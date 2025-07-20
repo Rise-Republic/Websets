@@ -67,7 +67,7 @@ export const useAuthProvider = () => {
     setError(null);
     
     try {
-      const newUser = await apiService.register(email, password, fullName);
+      await apiService.register(email, password, fullName);
       // Auto-login after registration
       await login(email, password);
     } catch (err) {
