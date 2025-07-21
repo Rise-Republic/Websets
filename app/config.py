@@ -49,14 +49,19 @@ class Settings(BaseSettings):
     weaviate_api_key: Optional[str] = None
     
     # Qdrant
-    qdrant_url: str = "http://localhost:6333"
+    qdrant_url: Optional[str] = None  # e.g., "http://localhost:6333"
+    qdrant_api_key: Optional[str] = None
     
-    # Object Storage (AWS S3, GCS)
+    # Object Storage
     object_storage_provider: str = "local"  # local, s3, gcs
-    s3_bucket_name: Optional[str] = None
-    s3_region: str = "us-east-1"
+    
+    # AWS S3 Configuration
     aws_access_key_id: Optional[str] = None
     aws_secret_access_key: Optional[str] = None
+    aws_region: str = "us-east-1"
+    s3_bucket_name: Optional[str] = None
+    
+    # Google Cloud Storage Configuration
     gcs_bucket_name: Optional[str] = None
     gcs_credentials_path: Optional[str] = None
     

@@ -11,6 +11,7 @@ from app.models import Job, JobStatus, DiscoveredURL, CrawlResult, Dataset, Data
 from app.agents import PlannerAgent, DiscoveryAgent, SchemaInferenceAgent
 from app.crawler import BrowserCrawler
 from app.storage import VectorStore, EmbeddingGenerator
+from app.tasks.progress_tracker import ProgressContext, JobProgressTracker
 
 
 @celery_app.task(bind=True)
@@ -30,235 +31,247 @@ def start_mining_job(self, job_id: str):
         
         logger.info(f"Starting mining job {job_id}: {job.prompt}")
         
+        # Initialize progress tracker
+        tracker = JobProgressTracker(job_id)
+        
         # Update job status
-        job.status = JobStatus.PLANNING
-        job.started_at = datetime.utcnow()
-        db.commit()
+        asyncio.run(tracker.update_status(JobStatus.PLANNING, "Starting job execution"))
         
         # Phase 1: Planning
-        self.update_state(state='PROGRESS', meta={'phase': 'planning', 'progress': 10})
-        plan = execute_planning_phase(job, db)
+        with ProgressContext(job_id, "planning", 100) as progress:
+            plan = execute_planning_phase(job, db, progress)
         
         # Phase 2: Discovery
-        self.update_state(state='PROGRESS', meta={'phase': 'discovery', 'progress': 30})
-        discovered_urls = execute_discovery_phase(job, plan, db)
+        with ProgressContext(job_id, "discovering", 100) as progress:
+            discovered_urls = execute_discovery_phase(job, plan, db, progress)
         
         # Phase 3: Crawling
-        self.update_state(state='PROGRESS', meta={'phase': 'crawling', 'progress': 50})
-        crawl_results = execute_crawling_phase(job, discovered_urls, db)
+        with ProgressContext(job_id, "crawling", len(discovered_urls)) as progress:
+            crawl_results = execute_crawling_phase(job, discovered_urls, db, progress)
         
         # Phase 4: Data Extraction
-        self.update_state(state='PROGRESS', meta={'phase': 'extraction', 'progress': 80})
-        dataset = execute_extraction_phase(job, crawl_results, plan, db)
-        
-        # Phase 5: Vector Storage
-        self.update_state(state='PROGRESS', meta={'phase': 'vectorization', 'progress': 95})
-        execute_vectorization_phase(job, dataset, db)
+        with ProgressContext(job_id, "extracting", len(crawl_results)) as progress:
+            extracted_data = execute_extraction_phase(job, crawl_results, db, progress)
         
         # Complete job
-        job.status = JobStatus.COMPLETED
-        job.completed_at = datetime.utcnow()
-        db.commit()
+        summary = {
+            "total_urls_discovered": len(discovered_urls),
+            "total_pages_crawled": len(crawl_results),
+            "total_records_extracted": len(extracted_data),
+            "job_duration": str(datetime.utcnow() - job.started_at)
+        }
         
-        logger.info(f"Completed mining job {job_id}")
+        asyncio.run(tracker.complete_job(summary))
+        
         return {
-            'status': 'completed',
-            'job_id': job_id,
-            'extracted_records': job.extracted_records,
-            'total_urls': job.total_urls
+            "job_id": job_id,
+            "status": "completed",
+            "summary": summary
         }
         
     except Exception as e:
-        logger.error(f"Mining job {job_id} failed: {e}")
-        
-        # Update job with error
-        job = db.query(Job).filter(Job.id == job_id).first()
-        if job:
-            job.status = JobStatus.FAILED
-            job.error_message = str(e)
-            job.completed_at = datetime.utcnow()
-            db.commit()
-        
+        logger.error(f"Job {job_id} failed: {e}")
+        tracker = JobProgressTracker(job_id)
+        asyncio.run(tracker.report_error(str(e)))
         raise
-        
     finally:
         db.close()
 
 
-def execute_planning_phase(job: Job, db: Session) -> Dict[str, Any]:
-    """Execute the planning phase using PlannerAgent."""
-    
-    # Initialize planner agent
-    planner = PlannerAgent()
-    
-    # Generate plan
-    plan = asyncio.run(planner.execute(job.prompt))
-    
-    # Save plan to job
-    job.plan = plan
-    job.status = JobStatus.DISCOVERING
-    db.commit()
-    
-    logger.info(f"Generated plan for job {job.id}: {plan.get('summary', '')}")
-    return plan
-
-
-def execute_discovery_phase(job: Job, plan: Dict[str, Any], db: Session) -> List[DiscoveredURL]:
-    """Execute URL discovery phase using DiscoveryAgent."""
-    
-    # Initialize discovery agent
-    discovery_agent = DiscoveryAgent()
-    
-    # Discover URLs
-    discovered_data = asyncio.run(discovery_agent.execute(plan))
-    
-    # Save discovered URLs to database
-    discovered_urls = []
-    for url_data in discovered_data:
-        discovered_url = DiscoveredURL(
-            job_id=job.id,
-            url=url_data.get('url'),
-            title=url_data.get('title'),
-            description=url_data.get('description'),
-            discovery_method='llm_discovery',
-            priority=url_data.get('priority', 3)
-        )
-        db.add(discovered_url)
-        discovered_urls.append(discovered_url)
-    
-    # Update job statistics
-    job.total_urls = len(discovered_urls)
-    job.status = JobStatus.CRAWLING
-    db.commit()
-    
-    logger.info(f"Discovered {len(discovered_urls)} URLs for job {job.id}")
-    return discovered_urls
-
-
-def execute_crawling_phase(job: Job, discovered_urls: List[DiscoveredURL], db: Session) -> List[CrawlResult]:
-    """Execute crawling phase using BrowserCrawler."""
-    
-    # Extract URLs for crawling
-    urls_to_crawl = [du.url for du in discovered_urls]
-    
-    # Execute crawling
-    crawl_results = asyncio.run(crawl_urls_batch(urls_to_crawl, str(job.id)))
-    
-    # Save crawl results to database
-    saved_results = []
-    for i, result in enumerate(crawl_results):
-        discovered_url = discovered_urls[i]
+def execute_planning_phase(job: Job, db: Session, progress: ProgressContext = None) -> Dict[str, Any]:
+    """Execute the planning phase."""
+    try:
+        if progress:
+            asyncio.run(progress.log("Starting planning phase", "info"))
         
-        crawl_result = CrawlResult(
-            discovered_url_id=discovered_url.id,
-            status_code=result.get('status_code'),
-            success=result.get('success', False),
-            error_message=result.get('error_message'),
-            raw_html=result.get('html_content'),
-            page_title=result.get('title'),
-            meta_description=result.get('meta_description'),
-            html_file_path=result.get('html_file_path'),
-            screenshot_path=result.get('screenshot_path')
-        )
+        planner = PlannerAgent()
+        plan = planner.create_plan(job.prompt)
         
-        db.add(crawl_result)
-        saved_results.append(crawl_result)
+        job.plan = plan.dict()
+        db.commit()
         
-        # Update discovered URL status
-        discovered_url.is_crawled = True
-        discovered_url.last_crawl_attempt = datetime.utcnow()
+        if progress:
+            asyncio.run(progress.update_step(100, {"plan": plan.dict()}))
+            asyncio.run(progress.log("Planning phase completed", "success"))
         
-        # Update job progress
-        job.crawled_urls += 1
-    
-    job.status = JobStatus.EXTRACTING
-    db.commit()
-    
-    logger.info(f"Crawled {len(saved_results)} URLs for job {job.id}")
-    return saved_results
+        return plan.dict()
+        
+    except Exception as e:
+        if progress:
+            asyncio.run(progress.log(f"Planning failed: {str(e)}", "error"))
+        raise
 
 
-async def crawl_urls_batch(urls: List[str], job_id: str) -> List[Dict[str, Any]]:
-    """Crawl multiple URLs using BrowserCrawler."""
-    
-    async with BrowserCrawler() as crawler:
-        results = await crawler.crawl_multiple_urls(urls, job_id)
-    
-    return results
-
-
-def execute_extraction_phase(job: Job, crawl_results: List[CrawlResult], plan: Dict[str, Any], db: Session) -> Dataset:
-    """Execute data extraction phase using SchemaInferenceAgent."""
-    
-    # Create dataset
-    dataset = Dataset(
-        job_id=job.id,
-        name=f"Dataset for: {job.prompt[:100]}",
-        description=plan.get('summary', ''),
-        schema=None  # Will be updated with inferred schema
-    )
-    db.add(dataset)
-    db.flush()  # Get dataset ID
-    
-    # Initialize schema inference agent
-    schema_agent = SchemaInferenceAgent()
-    
-    # Process successful crawl results
-    all_extracted_data = []
-    common_schema = None
-    
-    for crawl_result in crawl_results:
-        if not crawl_result.success or not crawl_result.raw_html:
-            continue
+def execute_discovery_phase(job: Job, plan: Dict[str, Any], db: Session, progress: ProgressContext = None) -> List[str]:
+    """Execute the discovery phase."""
+    try:
+        if progress:
+            asyncio.run(progress.log("Starting discovery phase", "info"))
         
-        try:
-            # Extract data using schema inference
-            extraction_result = asyncio.run(
-                schema_agent.execute(
-                    crawl_result.raw_html,
-                    crawl_result.discovered_url.url,
-                    plan
-                )
+        discovery_agent = DiscoveryAgent()
+        discovered_urls = discovery_agent.discover_urls(plan)
+        
+        # Store discovered URLs
+        for url in discovered_urls:
+            discovered_url = DiscoveredURL(
+                job_id=job.id,
+                url=url,
+                source="discovery"
             )
+            db.add(discovered_url)
+        
+        job.total_urls = len(discovered_urls)
+        db.commit()
+        
+        if progress:
+            asyncio.run(progress.update_step(100, {"discovered_urls": len(discovered_urls)}))
+            asyncio.run(progress.log(f"Discovered {len(discovered_urls)} URLs", "success"))
+        
+        return discovered_urls
+        
+    except Exception as e:
+        if progress:
+            asyncio.run(progress.log(f"Discovery failed: {str(e)}", "error"))
+        raise
+
+
+def execute_crawling_phase(job: Job, urls: List[str], db: Session, progress: ProgressContext = None) -> List[Dict[str, Any]]:
+    """Execute the crawling phase."""
+    try:
+        if progress:
+            asyncio.run(progress.log("Starting crawling phase", "info"))
+        
+        crawl_results = []
+        
+        for i, url in enumerate(urls):
+            if progress:
+                asyncio.run(progress.log(f"Crawling URL {i+1}/{len(urls)}: {url}", "info"))
             
-            if extraction_result.get('data'):
-                # Store extraction results
-                crawl_result.extracted_data = extraction_result['data']
-                crawl_result.schema_inference = extraction_result['schema']
+            try:
+                crawler = BrowserCrawler()
+                result = asyncio.run(crawler.crawl_page(url))
                 
-                # Create data records
-                for record_data in extraction_result['data']:
+                crawl_result = CrawlResult(
+                    job_id=job.id,
+                    url=url,
+                    html_content=result.get("html", ""),
+                    screenshot_path=result.get("screenshot_path"),
+                    title=result.get("title", ""),
+                    meta_description=result.get("meta_description", ""),
+                    status_code=result.get("status_code", 200)
+                )
+                db.add(crawl_result)
+                db.commit()
+                
+                crawl_results.append({
+                    "url": url,
+                    "crawl_result_id": str(crawl_result.id),
+                    "title": result.get("title", ""),
+                    "content_length": len(result.get("html", ""))
+                })
+                
+                if progress:
+                    asyncio.run(progress.increment({
+                        "url": url,
+                        "status": "success"
+                    }))
+                
+            except Exception as e:
+                if progress:
+                    asyncio.run(progress.log(f"Failed to crawl {url}: {str(e)}", "warning"))
+                    asyncio.run(progress.increment({
+                        "url": url,
+                        "status": "failed",
+                        "error": str(e)
+                    }))
+        
+        if progress:
+            asyncio.run(progress.log(f"Crawled {len(crawl_results)} pages successfully", "success"))
+        
+        return crawl_results
+        
+    except Exception as e:
+        if progress:
+            asyncio.run(progress.log(f"Crawling failed: {str(e)}", "error"))
+        raise
+
+
+def execute_extraction_phase(job: Job, crawl_results: List[Dict[str, Any]], db: Session, progress: ProgressContext = None) -> List[Dict[str, Any]]:
+    """Execute the data extraction phase."""
+    try:
+        if progress:
+            asyncio.run(progress.log("Starting extraction phase", "info"))
+        
+        extracted_data = []
+        
+        # Create dataset
+        dataset = Dataset(
+            job_id=job.id,
+            name=f"Dataset for {job.prompt[:50]}...",
+            description=f"Automatically extracted data for prompt: {job.prompt}",
+            schema={"type": "object", "properties": {}}
+        )
+        db.add(dataset)
+        db.commit()
+        
+        # Extract data from each crawl result
+        for i, result in enumerate(crawl_results):
+            if progress:
+                asyncio.run(progress.log(f"Extracting data from page {i+1}/{len(crawl_results)}", "info"))
+            
+            try:
+                # Get crawl result from database
+                crawl_result = db.query(CrawlResult).filter(
+                    CrawlResult.id == result["crawl_result_id"]
+                ).first()
+                
+                if not crawl_result:
+                    continue
+                
+                # Use schema inference agent to extract data
+                schema_agent = SchemaInferenceAgent()
+                extracted = schema_agent.extract_data(
+                    crawl_result.html_content,
+                    job.prompt,
+                    job.plan
+                )
+                
+                # Store extracted records
+                for record in extracted:
                     data_record = DataRecord(
                         dataset_id=dataset.id,
-                        source_url=crawl_result.discovered_url.url,
-                        source_title=crawl_result.page_title,
-                        data=record_data,
-                        confidence_score=extraction_result.get('confidence', 0.0),
-                        extraction_method='llm_inference'
+                        crawl_result_id=crawl_result.id,
+                        data=record,
+                        url=crawl_result.url
                     )
                     db.add(data_record)
-                    all_extracted_data.append(data_record)
+                    extracted_data.append(record)
                 
-                # Update common schema (use the first good schema)
-                if not common_schema and extraction_result.get('schema'):
-                    common_schema = extraction_result['schema']
+                db.commit()
+                
+                if progress:
+                    asyncio.run(progress.increment({
+                        "extracted_records": len(extracted),
+                        "url": crawl_result.url
+                    }))
+                
+            except Exception as e:
+                if progress:
+                    asyncio.run(progress.log(f"Failed to extract from {result['url']}: {str(e)}", "warning"))
         
-        except Exception as e:
-            logger.error(f"Extraction failed for {crawl_result.discovered_url.url}: {e}")
-            continue
-    
-    # Update dataset with final statistics and schema
-    dataset.total_records = len(all_extracted_data)
-    dataset.total_sources = len([cr for cr in crawl_results if cr.success])
-    dataset.schema = common_schema
-    
-    # Update job statistics
-    job.extracted_records = len(all_extracted_data)
-    
-    db.commit()
-    
-    logger.info(f"Extracted {len(all_extracted_data)} records for job {job.id}")
-    return dataset
+        # Update job with final counts
+        job.extracted_records = len(extracted_data)
+        db.commit()
+        
+        if progress:
+            asyncio.run(progress.log(f"Extracted {len(extracted_data)} records successfully", "success"))
+        
+        return extracted_data
+        
+    except Exception as e:
+        if progress:
+            asyncio.run(progress.log(f"Extraction failed: {str(e)}", "error"))
+        raise
 
 
 def execute_vectorization_phase(job: Job, dataset: Dataset, db: Session):
