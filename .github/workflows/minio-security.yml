@@ -1,0 +1,51 @@
+name: MinIO Security Automation
+
+on:
+  push:
+    paths:
+      - 'app/storage/minio_policy.json'
+      - 'scripts/apply_minio_policy.sh'
+      - 'scripts/audit_minio_policy.sh'
+      - 'scripts/rotate_minio_secrets.sh'
+      - 'scripts/README_minio_security.md'
+  schedule:
+    - cron: '0 2 * * *' # Nightly audit
+
+jobs:
+  apply-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Apply MinIO Policy
+        run: bash scripts/apply_minio_policy.sh
+        env:
+          MINIO_ALIAS: ${{ secrets.MINIO_ALIAS }}
+          MINIO_URL: ${{ secrets.MINIO_URL }}
+          MINIO_USER: ${{ secrets.MINIO_USER }}
+          MINIO_PASS: ${{ secrets.MINIO_PASS }}
+          MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
+
+  rotate-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Rotate MinIO Secrets
+        run: bash scripts/rotate_minio_secrets.sh
+        env:
+          VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+          VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
+
+  audit-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Audit MinIO Policy
+        run: bash scripts/audit_minio_policy.sh
+        env:
+          MINIO_ALIAS: ${{ secrets.MINIO_ALIAS }}
+          MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
+      - name: Archive Audit Log
+        uses: actions/upload-artifact@v3
+        with:
+          name: minio-policy-audit
+          path: app/storage/minio_policy_audit.log
