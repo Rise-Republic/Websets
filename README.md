@@ -373,3 +373,16 @@ For support and questions:
 - [ ] Support for authenticated websites
 - [ ] Multi-language content support
 - [ ] Advanced scheduling and automation features
+
+## 🔐 Secure Secrets Management (HashiCorp Vault)
+
+- All sensitive secrets (API keys, DB passwords) should be loaded from Vault, not .env or plaintext files.
+- Set `VAULT_ADDR` and `VAULT_TOKEN` environment variables for the app.
+- Use `app/secrets/vault.py` to fetch secrets at runtime.
+
+Example:
+```python
+from app.secrets.vault import VaultClient
+vault = VaultClient()
+openai_key = vault.get_secret("secret/data/websets", "openai_api_key")
+```
