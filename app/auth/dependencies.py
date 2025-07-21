@@ -5,6 +5,7 @@ from typing import Optional
 from app.database import get_db
 from app.models.user import User
 from app.auth.jwt_handler import verify_token
+from app.auth.rbac import require_roles, require_permissions
 
 security = HTTPBearer()
 
@@ -59,3 +60,9 @@ def get_current_user_optional(request: Request) -> Optional[User]:
             db.close()
     except Exception:
         return None
+
+
+# Example usage for FastAPI endpoints:
+# @router.get("/admin")
+# async def admin_dashboard(current_user: User = Depends(require_roles("admin"))):
+#     ...
