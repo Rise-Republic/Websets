@@ -8,6 +8,7 @@ import hashlib
 from datetime import datetime
 
 from app.config import settings
+from app.storage.object_storage import get_object_storage
 
 
 class BrowserCrawler:
@@ -179,39 +180,79 @@ class BrowserCrawler:
         }
     
     async def _save_html_content(self, html_content: str, url: str, job_id: str) -> str:
-        """Save HTML content to file and return file path."""
+        """Save HTML content to storage and return storage URL."""
         
         # Create filename from URL hash
         url_hash = hashlib.md5(url.encode()).hexdigest()
         filename = f"{url_hash}.html"
         
-        # Create directory structure
-        save_dir = Path(settings.data_dir) / "crawled" / job_id
-        save_dir.mkdir(parents=True, exist_ok=True)
+        # Create storage key
+        storage_key = f"crawled/{job_id}/{filename}"
         
-        file_path = save_dir / filename
+        # Get object storage instance
+        storage = get_object_storage()
         
-        async with aiofiles.open(file_path, 'w', encoding='utf-8') as f:
-            await f.write(html_content)
-        
-        return str(file_path)
+        try:
+            # Upload HTML content as bytes
+            html_bytes = html_content.encode('utf-8')
+            storage_url = await storage.upload_bytes(
+                data=html_bytes,
+                key=storage_key,
+                content_type="text/html"
+            )
+            
+            logger.info(f"Saved HTML content to storage: {storage_key}")
+            return storage_url
+            
+        except Exception as e:
+            logger.error(f"Failed to save HTML content to storage: {e}")
+            # Fallback to local storage
+            save_dir = Path(settings.data_dir) / "crawled" / job_id
+            save_dir.mkdir(parents=True, exist_ok=True)
+            file_path = save_dir / filename
+            
+            async with aiofiles.open(file_path, 'w', encoding='utf-8') as f:
+                await f.write(html_content)
+            
+            return str(file_path)
     
     async def _save_screenshot(self, page: Page, url: str, job_id: str) -> str:
-        """Save page screenshot and return file path."""
+        """Save page screenshot and return storage URL."""
         
         # Create filename from URL hash
         url_hash = hashlib.md5(url.encode()).hexdigest()
         filename = f"{url_hash}.png"
         
-        # Create directory structure
-        save_dir = Path(settings.data_dir) / "screenshots" / job_id
-        save_dir.mkdir(parents=True, exist_ok=True)
+        # Create storage key
+        storage_key = f"screenshots/{job_id}/{filename}"
         
-        file_path = save_dir / filename
+        # Get object storage instance
+        storage = get_object_storage()
         
-        await page.screenshot(path=str(file_path), full_page=True)
-        
-        return str(file_path)
+        try:
+            # Take screenshot to bytes buffer
+            screenshot_bytes = await page.screenshot(full_page=True)
+            
+            # Upload screenshot bytes
+            storage_url = await storage.upload_bytes(
+                data=screenshot_bytes,
+                key=storage_key,
+                content_type="image/png"
+            )
+            
+            logger.info(f"Saved screenshot to storage: {storage_key}")
+            return storage_url
+            
+        except Exception as e:
+            logger.error(f"Failed to save screenshot to storage: {e}")
+            # Fallback to local storage
+            save_dir = Path(settings.data_dir) / "screenshots" / job_id
+            save_dir.mkdir(parents=True, exist_ok=True)
+            file_path = save_dir / filename
+            
+            await page.screenshot(path=str(file_path), full_page=True)
+            
+            return str(file_path)
     
     async def _extract_structured_hints(self, page: Page) -> Dict[str, Any]:
         """Extract hints about structured data on the page."""

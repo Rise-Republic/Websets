@@ -15,6 +15,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from app.database import SessionLocal
 from app.models import Job, JobStatus, User
 from app.tasks.mining_tasks import start_mining_job
+from app.auth.jwt_handler import get_password_hash
 
 
 def create_test_user_if_not_exists():
@@ -23,7 +24,6 @@ def create_test_user_if_not_exists():
     try:
         user = db.query(User).first()
         if not user:
-            from app.auth import get_password_hash
             user = User(
                 email="test@websetminer.com",
                 hashed_password=get_password_hash("testpassword123"),
@@ -74,7 +74,6 @@ def main():
         if args.sync:
             # Run synchronously
             print("Running job synchronously...")
-            from app.tasks.mining_tasks import start_mining_job
             # Note: This calls the actual function, not the Celery task
             result = start_mining_job(str(job.id))
             print(f"Job completed: {result}")

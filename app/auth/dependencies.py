@@ -1,6 +1,7 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from typing import Optional
 from app.database import get_db
 from app.models.user import User
 from app.auth.jwt_handler import verify_token
@@ -33,3 +34,28 @@ async def get_current_active_user(current_user: User = Depends(get_current_user)
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
+
+
+def get_current_user_optional(request: Request) -> Optional[User]:
+    """Get current user from request without raising exceptions."""
+    try:
+        authorization = request.headers.get("Authorization")
+        if not authorization or not authorization.startswith("Bearer "):
+            return None
+        
+        token = authorization.split(" ")[1]
+        email = verify_token(token)
+        if email is None:
+            return None
+        
+        # We need a database session here, but can't inject it
+        # This is a simplified version for rate limiting purposes
+        from app.database import SessionLocal
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.email == email).first()
+            return user if user and user.is_active else None
+        finally:
+            db.close()
+    except Exception:
+        return None

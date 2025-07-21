@@ -1,13 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
+import re
 
 from app.database import get_db
 from app.models.user import User
-from app.auth import create_access_token, get_password_hash, verify_password
+from app.auth.jwt_handler import create_access_token, get_password_hash, verify_password
+from app.auth.dependencies import get_current_active_user
 from app.config import settings
+from app.middleware import limiter, RateLimits
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -16,6 +19,21 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     full_name: str = None
+    
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters long')
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not re.search(r'[a-z]', v):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not re.search(r'\d', v):
+            raise ValueError('Password must contain at least one digit')
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', v):
+            raise ValueError('Password must contain at least one special character')
+        return v
 
 
 class UserResponse(BaseModel):
@@ -35,7 +53,8 @@ class Token(BaseModel):
 
 
 @router.post("/register", response_model=UserResponse)
-async def register(user_data: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit(RateLimits.AUTH_REGISTER)
+async def register(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
     """Register a new user."""
     
     # Check if user already exists
@@ -69,7 +88,8 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@limiter.limit(RateLimits.AUTH_LOGIN)
+async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """Login and get access token."""
     
     # Authenticate user
@@ -102,7 +122,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user_info(current_user: User = Depends(get_current_active_user)):
+@limiter.limit(RateLimits.API_READ)
+async def get_current_user_info(request: Request, current_user: User = Depends(get_current_active_user)):
     """Get current user information."""
     return UserResponse(
         id=str(current_user.id),

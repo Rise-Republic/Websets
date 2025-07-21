@@ -3,10 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
 import sys
+from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
 from app.database import create_tables
 from app.api import auth_router, jobs_router, datasets_router, health_router
+from app.api.v1 import v1_router
+from app.api.versioning import versioning_router
+from app.middleware import limiter, rate_limit_handler
 
 # Configure logging
 logger.remove()
@@ -25,20 +29,32 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+# Add rate limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+
 # Add CORS middleware
+cors_origins = ["*"] if settings.environment == "development" else settings.allowed_origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # Include routers
+# Legacy routes (backward compatibility)
 app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(jobs_router)
 app.include_router(datasets_router)
+
+# V1 API routes
+app.include_router(v1_router)
+
+# API versioning routes
+app.include_router(versioning_router)
 
 
 @app.exception_handler(Exception)
