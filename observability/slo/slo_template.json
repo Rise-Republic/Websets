@@ -1,0 +1,34 @@
+{
+  "service": "<service-name>",
+  "tier": "<business-tier>",
+  "slis": [
+    {
+      "name": "availability",
+      "target": 99.99,
+      "measurement": "(successful_requests / total_requests) * 100"
+    },
+    {
+      "name": "latency",
+      "target": 99,
+      "measurement": "p99(request_latency_ms) < 300"
+    },
+    {
+      "name": "error_rate",
+      "target": 99.9,
+      "measurement": "(1 - (error_requests / total_requests)) * 100"
+    },
+    {
+      "name": "throughput",
+      "target": 99,
+      "measurement": "requests_per_second > 100"
+    }
+  ],
+  "alerting": {
+    "burn_rate_threshold": 2,
+    "error_budget_window": "30d"
+  },
+  "dashboard": {
+    "grafana_uid": "<dashboard-uid>",
+    "backstage_link": "<service-catalog-link>"
+  }
+}

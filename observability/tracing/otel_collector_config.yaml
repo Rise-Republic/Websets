@@ -1,0 +1,24 @@
+# OpenTelemetry Collector configuration for distributed tracing
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+exporters:
+  jaeger:
+    endpoint: jaeger:14250
+    tls:
+      insecure: true
+  tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+processors:
+  batch:
+  memory_limiter:
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch, memory_limiter]
+      exporters: [jaeger, tempo]

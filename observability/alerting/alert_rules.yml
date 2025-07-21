@@ -1,0 +1,53 @@
+# Prometheus Alertmanager rules for SLO, infra, and security
+---
+groups:
+- name: SLOAlerts
+  rules:
+  - alert: HighErrorRate
+    expr: job:request_errors:rate5m{tier="1"} > 0.001
+    for: 10m
+    labels:
+      severity: critical
+      runbook: https://confluence.company.com/runbooks/high-error-rate
+    annotations:
+      summary: "High error rate detected"
+      description: "Error rate exceeded SLO for Tier 1 service."
+      pagerduty_service: "platform-core"
+      slack_channel: "#alerts-core"
+  - alert: BurnRateExceeded
+    expr: slo_error_budget_burn_rate{tier="1"} > 2
+    for: 5m
+    labels:
+      severity: warning
+      runbook: https://confluence.company.com/runbooks/burn-rate
+    annotations:
+      summary: "SLO error budget burn rate high"
+      description: "Burn rate exceeded threshold for Tier 1 SLO."
+      pagerduty_service: "platform-core"
+      slack_channel: "#alerts-core"
+- name: InfraAlerts
+  rules:
+  - alert: HighMemoryUsage
+    expr: node_memory_Active_bytes / node_memory_MemTotal_bytes > 0.9
+    for: 5m
+    labels:
+      severity: warning
+      runbook: https://confluence.company.com/runbooks/memory
+    annotations:
+      summary: "High memory usage"
+      description: "Memory usage above 90% on node."
+      pagerduty_service: "platform-infra"
+      slack_channel: "#alerts-infra"
+- name: SecurityAlerts
+  rules:
+  - alert: MinIOPolicyViolation
+    expr: minio_policy_violation_total > 0
+    for: 1m
+    labels:
+      severity: critical
+      runbook: https://confluence.company.com/runbooks/minio-policy
+    annotations:
+      summary: "MinIO policy violation detected"
+      description: "Root access or policy violation in MinIO."
+      pagerduty_service: "platform-security"
+      slack_channel: "#alerts-security"

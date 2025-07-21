@@ -1,0 +1,17 @@
+# Filebeat configuration for shipping logs to ELK/OpenSearch
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/*.json
+    fields:
+      tenant: ${TENANT_ID}
+      service: ${SERVICE_NAME}
+      trace_id: ${TRACE_ID}
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  username: "${ELASTIC_USER}"
+  password: "${ELASTIC_PASS}"
+setup.ilm.enabled: false
+setup.template.name: "audit-logs"
+setup.template.pattern: "audit-logs-*"
