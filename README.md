@@ -37,9 +37,12 @@ cd webset-miner
 cp .env.example .env
 # Add your OPENAI_API_KEY and other settings
 ```
-python -m venv .venv
+
+```bash
+py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+```
 
 3. **Start services:**
 ```bash
