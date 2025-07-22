@@ -49,7 +49,12 @@ class Role(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    users = relationship("User", secondary=user_roles, back_populates="roles")
+    users = relationship(
+        "User",
+        secondary=user_roles,
+        back_populates="roles",
+        foreign_keys=[user_roles.c.role_id, user_roles.c.user_id]
+    )
     permissions = relationship("Permission", secondary=role_permissions, back_populates="roles")
     children = relationship("Role")
     parent = relationship("Role", remote_side=[id])
