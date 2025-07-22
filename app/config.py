@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     # Storage
     data_dir: str = "./data"
     vector_store_path: str = "./data/vector_store"
-    vector_store_provider: str = "faiss"  # faiss, pinecone, weaviate, qdrant
+    vector_store_provider: str = "chromadb"  # chromadb, pinecone, weaviate, qdrant
     
     # Vector Store Configurations
     # Pinecone

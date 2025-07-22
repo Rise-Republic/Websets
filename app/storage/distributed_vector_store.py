@@ -12,7 +12,7 @@ class VectorStoreProvider(str, Enum):
     PINECONE = "pinecone"
     WEAVIATE = "weaviate"
     QDRANT = "qdrant"
-    FAISS = "faiss"  # Keep FAISS as fallback for development
+    CHROMA = "chromadb"
 
 
 class BaseVectorStore(ABC):
@@ -453,10 +453,9 @@ class VectorStoreFactory:
             return QdrantVectorStore(**kwargs)
         elif provider == VectorStoreProvider.WEAVIATE:
             return WeaviateVectorStore(**kwargs)
-        elif provider == VectorStoreProvider.FAISS:
-            # Import the existing FAISS implementation
-            from .vector_store import VectorStore
-            return VectorStore(**kwargs)
+        elif provider == VectorStoreProvider.CHROMA:
+            from .chroma_vector_store import ChromaVectorStore
+            return ChromaVectorStore(**kwargs)
         else:
             raise ValueError(f"Unsupported vector store provider: {provider}")
 
@@ -469,7 +468,7 @@ def get_vector_store() -> BaseVectorStore:
     global _vector_store_instance
     
     if _vector_store_instance is None:
-        provider = VectorStoreProvider(getattr(settings, 'vector_store_provider', 'faiss'))
+        provider = VectorStoreProvider(getattr(settings, 'vector_store_provider', 'chromadb'))
         _vector_store_instance = VectorStoreFactory.create_vector_store(provider)
     
     return _vector_store_instance
