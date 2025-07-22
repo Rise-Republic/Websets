@@ -39,7 +39,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,  # Only trusted origins
     allow_credentials=True,
-    allow_methods=["POST"],  # Only POST for registration
+    allow_methods=["GET", "POST", "OPTIONS"],  # Include OPTIONS for preflight
     allow_headers=["Authorization", "Content-Type"],  # Only needed headers
 )
 
