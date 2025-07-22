@@ -5,6 +5,7 @@ from datetime import datetime
 import uuid
 
 from app.database import Base
+from app.models.role import user_roles
 
 
 class User(Base):
@@ -49,9 +50,9 @@ class User(Base):
     jobs = relationship("Job", back_populates="user", cascade="all, delete-orphan")
     roles = relationship(
         "Role",
-        secondary="user_roles",
+        secondary=user_roles,
         back_populates="users",
-        foreign_keys=[Base.metadata.tables['user_roles'].c.user_id, Base.metadata.tables['user_roles'].c.role_id]
+        foreign_keys=[user_roles.c.user_id, user_roles.c.role_id]
     )
     audit_logs = relationship("AuditLog", back_populates="user", cascade="all, delete-orphan")
     data_access_logs = relationship("DataAccessLog", back_populates="user", cascade="all, delete-orphan")
