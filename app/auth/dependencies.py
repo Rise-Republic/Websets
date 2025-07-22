@@ -6,6 +6,7 @@ from app.database import get_db
 from app.models.user import User
 from app.auth.jwt_handler import verify_token
 from app.auth.rbac import require_roles, require_permissions
+from app.auth.user_utils import get_current_active_user
 
 security = HTTPBearer()
 

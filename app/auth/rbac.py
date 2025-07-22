@@ -4,7 +4,7 @@ RBAC enforcement utilities for FastAPI endpoints
 from fastapi import Depends, HTTPException, status
 from app.models.user import User
 from app.models.role import Role, Permission
-from app.auth.dependencies import get_current_active_user
+from app.auth.user_utils import get_current_active_user
 from sqlalchemy.orm import Session
 from app.database import get_db
 from typing import List
