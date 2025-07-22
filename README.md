@@ -8,7 +8,7 @@ An autonomous LLM-powered system for discovering, extracting, and structuring pu
 - **Autonomous Discovery**: Finds relevant websites based on natural language queries
 - **Headless Crawling**: Playwright-based browser automation for full DOM capture
 - **Zero-Shot Extraction**: Schema inference and data extraction without manual configuration
-- **Dual Storage**: PostgreSQL for relational data + FAISS for vector search
+- **Dual Storage**: PostgreSQL for relational data + ChromaDB, Pinecone, Qdrant, or Weaviate for vector search
 - **Secure API**: JWT authentication with role-based access control
 - **Background Processing**: Celery + Redis for scalable job execution
 - **Production Ready**: Docker containerization and monitoring capabilities
@@ -69,7 +69,7 @@ curl -X POST "http://localhost:8000/jobs/" \
 2. **Discovery Agent** - Finds relevant URLs using LLM-powered search
 3. **Browser Crawler** - Headless Playwright-based web scraping
 4. **Schema Inference Agent** - Zero-shot data structure inference
-5. **Storage Layer** - PostgreSQL + FAISS vector database
+5. **Storage Layer** - PostgreSQL + ChromaDB, Pinecone, Qdrant, or Weaviate vector database
 6. **Job Orchestration** - Celery + Redis task queue
 7. **API Server** - FastAPI with JWT authentication
 
