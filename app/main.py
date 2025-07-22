@@ -34,13 +34,13 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
 # Add CORS middleware
-cors_origins = ["*"] if settings.environment == "development" else settings.allowed_origins
+cors_origins = settings.allowed_origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=cors_origins,  # Only trusted origins
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_methods=["POST"],  # Only POST for registration
+    allow_headers=["Authorization", "Content-Type"],  # Only needed headers
 )
 
 # Include routers
@@ -63,7 +63,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception: {exc}")
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error"}
+        content={"detail": str(exc)}
     )
 
 
