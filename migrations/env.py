@@ -1,0 +1,44 @@
+from alembic import context
+from sqlalchemy import engine_from_config, pool
+from logging.config import fileConfig
+import sys
+import os
+
+# this is the Alembic Config object, which provides access to values within the .ini file
+config = context.config
+
+# Interpret the config file for Python logging.
+fileConfig(config.config_file_name)
+
+# Add your model's MetaData object here for 'autogenerate' support
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from app.database import Base  # adjust import as needed
+target_metadata = Base.metadata
+
+def run_migrations_offline():
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        raise RuntimeError("DATABASE_URL environment variable not set.")
+    context.configure(
+        url=url, target_metadata=target_metadata, literal_binds=True, compare_type=True
+    )
+    with context.begin_transaction():
+        context.run_migrations()
+
+def run_migrations_online():
+    import sqlalchemy as sa
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        raise RuntimeError("DATABASE_URL environment variable not set.")
+    connectable = sa.create_engine(url)
+    with connectable.connect() as connection:
+        context.configure(
+            connection=connection, target_metadata=target_metadata, compare_type=True
+        )
+        with context.begin_transaction():
+            context.run_migrations()
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()

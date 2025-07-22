@@ -30,7 +30,16 @@ class User(Base):
     # MFA fields
     mfa_secret = Column(String, nullable=True)
     mfa_enabled = Column(Boolean, default=False)
+    mfa_method = Column(String, nullable=True)  # "totp", "email", "sms"
     backup_codes = Column(Text, nullable=True)  # JSON encrypted backup codes
+
+    # Password reset fields
+    password_reset_token = Column(String, nullable=True)
+    password_reset_expiry = Column(DateTime, nullable=True)
+
+    # Refresh token fields
+    refresh_token = Column(String, nullable=True)
+    refresh_token_expiry = Column(DateTime, nullable=True)
     
     # Tenant information (for multi-tenancy)
     tenant_id = Column(UUID(as_uuid=True), nullable=True)
