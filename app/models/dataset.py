@@ -29,6 +29,7 @@ class Dataset(Base):
     # Relationships
     job = relationship("Job", back_populates="datasets")
     records = relationship("DataRecord", back_populates="dataset", cascade="all, delete-orphan")
+    access_logs = relationship("DataAccessLog", back_populates="dataset", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<Dataset(id={self.id}, name='{self.name}', records={self.total_records})>"

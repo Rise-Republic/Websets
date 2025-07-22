@@ -73,7 +73,7 @@ class Settings(BaseSettings):
     # Environment
     environment: str = "development"
     log_level: str = "INFO"
-    allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:5173", "https://yourdomain.com"]
+    allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174", "https://yourdomain.com"]
     
     class Config:
         env_file = ".env"
