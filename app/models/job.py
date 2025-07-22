@@ -50,6 +50,7 @@ class Job(Base):
     user = relationship("User", back_populates="jobs")
     discovered_urls = relationship("DiscoveredURL", back_populates="job", cascade="all, delete-orphan")
     datasets = relationship("Dataset", back_populates="job", cascade="all, delete-orphan")
+    data_access_logs = relationship("DataAccessLog", back_populates="job", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<Job(id={self.id}, status={self.status.value}, prompt='{self.prompt[:50]}...')>"
