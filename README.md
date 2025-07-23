@@ -202,8 +202,8 @@ For production deployments, adjust these settings:
 
 ### Running Tests
 ```bash
-# Install test dependencies
-pip install pytest pytest-asyncio
+# Install dev dependencies
+pip install -r requirements-dev.txt
 
 # Run tests
 pytest tests/
@@ -220,7 +220,7 @@ pip install bandit safety
 bandit -r app -x tests -lll
 
 # Safety dependency vulnerability scan
-safety check -r requirements.txt
+safety check -r requirements.txt -r requirements-dev.txt
 
 # Trivy filesystem scan (requires Docker)
 docker run --rm -v $(pwd):/repo aquasec/trivy fs --severity CRITICAL /repo

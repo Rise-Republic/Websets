@@ -17,7 +17,7 @@ fi
 
 # Install Python dependencies
 echo "Installing Python dependencies..."
-pip install -r requirements.txt
+pip install -r requirements.txt -r requirements-dev.txt
 
 # Install Playwright browsers
 echo "Installing Playwright browsers..."

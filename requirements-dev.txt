@@ -1,0 +1,15 @@
+pytest==8.4.1
+pytest-asyncio==0.21.1
+pytest-mock==3.12.0
+pytest-cov==4.1.0
+pytest-randomly==3.15.0
+pytest-xdist==3.5.0
+hypothesis==6.108.2
+schemathesis==4.0.12
+junit-xml==1.9
+ruff==0.4.5
+mypy==1.10.0
+bandit==1.7.8
+safety==2.3.5
+testcontainers[postgres]==3.7.1
+
