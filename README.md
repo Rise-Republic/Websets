@@ -295,6 +295,11 @@ spec:
               key: database-url
 ```
 
+Full manifests with resource requests, limits, and security context can be found
+in the `k8s/` directory. Use `scripts/blue_green_deploy.sh` to perform
+blue/green rollouts between the `webset-miner-blue` and `webset-miner-green`
+deployments.
+
 ## CI/CD Pipeline
 
 Automated builds and deployments run via **GitHub Actions**. Docker
