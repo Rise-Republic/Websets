@@ -5,10 +5,11 @@ This guide describes SLI definitions, SLO dashboards, error budget, burn rate, a
 
 ## Steps
 1. Define SLIs: availability, latency, error rate, throughput.
-2. Set SLOs per business tier (e.g., Tier 1 = 99.99%).
-3. Create dashboards for burn rate, error budget, real-time alerts.
-4. Integrate SLO reviews into engineering retrospectives.
-5. Publish SLOs in Backstage/service catalog.
+2. Document SLI formulas (e.g., `(successful_requests / total_requests) * 100`).
+3. Set SLOs per business tier (e.g., Tier 1 = 99.99%).
+4. Create dashboards for burn rate, error budget, real-time alerts.
+5. Integrate SLO reviews into engineering retrospectives.
+6. Publish SLOs in Backstage/service catalog.
 
 ## Automation
 - Self-service SLO templates.

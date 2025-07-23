@@ -1,0 +1,23 @@
+{
+  "title": "Websets Overview",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "HTTP Requests per Second",
+      "targets": [
+        {
+          "expr": "rate(websets_http_requests_total[1m])"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Error Rate",
+      "targets": [
+        {
+          "expr": "rate(websets_http_requests_total{status_code!~'2..'}[1m]) / rate(websets_http_requests_total[1m])"
+        }
+      ]
+    }
+  ]
+}

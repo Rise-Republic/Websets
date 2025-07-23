@@ -183,7 +183,7 @@ class BrowserCrawler:
         """Save HTML content to storage and return storage URL."""
         
         # Create filename from URL hash
-        url_hash = hashlib.md5(url.encode()).hexdigest()
+        url_hash = hashlib.md5(url.encode(), usedforsecurity=False).hexdigest()
         filename = f"{url_hash}.html"
         
         # Create storage key
@@ -220,7 +220,7 @@ class BrowserCrawler:
         """Save page screenshot and return storage URL."""
         
         # Create filename from URL hash
-        url_hash = hashlib.md5(url.encode()).hexdigest()
+        url_hash = hashlib.md5(url.encode(), usedforsecurity=False).hexdigest()
         filename = f"{url_hash}.png"
         
         # Create storage key

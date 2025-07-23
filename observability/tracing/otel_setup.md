@@ -12,6 +12,7 @@ This guide describes how to implement distributed tracing across all services us
 6. Update structured logging to include trace IDs for trace-to-log correlation.
 7. Create Grafana dashboards with trace drill-down.
 8. Link trace views to SLO dashboards for root cause analysis.
+9. Enable the OpenTelemetry Prometheus exporter for unified metrics and traces.
 
 ## Automation
 - Use Helm charts for collector deployment.
