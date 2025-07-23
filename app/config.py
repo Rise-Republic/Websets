@@ -1,23 +1,22 @@
+
 from pydantic_settings import BaseSettings
 from typing import Optional
 from pydantic import field_validator
 import os
 import sys
+from app.secrets.vault import VaultClient
 
 
 class Settings(BaseSettings):
     # API Keys
     openai_api_key: str
     anthropic_api_key: Optional[str] = None
-    
     # Database
     database_url: str
-    
     # Redis/Celery
     redis_url: str
     celery_broker_url: str
     celery_result_backend: str
-    
     # Authentication
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
@@ -79,23 +78,41 @@ class Settings(BaseSettings):
         env_file = ".env"
 
 
-def validate_settings():
-    """Validate critical settings at startup."""
+# --- Vault integration for secrets ---
+def get_secret_from_vault_or_env(key, default=None):
+    vault_path = os.getenv("VAULT_SECRET_PATH", "secret/websets")
     try:
-        settings = Settings()
-        
-        # Check for required environment variables
-        required_vars = ['JWT_SECRET_KEY', 'DATABASE_URL', 'OPENAI_API_KEY']
-        missing_vars = [var for var in required_vars if not os.getenv(var)]
-        
+        vault = VaultClient()
+        value = vault.get_secret(vault_path, key)
+        if value:
+            return value
+    except Exception:
+        pass
+    return os.getenv(key, default)
+
+
+def validate_settings():
+    """Validate critical settings at startup, using Vault if available."""
+    try:
+        # Try to load from Vault first, fallback to env
+        settings = Settings(
+            openai_api_key=get_secret_from_vault_or_env('OPENAI_API_KEY'),
+            anthropic_api_key=get_secret_from_vault_or_env('ANTHROPIC_API_KEY'),
+            database_url=get_secret_from_vault_or_env('DATABASE_URL'),
+            redis_url=get_secret_from_vault_or_env('REDIS_URL'),
+            celery_broker_url=get_secret_from_vault_or_env('CELERY_BROKER_URL'),
+            celery_result_backend=get_secret_from_vault_or_env('CELERY_RESULT_BACKEND'),
+            jwt_secret_key=get_secret_from_vault_or_env('JWT_SECRET_KEY'),
+        )
+        # Check for required variables
+        required_vars = ['jwt_secret_key', 'database_url', 'openai_api_key']
+        missing_vars = [var for var in required_vars if not getattr(settings, var)]
         if missing_vars:
-            print(f"Error: Missing required environment variables: {', '.join(missing_vars)}")
+            print(f"Error: Missing required secrets: {', '.join(missing_vars)}")
             sys.exit(1)
-            
         return settings
     except Exception as e:
         print(f"Error validating settings: {e}")
         sys.exit(1)
-
 
 settings = validate_settings()
