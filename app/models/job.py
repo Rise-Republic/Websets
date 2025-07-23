@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime, Text, Enum, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB
+from app.models.types import GUID as UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -22,8 +23,8 @@ class JobStatus(enum.Enum):
 class Job(Base):
     __tablename__ = "jobs"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID, ForeignKey("users.id"), nullable=False)
     
     # Job configuration
     prompt = Column(Text, nullable=False)

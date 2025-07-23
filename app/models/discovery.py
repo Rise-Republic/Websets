@@ -1,5 +1,6 @@
 from sqlalchemy import Column, String, DateTime, Text, Boolean, Integer, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB
+from app.models.types import GUID as UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -10,8 +11,8 @@ from app.database import Base
 class DiscoveredURL(Base):
     __tablename__ = "discovered_urls"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=False)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
+    job_id = Column(UUID, ForeignKey("jobs.id"), nullable=False)
     
     # URL information
     url = Column(String, nullable=False, index=True)
@@ -41,8 +42,8 @@ class DiscoveredURL(Base):
 class CrawlResult(Base):
     __tablename__ = "crawl_results"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    discovered_url_id = Column(UUID(as_uuid=True), ForeignKey("discovered_urls.id"), nullable=False)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
+    discovered_url_id = Column(UUID, ForeignKey("discovered_urls.id"), nullable=False)
     
     # Crawl metadata
     status_code = Column(Integer, nullable=True)

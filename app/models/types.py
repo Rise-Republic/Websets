@@ -5,9 +5,12 @@ This module provides custom types to ensure compatibility across different datab
 such as PostgreSQL and SQLite.
 """
 
-from sqlalchemy.types import TypeDecorator, CHAR
-from sqlalchemy.dialects.postgresql import UUID
+import json
 import uuid
+
+from sqlalchemy.types import TypeDecorator, CHAR, Text, JSON
+from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
+from sqlalchemy import String
 
 class GUID(TypeDecorator):
     """
@@ -40,4 +43,42 @@ class GUID(TypeDecorator):
             return value
         if not isinstance(value, uuid.UUID):
             value = uuid.UUID(value)
+        return value
+
+
+class JsonEncodedDict(TypeDecorator):
+    """Enables JSON storage by encoding and decoding on the fly."""
+    impl = Text
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(JSONB())
+        else:
+            return dialect.type_descriptor(JSON())
+
+
+class StringArray(TypeDecorator):
+    """Enables ARRAY storage for string types by encoding and decoding on the fly."""
+    impl = Text
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(ARRAY(String))
+        else:
+            return dialect.type_descriptor(Text)
+
+    def process_bind_param(self, value, dialect):
+        if dialect.name == 'postgresql':
+            return value
+        if value is not None:
+            return json.dumps(value)
+        return value
+
+    def process_result_value(self, value, dialect):
+        if dialect.name == 'postgresql':
+            return value
+        if value is not None:
+            return json.loads(value)
         return value
