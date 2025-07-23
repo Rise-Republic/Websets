@@ -1,0 +1,11 @@
+# Recording rules for Websets SLO metrics
+---
+groups:
+- name: WebsetsSLOs
+  rules:
+  - record: slo_availability
+    expr: 1 - (rate(websets_http_requests_total{status_code!~"2.."}[5m]) / rate(websets_http_requests_total[5m]))
+  - record: slo_latency_p95
+    expr: histogram_quantile(0.95, sum(rate(websets_http_request_duration_seconds_bucket[5m])) by (le))
+  - record: slo_error_budget_burn_rate
+    expr: (1 - slo_availability) / (1 - 0.999)
