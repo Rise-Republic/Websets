@@ -1,6 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Float
-from sqlalchemy.dialects.postgresql import JSONB
-from app.models.types import GUID as UUID
+from app.models.types import GUID as UUID, JsonEncodedDict
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -17,7 +16,7 @@ class Dataset(Base):
     # Metadata
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
-    schema = Column(JSONB, nullable=True)  # Inferred schema
+    schema = Column(JsonEncodedDict, nullable=True)  # Inferred schema
     
     # Statistics
     total_records = Column(Integer, default=0)
@@ -47,7 +46,7 @@ class DataRecord(Base):
     source_title = Column(String, nullable=True)
     
     # Extracted data
-    data = Column(JSONB, nullable=False)
+    data = Column(JsonEncodedDict, nullable=False)
     
     # Vector embedding for similarity search
     embedding_id = Column(String, nullable=True)  # Reference to vector store

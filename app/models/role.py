@@ -4,8 +4,7 @@ Implements comprehensive role and permission system
 """
 
 from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Table, Text, Integer
-from sqlalchemy.dialects.postgresql import ARRAY
-from app.models.types import GUID as UUID
+from app.models.types import GUID as UUID, StringArray
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -69,7 +68,7 @@ class Permission(Base):
     description = Column(Text, nullable=True)
     resource = Column(String(50), nullable=False, index=True)  # e.g., 'jobs', 'datasets', 'users'
     action = Column(String(50), nullable=False, index=True)   # e.g., 'create', 'read', 'update', 'delete'
-    conditions = Column(ARRAY(String), nullable=True)  # JSON conditions for fine-grained control
+    conditions = Column(StringArray, nullable=True)  # e.g., ['is_owner', 'in_same_department']
     
     # Scope restrictions
     tenant_scoped = Column(Boolean, default=False)  # Permission is tenant-specific
@@ -144,7 +143,7 @@ class DataAccessLog(Base):
     
     # Data sensitivity
     contains_pii = Column(Boolean, default=False)
-    data_categories = Column(ARRAY(String), nullable=True)  # Types of data accessed
+    data_categories = Column(StringArray, nullable=True)  # e.g., ['PII', 'Financial', 'Health']
     
     # Timestamps
     accessed_at = Column(DateTime, default=datetime.utcnow, index=True)

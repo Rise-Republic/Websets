@@ -1,6 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, Text, Enum, ForeignKey
-from sqlalchemy.dialects.postgresql import JSONB
-from app.models.types import GUID as UUID
+from app.models.types import GUID as UUID, JsonEncodedDict
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -31,7 +30,7 @@ class Job(Base):
     status = Column(Enum(JobStatus), default=JobStatus.PENDING, nullable=False)
     
     # Planning phase
-    plan = Column(JSONB, nullable=True)
+    plan = Column(JsonEncodedDict, nullable=True)
     
     # Progress tracking
     total_urls = Column(Integer, default=0)

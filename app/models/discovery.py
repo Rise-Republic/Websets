@@ -1,6 +1,5 @@
 from sqlalchemy import Column, String, DateTime, Text, Boolean, Integer, ForeignKey
-from sqlalchemy.dialects.postgresql import JSONB
-from app.models.types import GUID as UUID
+from app.models.types import GUID as UUID, JsonEncodedDict
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -56,8 +55,8 @@ class CrawlResult(Base):
     meta_description = Column(Text, nullable=True)
     
     # Processing results
-    extracted_data = Column(JSONB, nullable=True)
-    schema_inference = Column(JSONB, nullable=True)
+    extracted_data = Column(JsonEncodedDict, nullable=True)
+    schema_inference = Column(JsonEncodedDict, nullable=True)
     
     # Storage paths
     html_file_path = Column(String, nullable=True)
