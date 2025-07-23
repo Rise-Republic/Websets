@@ -1,8 +1,9 @@
 import pytest
-import schemathesis
+from schemathesis import openapi
 from app.main import app
 
-schema = schemathesis.from_asgi('/openapi.json', app)
+# Schemathesis 4.x exposes helpers under the ``openapi`` module
+schema = openapi.from_asgi('/openapi.json', app)
 
 @pytest.mark.contract
 @schema.parametrize()
