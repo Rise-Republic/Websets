@@ -69,7 +69,7 @@ This roadmap is broken down into Sprints, Epics, and Tasks. Each task is mapped 
 ### Epic: Compliance & Production Hardening
 
 - **[P3][M][Security]** Review and update all compliance docs (SOC2/OWASP mapping)
-- **[P3][M][Backend]** Harden Docker/infra for production (docker-compose, resource limits)
+- **[P3][M][Backend]** Harden Docker/infra for production (docker compose, resource limits)
 - **[P3][S][Backend]** Review and document all APIs (OpenAPI, docstrings)
 
 
@@ -92,7 +92,7 @@ This roadmap is broken down into Sprints, Epics, and Tasks. Each task is mapped 
 | P2       | Improve onboarding docs/scripts     | README.md, scripts/, devcontainer| S      | DevRel   |
 | P2       | Refactor large modules              | app/agents/, app/tasks/          | M      | Backend  |
 | P3       | Expand metrics/tracing/SLO docs     | observability/, app/monitoring/  | M      | SRE      |
-| P3       | Harden Docker/infra for prod        | docker-compose*, Dockerfile      | M      | Backend  |
+| P3       | Harden Docker/infra for prod        | docker compose*, Dockerfile      | M      | Backend  |
 | P3       | Review/update compliance docs       | observability/, SECURITY_GAP*    | M      | Security |
 
 ---

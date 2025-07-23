@@ -57,10 +57,10 @@ docker logs websets-app-1 --tail 50
 #### Monitor All Services
 ```bash
 # All containers simultaneously
-docker-compose logs -f
+docker compose logs -f
 
 # Specific services only
-docker-compose logs -f app worker beat
+docker compose logs -f app worker beat
 ```
 
 #### Monitor Beat Scheduler
@@ -387,7 +387,7 @@ docker exec -it websets-app-1 env | grep -E "(OPENAI|ANTHROPIC)"
 
 # Update .env file with valid API keys
 # Restart containers after updating .env
-docker-compose restart
+docker compose restart
 ```
 
 ### Crawling Failures
@@ -579,7 +579,7 @@ docker ps --filter "name=websets"
 ### Emergency Commands
 ```bash
 # Restart all services
-docker-compose restart
+docker compose restart
 
 # Stop stuck job (find PID first)
 docker exec -it websets-worker-1 pkill -f "celery worker"
