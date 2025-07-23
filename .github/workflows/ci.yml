@@ -38,6 +38,18 @@ jobs:
           pip install -r requirements.txt -r requirements-dev.txt
       - name: Install Node dependencies
         run: npm ci
+      - name: Start Vault and seed secrets
+        run: bash scripts/start_dev_vault.sh
+        env:
+          VAULT_ADDR: http://127.0.0.1:8200
+          VAULT_TOKEN: root
+          VAULT_SECRET_PATH: secret/websets
+      - name: Verify Vault connectivity
+        run: python scripts/test_vault.py
+        env:
+          VAULT_ADDR: http://127.0.0.1:8200
+          VAULT_TOKEN: root
+          VAULT_SECRET_PATH: secret/websets
       - name: Run backend tests
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
@@ -47,6 +59,9 @@ jobs:
           JWT_SECRET_KEY: test-secret-key-for-ci-that-is-long-enough
           OPENAI_API_KEY: test-openai-key
           ENVIRONMENT: testing
+          VAULT_ADDR: http://127.0.0.1:8200
+          VAULT_TOKEN: root
+          VAULT_SECRET_PATH: secret/websets
         run: pytest -v
       - name: Run frontend tests
         run: npm test
