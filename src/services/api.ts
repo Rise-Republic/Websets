@@ -1,5 +1,8 @@
 // API Service for Websets Backend
-const API_BASE = 'http://localhost:8000';
+// Allow overriding the backend URL via Vite environment variables
+const API_BASE =
+  (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.VITE_API_BASE) ||
+  'http://localhost:8000';
 const API_VERSION = 'v1'; // Default to v1
 const VERSIONED_API_BASE = `${API_BASE}/${API_VERSION}`;
 
@@ -213,22 +216,32 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async login(email: string, password: string): Promise<{ access_token: string; token_type: string }> {
+  async login(
+    email: string,
+    password: string
+  ): Promise<{ access_token: string; token_type: string }> {
     const formData = new URLSearchParams();
     formData.append('username', email);
     formData.append('password', password);
 
-    const response = await fetch(this.getBaseUrl('/auth/login'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formData,
-    });
-    
-    const data = await this.handleResponse(response);
-    this.token = data.access_token;
-    localStorage.setItem('websets_token', this.token!);
-    
-    return data;
+    try {
+      const response = await this.fetchWithRetry(this.getBaseUrl('/auth/login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData,
+      });
+
+      const data = await this.handleResponse(response);
+      this.token = data.access_token;
+      localStorage.setItem('websets_token', this.token!);
+      return data;
+    } catch (error: any) {
+      // Provide clearer message for network failures
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        error.message = 'Unable to reach the server. Is the backend running?';
+      }
+      throw error;
+    }
   }
 
   async getCurrentUser(): Promise<User> {
