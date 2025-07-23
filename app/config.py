@@ -94,16 +94,22 @@ def get_secret_from_vault_or_env(key, default=None):
 def validate_settings():
     """Validate critical settings at startup, using Vault if available."""
     try:
-        # Try to load from Vault first, fallback to env
-        settings = Settings(
-            openai_api_key=get_secret_from_vault_or_env('OPENAI_API_KEY'),
-            anthropic_api_key=get_secret_from_vault_or_env('ANTHROPIC_API_KEY'),
-            database_url=get_secret_from_vault_or_env('DATABASE_URL'),
-            redis_url=get_secret_from_vault_or_env('REDIS_URL'),
-            celery_broker_url=get_secret_from_vault_or_env('CELERY_BROKER_URL'),
-            celery_result_backend=get_secret_from_vault_or_env('CELERY_RESULT_BACKEND'),
-            jwt_secret_key=get_secret_from_vault_or_env('JWT_SECRET_KEY'),
-        )
+        # Gather all required secrets
+        secret_values = {
+            'openai_api_key': get_secret_from_vault_or_env('OPENAI_API_KEY'),
+            'anthropic_api_key': get_secret_from_vault_or_env('ANTHROPIC_API_KEY'),
+            'database_url': get_secret_from_vault_or_env('DATABASE_URL'),
+            'redis_url': get_secret_from_vault_or_env('REDIS_URL'),
+            'celery_broker_url': get_secret_from_vault_or_env('CELERY_BROKER_URL'),
+            'celery_result_backend': get_secret_from_vault_or_env('CELERY_RESULT_BACKEND'),
+            'jwt_secret_key': get_secret_from_vault_or_env('JWT_SECRET_KEY'),
+        }
+        # Debug print for missing secrets
+        for k, v in secret_values.items():
+            if v is None:
+                print(f"[config.py] WARNING: Secret '{k}' is missing (None)")
+        # Only pass expected fields to Settings
+        settings = Settings(**secret_values)
         # Check for required variables
         required_vars = ['jwt_secret_key', 'database_url', 'openai_api_key']
         missing_vars = [var for var in required_vars if not getattr(settings, var)]
