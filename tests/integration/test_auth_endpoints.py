@@ -3,6 +3,7 @@ from fastapi import status
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("mock_redis")
 class TestAuthEndpoints:
     def test_register_user_success(self, client, sample_user_data):
         """Test successful user registration."""
