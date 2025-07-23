@@ -32,7 +32,7 @@ class TestExternalServiceMocking:
         assert result == "Mocked OpenAI response"
         mock_client.chat.completions.create.assert_called_once()
 
-    @patch('anthropic.Anthropic')
+    @patch('app.agents.base.Anthropic')
     def test_anthropic_api_mock(self, mock_anthropic_class, mock_settings):
         """Test Anthropic API mocking."""
         # Setup mock response
