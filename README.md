@@ -210,6 +210,7 @@ pytest tests/
 ```
 
 ### Running Security Scans
+Security scans run automatically in CI using **Bandit**, **Safety**, and **Trivy**.
 Install security tooling and run the scans locally before pushing changes:
 
 ```bash
@@ -244,6 +245,9 @@ alembic upgrade head
 ```
 
 ## Production Deployment
+
+For HTTPS configuration and container hardening guidance see
+[PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md).
 
 ### Docker Production Build
 ```bash
