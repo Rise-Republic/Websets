@@ -20,7 +20,7 @@
 ## Phase 3: Advanced Security (Week 5-6)
 - [ ] Implement mTLS for all internal service calls
 - [ ] Integrate Vault for secrets management
-- [ ] Add security scanning to CI/CD (SAST/DAST)
+- [x] Add security scanning to CI/CD (SAST/DAST)
 - [ ] Add incident response procedures
 
 ## Observability & Reliability
@@ -30,9 +30,8 @@
 - [ ] Define and implement alert rules for failures, latency, and resource exhaustion
 - [ ] Document SLOs/SLIs for core APIs
 
-## CI/CD & Deployment
-- [ ] Add GitHub Actions or GitLab CI for build, test, deploy
-- [ ] Integrate SAST/DAST tools (Bandit, Trivy, Snyk)
+- [x] Add GitHub Actions or GitLab CI for build, test, deploy
+- [x] Integrate SAST/DAST tools (Bandit, Trivy, Snyk)
 - [ ] Add rollback and blue-green deployment scripts
 - [ ] Use Terraform or similar for all infra
 
