@@ -10,6 +10,15 @@ MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
 MINIO_BUCKET = os.getenv("MINIO_BUCKET", "websets-data")
+MINIO_CA_CERT = os.getenv("MINIO_CA_CERT")
+MINIO_CLIENT_CERT = os.getenv("MINIO_CLIENT_CERT")
+MINIO_CLIENT_KEY = os.getenv("MINIO_CLIENT_KEY")
+
+extra_args = {}
+if MINIO_CA_CERT:
+    extra_args["verify"] = MINIO_CA_CERT
+if MINIO_CLIENT_CERT and MINIO_CLIENT_KEY:
+    extra_args["cert"] = (MINIO_CLIENT_CERT, MINIO_CLIENT_KEY)
 
 s3 = boto3.client(
     "s3",
@@ -17,7 +26,8 @@ s3 = boto3.client(
     aws_access_key_id=MINIO_ACCESS_KEY,
     aws_secret_access_key=MINIO_SECRET_KEY,
     config=Config(signature_version="s3v4"),
-    region_name="us-east-1"
+    region_name="us-east-1",
+    **extra_args
 )
 
 def upload_file_encrypted(file_path, object_name=None):

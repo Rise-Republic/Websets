@@ -2,6 +2,7 @@
 
 ## TLS Configuration
 - Generate TLS certificates (use Let’s Encrypt, cert-manager, or your CA).
+- For local development run `scripts/generate_mtls_certs.sh` to create a self-signed CA and client certificates.
 - Mount certs in MinIO container:
   - `/certs/private.key`
   - `/certs/public.crt`
@@ -19,6 +20,7 @@
 ## Cert Rotation
 - Automate renewal with cron or cert-manager.
 - Restart MinIO after cert update.
+- The Celery beat task `rotate_minio_credentials` updates MinIO credentials in Vault daily.
 
 ## Access Logging
 - Enable server access logs in MinIO config.

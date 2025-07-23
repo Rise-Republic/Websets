@@ -9,6 +9,12 @@ This guide covers best practices for deploying WebSet Miner securely in a produc
 - **Enforce HTTPS.** Redirect all HTTP traffic to HTTPS and use HSTS headers to prevent downgrade attacks.
 - **Expose the FastAPI app on an internal network only.** The container should listen on a private interface while the proxy handles public TLS.
 
+## mTLS Between Services
+
+- Generate a shared certificate authority and client certificates using `scripts/generate_mtls_certs.sh`.
+- Mount the certificates into each service container and configure `MINIO_CA_CERT`, `MINIO_CLIENT_CERT`, and `MINIO_CLIENT_KEY` for the app.
+- The provided Celery task `rotate_minio_credentials` keeps object storage credentials fresh in Vault.
+
 Example Nginx snippet:
 ```nginx
 server {
