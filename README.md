@@ -204,6 +204,15 @@ pip install -r requirements-dev.txt
 pytest tests/
 ```
 
+### Linting
+This project uses **pre-commit** with Ruff for formatting and linting.
+Install the hooks and run them on all files before committing:
+
+```bash
+pip install pre-commit
+pre-commit run --all-files
+```
+
 ### Running Security Scans
 Security scans run automatically in CI using **Bandit**, **Safety**, and **Trivy**.
 Install security tooling and run the scans locally before pushing changes:
