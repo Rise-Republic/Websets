@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webset-miner-blue
+  labels:
+    app: webset-miner-blue
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: webset-miner-blue
+  template:
+    metadata:
+      labels:
+        app: webset-miner-blue
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: webset-miner
+        image: webset-miner:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        readinessProbe:
+          httpGet:
+            path: /health/readiness
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 20
+        livenessProbe:
+          httpGet:
+            path: /health/liveness
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 30

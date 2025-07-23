@@ -32,7 +32,7 @@
 
 - [x] Add GitHub Actions or GitLab CI for build, test, deploy
 - [x] Integrate SAST/DAST tools (Bandit, Trivy, Snyk)
-- [ ] Add rollback and blue-green deployment scripts
+- [x] Add rollback and blue-green deployment scripts
 - [ ] Use Terraform or similar for all infra
 
 ## Multi-tenancy & Data Isolation
