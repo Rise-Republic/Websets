@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -20,13 +21,28 @@ logger.add(
     format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
 )
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application startup and shutdown events."""
+    logger.info("Starting WebSet Miner application")
+    
+    # Create database tables
+    create_tables()
+    logger.info("Database tables created/verified")
+    
+    logger.info("WebSet Miner startup completed")
+    yield
+    logger.info("Shutting down WebSet Miner application")
+
+
 # Create FastAPI app
 app = FastAPI(
     title="WebSet Miner",
     description="Autonomous LLM-powered system for discovering, extracting, and structuring public web data at scale",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # Add rate limiting
@@ -67,23 +83,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Application startup event."""
-    logger.info("Starting WebSet Miner application")
-    
-    # Create database tables
-    create_tables()
-    logger.info("Database tables created/verified")
-    
-    # Additional startup tasks can be added here
-    logger.info("WebSet Miner startup completed")
 
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Application shutdown event."""
-    logger.info("Shutting down WebSet Miner application")
 
 
 @app.get("/")
