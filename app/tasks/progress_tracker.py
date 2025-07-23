@@ -18,11 +18,17 @@ class JobProgressTracker:
         self.job_id = job_id
         self.websocket_manager = WebSocketManager()
         self.db = SessionLocal()
+        self._job: Optional[Job] = None
+
+    def _get_job(self) -> Job | None:
+        if self._job is None:
+            self._job = self.db.query(Job).filter(Job.id == self.job_id).first()
+        return self._job
     
     async def update_status(self, status: JobStatus, message: str = None):
         """Update job status and notify via WebSocket."""
         try:
-            job = self.db.query(Job).filter(Job.id == self.job_id).first()
+            job = self._get_job()
             if job:
                 old_status = job.status
                 job.status = status
@@ -49,7 +55,7 @@ class JobProgressTracker:
     async def update_progress(self, phase: str, progress: int, details: Dict[str, Any] = None):
         """Update job progress and notify via WebSocket."""
         try:
-            job = self.db.query(Job).filter(Job.id == self.job_id).first()
+            job = self._get_job()
             if job:
                 # Update progress fields based on phase
                 if phase == "crawling":
@@ -77,7 +83,7 @@ class JobProgressTracker:
     async def add_log(self, level: str, message: str, details: Dict[str, Any] = None):
         """Add log entry and notify via WebSocket."""
         try:
-            job = self.db.query(Job).filter(Job.id == self.job_id).first()
+            job = self._get_job()
             if job:
                 log_entry = f"\n{datetime.utcnow().isoformat()} [{level.upper()}] {message}"
                 job.logs = (job.logs or "") + log_entry
@@ -105,7 +111,7 @@ class JobProgressTracker:
     async def complete_job(self, summary: Dict[str, Any] = None):
         """Mark job as completed."""
         try:
-            job = self.db.query(Job).filter(Job.id == self.job_id).first()
+            job = self._get_job()
             if job:
                 job.status = JobStatus.COMPLETED
                 job.completed_at = datetime.utcnow()
@@ -144,7 +150,7 @@ class JobProgressTracker:
             )
             
             # Also send to user's jobs channel
-            job = self.db.query(Job).filter(Job.id == self.job_id).first()
+            job = self._get_job()
             if job and job.user_id:
                 await self.websocket_manager.broadcast_to_channel(
                     f"user_{job.user_id}_jobs",
