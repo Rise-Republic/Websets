@@ -6,19 +6,15 @@ import sys
 from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
+from app.logging_utils import configure_logging
 from app.database import create_tables
 from app.api import auth_router, jobs_router, datasets_router, health_router
 from app.api.v1 import v1_router
 from app.api.versioning import versioning_router
 from app.middleware import limiter, rate_limit_handler
 
-# Configure logging
-logger.remove()
-logger.add(
-    sys.stdout,
-    level=settings.log_level,
-    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
-)
+# Configure logging with redaction
+configure_logging(settings.log_level)
 
 # Create FastAPI app
 app = FastAPI(
