@@ -210,6 +210,7 @@ pytest tests/
 ```
 
 ### Running Security Scans
+Security scans run automatically in CI using **Bandit**, **Safety**, and **Trivy**.
 Install security tooling and run the scans locally before pushing changes:
 
 ```bash
