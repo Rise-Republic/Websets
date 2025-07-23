@@ -2,7 +2,6 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
-import sys
 from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
@@ -11,7 +10,12 @@ from app.database import create_tables
 from app.api import auth_router, jobs_router, datasets_router, health_router
 from app.api.v1 import v1_router
 from app.api.versioning import versioning_router
-from app.middleware import limiter, rate_limit_handler
+from app.middleware import (
+    limiter,
+    rate_limit_handler,
+    AuditMiddleware,
+    RBACMiddleware,
+)
 
 # Configure logging with redaction
 configure_logging(settings.log_level)
@@ -22,7 +26,7 @@ app = FastAPI(
     description="Autonomous LLM-powered system for discovering, extracting, and structuring public web data at scale",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # Add rate limiting
@@ -38,6 +42,10 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],  # Include OPTIONS for preflight
     allow_headers=["Authorization", "Content-Type"],  # Only needed headers
 )
+
+# Security middleware
+app.add_middleware(RBACMiddleware)
+app.add_middleware(AuditMiddleware)
 
 # Include routers
 # Legacy routes (backward compatibility)
@@ -57,21 +65,18 @@ app.include_router(versioning_router)
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler for unhandled errors."""
     logger.error(f"Unhandled exception: {exc}")
-    return JSONResponse(
-        status_code=500,
-        content={"detail": str(exc)}
-    )
+    return JSONResponse(status_code=500, content={"detail": str(exc)})
 
 
 @app.on_event("startup")
 async def startup_event():
     """Application startup event."""
     logger.info("Starting WebSet Miner application")
-    
+
     # Create database tables
     create_tables()
     logger.info("Database tables created/verified")
-    
+
     # Additional startup tasks can be added here
     logger.info("WebSet Miner startup completed")
 
@@ -89,15 +94,16 @@ async def root():
         "message": "WebSet Miner API",
         "version": "1.0.0",
         "docs": "/docs",
-        "health": "/health"
+        "health": "/health",
     }
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
         port=8000,
-        reload=settings.environment == "development"
+        reload=settings.environment == "development",
     )
