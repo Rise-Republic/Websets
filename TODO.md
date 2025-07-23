@@ -1,8 +1,8 @@
 # 🚨 Websets Security & Compliance TODO
 
 ## Phase 1: Critical Security (Week 1-2)
-- [ ] Implement RBAC system (roles, permissions, enforcement)
-- [ ] Add comprehensive audit logging (user actions, data access, failed auth)
+- [x] Implement RBAC system (roles, permissions, enforcement)
+- [x] Add comprehensive audit logging (user actions, data access, failed auth)
 - [ ] Encrypt sensitive data at rest (Postgres, S3, etc)
 - [ ] Enforce HTTPS everywhere; add mTLS for internal APIs
 - [ ] Remove all plaintext secrets from code/configs

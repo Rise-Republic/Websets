@@ -8,6 +8,7 @@ from app.database import get_db
 from app.models import Dataset, DataRecord, Job, User
 from app.auth.dependencies import get_current_active_user
 from app.storage import VectorStore, EmbeddingGenerator
+from app.middleware import rbac_required
 
 router = APIRouter(prefix="/datasets", tags=["v1-datasets"])
 
@@ -65,6 +66,7 @@ class SearchResponse(BaseModel):
 
 
 @router.get("/", response_model=DatasetListResponse)
+@rbac_required(permissions=["datasets:read"])
 async def list_datasets(
     page: int = 1,
     size: int = 20,
@@ -107,6 +109,7 @@ async def list_datasets(
 
 
 @router.get("/{dataset_id}", response_model=DatasetResponse)
+@rbac_required(permissions=["datasets:read"])
 async def get_dataset(
     dataset_id: str,
     current_user: User = Depends(get_current_active_user),
@@ -139,6 +142,7 @@ async def get_dataset(
 
 
 @router.get("/{dataset_id}/records")
+@rbac_required(permissions=["datasets:read"])
 async def get_dataset_records(
     dataset_id: str,
     page: int = 1,
@@ -190,6 +194,7 @@ async def get_dataset_records(
 
 
 @router.post("/{dataset_id}/search", response_model=SearchResponse)
+@rbac_required(permissions=["datasets:read"])
 async def search_dataset(
     dataset_id: str,
     search_request: SearchRequest,
@@ -269,6 +274,7 @@ async def search_dataset(
 
 
 @router.get("/{dataset_id}/export")
+@rbac_required(permissions=["datasets:export"])
 async def export_dataset(
     dataset_id: str,
     format: str = Query("json", regex="^(json|csv)$"),
@@ -367,6 +373,7 @@ async def export_dataset(
 
 
 @router.delete("/{dataset_id}")
+@rbac_required(permissions=["datasets:delete"])
 async def delete_dataset(
     dataset_id: str,
     current_user: User = Depends(get_current_active_user),
