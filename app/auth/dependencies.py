@@ -12,7 +12,7 @@ security = HTTPBearer()
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security, use_cache=False),
     db: Session = Depends(get_db)
 ) -> User:
     credentials_exception = HTTPException(
@@ -21,7 +21,11 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
-    email = verify_token(credentials.credentials)
+    if credentials is None:
+        raise credentials_exception
+
+    token = credentials.credentials
+    email = verify_token(token)
     if email is None:
         raise credentials_exception
     
