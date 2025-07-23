@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+    auth0_domain: Optional[str] = None
+    auth0_client_id: Optional[str] = None
+    auth0_client_secret: Optional[str] = None
+    auth0_audience: Optional[str] = None
+    auth0_issuer: Optional[str] = None
     
     @field_validator('jwt_secret_key')
     @classmethod
@@ -124,6 +129,11 @@ def validate_settings():
             'celery_broker_url': get_secret_from_vault_or_env('CELERY_BROKER_URL'),
             'celery_result_backend': get_secret_from_vault_or_env('CELERY_RESULT_BACKEND'),
             'jwt_secret_key': get_secret_from_vault_or_env('JWT_SECRET_KEY'),
+            'auth0_domain': get_secret_from_vault_or_env('AUTH0_DOMAIN'),
+            'auth0_client_id': get_secret_from_vault_or_env('AUTH0_CLIENT_ID'),
+            'auth0_client_secret': get_secret_from_vault_or_env('AUTH0_CLIENT_SECRET'),
+            'auth0_audience': get_secret_from_vault_or_env('AUTH0_AUDIENCE'),
+            'auth0_issuer': get_secret_from_vault_or_env('AUTH0_ISSUER'),
         }
         print("[config.py] Required secrets loaded:")
         for k, v in secret_values.items():

@@ -1,98 +1,46 @@
-import { useState, useEffect, createContext, useContext } from 'react';
-import apiService, { User } from '../services/api';
+import { createContext, useContext, ReactNode } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
+import apiService from '../services/api';
 
 interface AuthContextType {
-  user: User | null;
+  user: any;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, fullName: string) => Promise<void>;
+  login: () => void;
   logout: () => void;
-  error: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error('useAuth must be used within AuthProvider');
   }
-  return context;
+  return ctx;
 };
 
-export const useAuthProvider = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const { isAuthenticated, isLoading, user, loginWithRedirect, logout, getAccessTokenSilently } = useAuth0();
 
-  const isAuthenticated = !!user && apiService.isAuthenticated();
-
-  // Check if user is already logged in on mount
-  useEffect(() => {
-    const checkAuth = async () => {
-      if (apiService.isAuthenticated()) {
-        try {
-          const currentUser = await apiService.getCurrentUser();
-          setUser(currentUser);
-        } catch (err) {
-          // Token might be expired, clear it
-          apiService.logout();
-        }
-      }
-      setIsLoading(false);
-    };
-
-    checkAuth();
-  }, []);
-
-  const login = async (email: string, password: string) => {
-    setIsLoading(true);
-    setError(null);
-    
+  apiService.setTokenProvider(async () => {
     try {
-      await apiService.login(email, password);
-      const currentUser = await apiService.getCurrentUser();
-      setUser(currentUser);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
-      throw err;
-    } finally {
-      setIsLoading(false);
+      return await getAccessTokenSilently();
+    } catch {
+      return null;
     }
-  };
+  });
 
-  const register = async (email: string, password: string, fullName: string) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      await apiService.register(email, password, fullName);
-      // Auto-login after registration
-      await login(email, password);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const logout = () => {
-    apiService.logout();
-    setUser(null);
-    setError(null);
-  };
-
-  return {
+  const value: AuthContextType = {
     user,
     isLoading,
     isAuthenticated,
-    login,
-    register,
-    logout,
-    error,
+    login: () => loginWithRedirect(),
+    logout: () => logout({ logoutParams: { returnTo: window.location.origin } }),
   };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export { AuthContext };
+export { AuthProvider };
+export default AuthProvider;

@@ -35,7 +35,7 @@ class RBACMiddleware(BaseHTTPMiddleware):
                         )
 
                 if required_perms:
-                    user_perms = set()
+                    user_perms = set(request.state.token_permissions or [])
                     for role in getattr(user, "roles", []):
                         user_perms.update(
                             {p.name for p in getattr(role, "permissions", [])}
