@@ -41,6 +41,9 @@ class Job(Base):
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
+
+    # Retention
+    data_retention_days = Column(Integer, default=365)
     
     # Error handling
     error_message = Column(Text, nullable=True)

@@ -21,6 +21,9 @@ class Dataset(Base):
     # Statistics
     total_records = Column(Integer, default=0)
     total_sources = Column(Integer, default=0)
+
+    # Retention
+    data_retention_days = Column(Integer, default=365)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -57,6 +60,9 @@ class DataRecord(Base):
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Retention
+    data_retention_days = Column(Integer, default=365)
     
     # Relationships
     dataset = relationship("Dataset", back_populates="records")
