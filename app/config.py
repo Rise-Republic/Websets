@@ -108,12 +108,11 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174", "https://yourdomain.com"]
     
-    class Config:
-        # Conditionally load .env file only if Vault is not configured.
-        # This allows local development without requiring a running Vault instance.
-        if not os.getenv("VAULT_ADDR"):
-            env_file = ".env"
-        env_file_encoding = 'utf-8'
+    model_config = {
+        "env_file": ".env" if not os.getenv("VAULT_ADDR") else None,
+        "env_file_encoding": "utf-8",
+        "extra": "ignore"
+    }
 
 
 def validate_settings():
