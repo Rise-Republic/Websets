@@ -27,6 +27,12 @@
 ## Firewall/IP Allowlist
 - Restrict MinIO access to trusted IPs/networks via firewall/security group.
 
+## Other Object Storage Providers
+
+- **AWS S3 / GCS**: Use HTTPS endpoints and enable server access logging.
+- **IAM/Firewall**: Restrict buckets to trusted networks and roles.
+- **Encryption**: Enforce encryption at rest and in transit.
+
 ## Compliance Checklist
 - TLS enabled and auto-rotated
 - Access logs archived and reviewed

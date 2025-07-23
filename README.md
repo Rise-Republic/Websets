@@ -15,6 +15,8 @@ An autonomous LLM-powered system for discovering, extracting, and structuring pu
 
 ## Quick Start
 
+For detailed onboarding instructions see [ONBOARDING.md](ONBOARDING.md).
+
 ### Prerequisites
 
 - Docker and Docker Compose
@@ -28,21 +30,18 @@ An autonomous LLM-powered system for discovering, extracting, and structuring pu
 ```bash
 git clone <repository>
 cd webset-miner
-./scripts/setup.sh
+make setup
 ```
 
 2. **Configure environment:**
 ```bash
-# Edit .env file with your API keys
+# Copy the sample env file and add your API keys
 cp .env.example .env
-# Add your OPENAI_API_KEY and other settings
 ```
+If using Vault, seed your secrets using `vault_secrets_template.json`.
 
-```bash
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
+You can also open the repository in a [Dev Container](.devcontainer/devcontainer.json) which will
+run `make setup` automatically after creation.
 
 3. **Start services:**
 ```bash
@@ -104,6 +103,17 @@ User Prompt → Planning → URL Discovery → Crawling → Schema Inference →
 - `GET /health/` - Basic health check
 - `GET /health/detailed` - Detailed health check
 
+### OpenAPI Documentation
+
+Generate a full OpenAPI specification by running:
+
+```bash
+python scripts/generate_openapi_spec.py
+```
+
+The spec is written to `openapi.json` and can be used with tooling such as
+Swagger UI for interactive docs.
+
 ## Usage Examples
 
 ### 1. Register and Login
@@ -160,7 +170,7 @@ curl -X POST "http://localhost:8000/datasets/DATASET_ID/search" \
 
 ### Environment Variables
 
-Key configuration options in `.env`:
+Key configuration options in `.env` (or Vault):
 
 ```env
 # API Keys
@@ -385,6 +395,10 @@ For support and questions:
 - All sensitive secrets (API keys, DB passwords) should be loaded from Vault, not .env or plaintext files.
 - Set `VAULT_ADDR` and `VAULT_TOKEN` environment variables for the app.
 - Use `app/secrets/vault.py` to fetch secrets at runtime.
+
+Docker deployments can use [Docker secrets](secrets/README.md) to inject
+credentials without storing them in the compose file. Place secret files in
+`./secrets` and reference them in `docker-compose.yml`.
 
 Example:
 ```python
