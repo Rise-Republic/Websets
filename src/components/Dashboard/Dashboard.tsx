@@ -1,15 +1,42 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import JobList from '../Jobs/JobList';
-import { Job } from '../../services/api';
+import DatasetList from '../Datasets/DatasetList';
+import DatasetViewer from '../Datasets/DatasetViewer';
+import apiService, { Job, Dataset } from '../../services/api';
 
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null);
   const [showCreateJob, setShowCreateJob] = useState(false);
+  const [activeTab, setActiveTab] = useState<'jobs' | 'datasets'>('jobs');
+  const [jobRefresh, setJobRefresh] = useState(0);
+  const [prompt, setPrompt] = useState('');
+  const [creatingJob, setCreatingJob] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const handleJobSelect = (job: Job) => {
     setSelectedJob(job);
+  };
+
+  const handleDatasetSelect = (dataset: Dataset) => {
+    setSelectedDataset(dataset);
+  };
+
+  const handleCreateJob = async () => {
+    try {
+      setCreatingJob(true);
+      setFormError(null);
+      await apiService.createJob(prompt);
+      setPrompt('');
+      setShowCreateJob(false);
+      setJobRefresh((v) => v + 1);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to create job');
+    } finally {
+      setCreatingJob(false);
+    }
   };
 
   return (
@@ -46,8 +73,22 @@ const Dashboard: React.FC = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="mb-4 flex space-x-4">
+          <button
+            onClick={() => setActiveTab('jobs')}
+            className={`px-3 py-2 text-sm font-medium rounded-md ${activeTab === 'jobs' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+          >
+            Jobs
+          </button>
+          <button
+            onClick={() => setActiveTab('datasets')}
+            className={`px-3 py-2 text-sm font-medium rounded-md ${activeTab === 'datasets' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+          >
+            Datasets
+          </button>
+        </div>
         <div className="px-4 py-6 sm:px-0">
-          {showCreateJob ? (
+          {activeTab === 'jobs' && showCreateJob ? (
             <div className="mb-6">
               <div className="bg-white shadow rounded-lg">
                 <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
@@ -70,10 +111,15 @@ const Dashboard: React.FC = () => {
                       <textarea
                         id="prompt"
                         rows={4}
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
                         className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                         placeholder="Describe what you're looking for... e.g., 'AI startups in Europe hiring ML engineers'"
                       />
                     </div>
+                    {formError && (
+                      <p className="text-sm text-red-600">{formError}</p>
+                    )}
                     <div className="flex justify-end space-x-3">
                       <button
                         onClick={() => setShowCreateJob(false)}
@@ -82,9 +128,11 @@ const Dashboard: React.FC = () => {
                         Cancel
                       </button>
                       <button
-                        className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                        onClick={handleCreateJob}
+                        disabled={creatingJob || !prompt.trim()}
+                        className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
                       >
-                        Start Mining
+                        {creatingJob ? 'Starting...' : 'Start Mining'}
                       </button>
                     </div>
                   </div>
@@ -93,7 +141,7 @@ const Dashboard: React.FC = () => {
             </div>
           ) : null}
 
-          {selectedJob ? (
+          {activeTab === 'jobs' && selectedJob ? (
             <div className="mb-6">
               <div className="bg-white shadow rounded-lg">
                 <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
@@ -135,10 +183,21 @@ const Dashboard: React.FC = () => {
             </div>
           ) : null}
 
-          {/* Jobs List */}
-          <div className="bg-white shadow rounded-lg">
-            <JobList onJobSelect={handleJobSelect} />
-          </div>
+          {activeTab === 'jobs' && (
+            <div className="bg-white shadow rounded-lg">
+              <JobList onJobSelect={handleJobSelect} refreshTrigger={jobRefresh} />
+            </div>
+          )}
+
+          {activeTab === 'datasets' && selectedDataset && (
+            <div className="mb-6">
+              <DatasetViewer dataset={selectedDataset} onClose={() => setSelectedDataset(null)} />
+            </div>
+          )}
+
+          {activeTab === 'datasets' && (
+            <DatasetList onDatasetSelect={handleDatasetSelect} />
+          )}
         </div>
       </div>
     </div>
