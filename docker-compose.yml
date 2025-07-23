@@ -34,7 +34,7 @@ services:
 
   worker:
     build: .
-    command: celery -A app.tasks.celery_app worker --loglevel=info
+    command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/webset_miner
       - REDIS_URL=redis://redis:6379
