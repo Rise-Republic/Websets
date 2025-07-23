@@ -26,6 +26,9 @@ class DiscoveredURL(Base):
     is_crawled = Column(Boolean, default=False)
     crawl_attempts = Column(Integer, default=0)
     last_crawl_attempt = Column(DateTime, nullable=True)
+
+    # Retention
+    data_retention_days = Column(Integer, default=365)
     
     # Timestamps
     discovered_at = Column(DateTime, default=datetime.utcnow)
@@ -64,6 +67,9 @@ class CrawlResult(Base):
     
     # Timestamps
     crawled_at = Column(DateTime, default=datetime.utcnow)
+
+    # Retention
+    data_retention_days = Column(Integer, default=365)
     
     # Relationships
     discovered_url = relationship("DiscoveredURL", back_populates="crawl_results")

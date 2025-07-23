@@ -119,6 +119,9 @@ class AuditLog(Base):
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # Retention
+    data_retention_days = Column(Integer, default=730)
     
     # Relationships
     user = relationship("User", back_populates="audit_logs")
@@ -147,6 +150,9 @@ class DataAccessLog(Base):
     
     # Timestamps
     accessed_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # Retention
+    data_retention_days = Column(Integer, default=730)
     
     # Relationships
     user = relationship("User", back_populates="data_access_logs")
