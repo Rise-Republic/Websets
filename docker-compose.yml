@@ -172,7 +172,7 @@ services:
           memory: 256m
 
   qdrant:
-    image: qdrant/qdrant:1.7.3
+    image: qdrant/qdrant:latest
     ports:
       - "6333:6333"
     volumes:
