@@ -1,16 +1,17 @@
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
-from app.agents.base import BaseAgent
-
-
-class MockAgent(BaseAgent):
-    """Mock agent for testing external service integration."""
-    async def execute(self):
-        return "mock execution"
-
-
 @pytest.mark.unit
 class TestExternalServiceMocking:
+    @pytest.fixture(autouse=True)
+    def agent_imports(self):
+        from app.agents.base import BaseAgent
+
+        class MockAgent(BaseAgent):
+            """Mock agent for testing external service integration."""
+            async def execute(self):
+                return "mock execution"
+        
+        self.MockAgent = MockAgent
     
     @patch('openai.ChatCompletion.create')
     def test_openai_api_mock(self, mock_openai_create, mock_settings):
@@ -22,7 +23,7 @@ class TestExternalServiceMocking:
         mock_openai_create.return_value = mock_response
         
         # Test the mock
-        agent = MockAgent(provider="openai")
+        agent = self.MockAgent(provider="openai")
         with patch.object(agent, 'client') as mock_client:
             mock_client.chat.completions.create.return_value = mock_response
             result = agent._call_llm("test prompt")
@@ -46,7 +47,7 @@ class TestExternalServiceMocking:
         mock_settings.anthropic_api_key = "test-anthropic-key"
         
         # Test the mock
-        agent = MockAgent(provider="anthropic")
+        agent = self.MockAgent(provider="anthropic")
         result = agent._call_llm("test prompt")
         
         assert result == "Mocked Anthropic response"

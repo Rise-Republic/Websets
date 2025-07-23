@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Float
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB
+from app.models.types import GUID as UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -10,8 +11,8 @@ from app.database import Base
 class Dataset(Base):
     __tablename__ = "datasets"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=False)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
+    job_id = Column(UUID, ForeignKey("jobs.id"), nullable=False)
     
     # Metadata
     name = Column(String, nullable=False)
@@ -38,8 +39,8 @@ class Dataset(Base):
 class DataRecord(Base):
     __tablename__ = "data_records"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    dataset_id = Column(UUID(as_uuid=True), ForeignKey("datasets.id"), nullable=False)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
+    dataset_id = Column(UUID, ForeignKey("datasets.id"), nullable=False)
     
     # Source information
     source_url = Column(String, nullable=False)

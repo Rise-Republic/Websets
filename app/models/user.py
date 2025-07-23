@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, DateTime, Boolean, Text, Integer
-from sqlalchemy.dialects.postgresql import UUID
+from app.models.types import GUID as UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -11,7 +11,7 @@ from app.models.role import user_roles
 class User(Base):
     __tablename__ = "users"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     
@@ -42,7 +42,7 @@ class User(Base):
     refresh_token_expiry = Column(DateTime, nullable=True)
     
     # Tenant information (for multi-tenancy)
-    tenant_id = Column(UUID(as_uuid=True), nullable=True)
+    tenant_id = Column(UUID, nullable=True)
     
     # GDPR compliance
     consent_given = Column(Boolean, default=False)

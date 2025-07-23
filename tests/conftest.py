@@ -10,10 +10,6 @@ import sys
 # Add the app directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from app.main import app
-from app.database import get_db, Base
-from app.config import Settings
-
 # Test database URL
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 
@@ -34,24 +30,21 @@ def event_loop():
 
 
 @pytest.fixture(autouse=True)
-def mock_settings(monkeypatch):
-    """Mock settings for tests."""
-    test_settings = Settings(
-        openai_api_key="test-openai-key",
-        database_url="sqlite:///./test.db",
-        redis_url="redis://localhost:6379",
-        celery_broker_url="redis://localhost:6379",
-        celery_result_backend="redis://localhost:6379",
-        jwt_secret_key="test-secret-key-that-is-long-enough-for-testing-purposes",
-        environment="testing"
-    )
-    monkeypatch.setattr("app.config.settings", test_settings)
-    return test_settings
+def mock_env_vars(monkeypatch):
+    """Set environment variables for tests."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///./test.db")
+    monkeypatch.setenv("REDIS_URL", "redis://localhost:6379")
+    monkeypatch.setenv("CELERY_BROKER_URL", "redis://localhost:6379")
+    monkeypatch.setenv("CELERY_RESULT_BACKEND", "redis://localhost:6379")
+    monkeypatch.setenv("JWT_SECRET_KEY", "test-secret-key-that-is-long-enough-for-testing-purposes")
+    monkeypatch.setenv("ENVIRONMENT", "testing")
 
 
 @pytest.fixture
 def db_session():
     """Create a fresh database session for each test."""
+    from app.database import Base
     Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
     try:
@@ -64,12 +57,15 @@ def db_session():
 @pytest.fixture
 def client(db_session):
     """Create a test client with database dependency override."""
+    from app.main import app
+    from app.database import get_db
+
     def override_get_db():
         try:
             yield db_session
         finally:
             db_session.close()
-    
+
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:
         yield test_client

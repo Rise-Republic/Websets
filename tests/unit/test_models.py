@@ -1,16 +1,20 @@
 import pytest
 from datetime import datetime
-from app.models.user import User
-from app.auth.jwt_handler import get_password_hash
-
 
 @pytest.mark.unit
 class TestUserModel:
+    @pytest.fixture(autouse=True)
+    def model_imports(self):
+        from app.models.user import User
+        from app.auth.jwt_handler import get_password_hash
+        self.User = User
+        self.get_password_hash = get_password_hash
+
     def test_user_creation(self, db_session):
         """Test creating a user."""
-        user = User(
+        user = self.User(
             email="test@example.com",
-            hashed_password=get_password_hash("password"),
+            hashed_password=self.get_password_hash("password"),
             full_name="Test User"
         )
         
@@ -26,9 +30,9 @@ class TestUserModel:
 
     def test_user_repr(self, db_session):
         """Test user string representation."""
-        user = User(
+        user = self.User(
             email="test@example.com",
-            hashed_password=get_password_hash("password")
+            hashed_password=self.get_password_hash("password")
         )
         
         db_session.add(user)
@@ -40,13 +44,13 @@ class TestUserModel:
 
     def test_user_unique_email_constraint(self, db_session):
         """Test that email must be unique."""
-        user1 = User(
+        user1 = self.User(
             email="test@example.com",
-            hashed_password=get_password_hash("password1")
+            hashed_password=self.get_password_hash("password1")
         )
-        user2 = User(
+        user2 = self.User(
             email="test@example.com",
-            hashed_password=get_password_hash("password2")
+            hashed_password=self.get_password_hash("password2")
         )
         
         db_session.add(user1)

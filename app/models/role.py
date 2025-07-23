@@ -4,7 +4,8 @@ Implements comprehensive role and permission system
 """
 
 from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Table, Text, Integer
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY
+from app.models.types import GUID as UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -15,34 +16,34 @@ from app.database import Base
 user_roles = Table(
     'user_roles',
     Base.metadata,
-    Column('user_id', UUID(as_uuid=True), ForeignKey('users.id'), primary_key=True),
-    Column('role_id', UUID(as_uuid=True), ForeignKey('roles.id'), primary_key=True),
+    Column('user_id', UUID, ForeignKey('users.id'), primary_key=True),
+    Column('role_id', UUID, ForeignKey('roles.id'), primary_key=True),
     Column('assigned_at', DateTime, default=datetime.utcnow),
-    Column('assigned_by', UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
+    Column('assigned_by', UUID, ForeignKey('users.id'), nullable=True)
 )
 
 # Association table for role permissions
 role_permissions = Table(
     'role_permissions',
     Base.metadata,
-    Column('role_id', UUID(as_uuid=True), ForeignKey('roles.id'), primary_key=True),
-    Column('permission_id', UUID(as_uuid=True), ForeignKey('permissions.id'), primary_key=True),
+    Column('role_id', UUID, ForeignKey('roles.id'), primary_key=True),
+    Column('permission_id', UUID, ForeignKey('permissions.id'), primary_key=True),
     Column('granted_at', DateTime, default=datetime.utcnow),
-    Column('granted_by', UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
+    Column('granted_by', UUID, ForeignKey('users.id'), nullable=True)
 )
 
 
 class Role(Base):
     __tablename__ = "roles"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
     name = Column(String(50), unique=True, nullable=False, index=True)
     description = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True)
     is_system = Column(Boolean, default=False)  # Cannot be deleted
     
     # Hierarchy support
-    parent_id = Column(UUID(as_uuid=True), ForeignKey('roles.id'), nullable=True)
+    parent_id = Column(UUID, ForeignKey('roles.id'), nullable=True)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -63,7 +64,7 @@ class Role(Base):
 class Permission(Base):
     __tablename__ = "permissions"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
     name = Column(String(100), unique=True, nullable=False, index=True)
     description = Column(Text, nullable=True)
     resource = Column(String(50), nullable=False, index=True)  # e.g., 'jobs', 'datasets', 'users'
@@ -84,10 +85,10 @@ class Permission(Base):
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
     
     # User information
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
+    user_id = Column(UUID, ForeignKey('users.id'), nullable=True)
     user_email = Column(String, nullable=True)  # For deleted users
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(Text, nullable=True)
@@ -110,7 +111,7 @@ class AuditLog(Base):
     error_message = Column(Text, nullable=True)
     
     # Additional context
-    tenant_id = Column(UUID(as_uuid=True), nullable=True)
+    tenant_id = Column(UUID, nullable=True)
     session_id = Column(String(255), nullable=True)
     trace_id = Column(String(255), nullable=True)  # For distributed tracing
     
@@ -127,14 +128,14 @@ class AuditLog(Base):
 class DataAccessLog(Base):
     __tablename__ = "data_access_logs"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
     
     # User information
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+    user_id = Column(UUID, ForeignKey('users.id'), nullable=False)
     
     # Data accessed
-    dataset_id = Column(UUID(as_uuid=True), ForeignKey('datasets.id'), nullable=True)
-    job_id = Column(UUID(as_uuid=True), ForeignKey('jobs.id'), nullable=True)
+    dataset_id = Column(UUID, ForeignKey('datasets.id'), nullable=True)
+    job_id = Column(UUID, ForeignKey('jobs.id'), nullable=True)
     
     # Access details
     access_type = Column(String(20), nullable=False)  # 'read', 'download', 'export', 'delete'
