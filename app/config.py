@@ -4,6 +4,7 @@ from typing import Optional
 from pydantic import field_validator
 import os
 import sys
+from dotenv import load_dotenv
 from app.secrets.vault import VaultClient
 
 
@@ -83,19 +84,25 @@ class Settings(BaseSettings):
 # --- Vault integration for secrets ---
 def get_secret_from_vault_or_env(key, default=None):
     vault_path = os.getenv("VAULT_SECRET_PATH", "secret/websets")
-    try:
-        vault = VaultClient()
-        value = vault.get_secret(vault_path, key)
-        if value:
-            return value
-    except Exception:
-        pass
+    if os.getenv("VAULT_ADDR") and os.getenv("VAULT_TOKEN"):
+        try:
+            vault = VaultClient()
+            value = vault.get_secret(vault_path, key)
+            if value is not None:
+                return value
+            print(f"[config.py] Secret '{key}' not found at {vault_path}")
+        except Exception as e:
+            print(f"[config.py] Vault error retrieving '{key}': {e}")
+            raise
+    else:
+        print("[config.py] Vault not configured, using env/.env for secrets")
     return os.getenv(key, default)
 
 
 def validate_settings():
     """Validate critical settings at startup, using Vault if available."""
     try:
+        load_dotenv(".env")
         # Print all VAULT_ env vars for debug
         print("[config.py] VAULT_ env vars:")
         for k, v in os.environ.items():
