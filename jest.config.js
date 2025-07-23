@@ -8,6 +8,7 @@ export default {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
       useESM: true,
+      tsconfig: 'tsconfig.app.json',
     }],
   },
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
