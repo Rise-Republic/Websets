@@ -74,8 +74,10 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174", "https://yourdomain.com"]
     
-    class Config:
-        env_file = ".env"
+    model_config = {
+        "env_file": ".env",
+        "extra": "ignore"
+    }
 
 
 # --- Vault integration for secrets ---
@@ -94,6 +96,11 @@ def get_secret_from_vault_or_env(key, default=None):
 def validate_settings():
     """Validate critical settings at startup, using Vault if available."""
     try:
+        # Print all VAULT_ env vars for debug
+        print("[config.py] VAULT_ env vars:")
+        for k, v in os.environ.items():
+            if k.startswith("VAULT_"):
+                print(f"  {k}={v}")
         # Gather all required secrets
         secret_values = {
             'openai_api_key': get_secret_from_vault_or_env('OPENAI_API_KEY'),
@@ -104,8 +111,9 @@ def validate_settings():
             'celery_result_backend': get_secret_from_vault_or_env('CELERY_RESULT_BACKEND'),
             'jwt_secret_key': get_secret_from_vault_or_env('JWT_SECRET_KEY'),
         }
-        # Debug print for missing secrets
+        print("[config.py] Required secrets loaded:")
         for k, v in secret_values.items():
+            print(f"  {k}={'***' if v else None}")
             if v is None:
                 print(f"[config.py] WARNING: Secret '{k}' is missing (None)")
         # Only pass expected fields to Settings
