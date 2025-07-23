@@ -4,7 +4,7 @@
 - [ ] Implement RBAC system (roles, permissions, enforcement)
 - [ ] Add comprehensive audit logging (user actions, data access, failed auth)
 - [ ] Encrypt sensitive data at rest (Postgres, S3, etc)
-- [ ] Enforce HTTPS everywhere; add mTLS for internal APIs
+- [x] Enforce HTTPS everywhere; add mTLS for internal APIs
 - [ ] Remove all plaintext secrets from code/configs
 - [ ] Integrate Vault or KMS for runtime secret injection
 - [ ] Rotate all exposed keys (MCP, OpenAI, etc)
@@ -18,7 +18,7 @@
 - [ ] Add region tagging and residency enforcement
 
 ## Phase 3: Advanced Security (Week 5-6)
-- [ ] Implement mTLS for all internal service calls
+- [x] Implement mTLS for all internal service calls
 - [ ] Integrate Vault for secrets management
 - [x] Add security scanning to CI/CD (SAST/DAST)
 - [ ] Add incident response procedures

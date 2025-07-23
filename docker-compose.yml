@@ -9,9 +9,14 @@ services:
       - REDIS_URL=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379
       - CELERY_RESULT_BACKEND=redis://redis:6379
+      - MINIO_ENDPOINT=https://minio:9000
+      - MINIO_CA_CERT=/certs/ca.crt
+      - MINIO_CLIENT_CERT=/certs/app.crt
+      - MINIO_CLIENT_KEY=/certs/app.key
     volumes:
       - ./app:/app/app
       - ./data:/app/data
+      - ./certs:/certs:ro
     depends_on:
       db:
         condition: service_healthy
@@ -40,9 +45,14 @@ services:
       - REDIS_URL=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379
       - CELERY_RESULT_BACKEND=redis://redis:6379
+      - MINIO_ENDPOINT=https://minio:9000
+      - MINIO_CA_CERT=/certs/ca.crt
+      - MINIO_CLIENT_CERT=/certs/app.crt
+      - MINIO_CLIENT_KEY=/certs/app.key
     volumes:
       - ./app:/app/app
       - ./data:/app/data
+      - ./certs:/certs:ro
     depends_on:
       db:
         condition: service_healthy
@@ -71,9 +81,14 @@ services:
       - REDIS_URL=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379
       - CELERY_RESULT_BACKEND=redis://redis:6379
+      - MINIO_ENDPOINT=https://minio:9000
+      - MINIO_CA_CERT=/certs/ca.crt
+      - MINIO_CLIENT_CERT=/certs/app.crt
+      - MINIO_CLIENT_KEY=/certs/app.key
     volumes:
       - ./app:/app/app
       - ./data:/app/data
+      - ./certs:/certs:ro
     depends_on:
       - db
       - redis
