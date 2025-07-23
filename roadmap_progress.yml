@@ -1,0 +1,102 @@
+- task: "Migrate secrets from .env to Vault or secret manager"
+  priority: P0
+  status: in-progress
+  pr: null
+  coverage_delta: null
+  notes: null
+- task: "Audit and expand RBAC coverage and negative tests"
+  priority: P0
+  status: todo
+  pr: null
+  coverage_delta: null
+  notes: null
+- task: "Harden input validation on all API endpoints"
+  priority: P1
+  status: todo
+  pr: null
+  coverage_delta: null
+  notes: null
+- task: "Audit and scrub logs for sensitive info"
+  priority: P1
+  status: todo
+  pr: null
+  coverage_delta: null
+  notes: null
+- task: "Add trivy, bandit, and safety checks to CI for Python deps"
+  priority: P2
+  status: todo
+  pr: null
+  coverage_delta: null
+  notes: null
+- task: "Review all dependencies for license compliance; add LICENSE file"
+  priority: P2
+  status: todo
+  pr: null
+  coverage_delta: null
+  notes: null
+- task: "Expand unit and integration test coverage"
+  priority: P1
+  status: todo
+  pr: null
+  coverage_delta: null
+  notes: null
+- task: "Add/expand pytest --cov and coverage badge to CI"
+  priority: P1
+  status: todo
+  pr: null
+  coverage_delta: null
+  notes: null
+- task: "Add negative/edge case tests for RBAC, input validation, and agent flows"
+  priority: P1
+  status: todo
+  pr: null
+  coverage_delta: null
+  notes: null
+- task: "Expand metrics/tracing (Prometheus, OpenTelemetry); document SLOs/SLIs"
+  priority: P3
+  status: todo
+  pr: null
+  coverage_delta: null
+  notes: null
+- task: "Add alerting rules and dashboards for key metrics"
+  priority: P3
+  status: todo
+  pr: null
+  coverage_delta: null
+  notes: null
+- task: "Improve README and onboarding docs"
+  priority: P2
+  status: todo
+  pr: null
+  coverage_delta: null
+  notes: null
+- task: "Add setup scripts (make setup, devcontainer.json)"
+  priority: P2
+  status: todo
+  pr: null
+  coverage_delta: null
+  notes: null
+- task: "Refactor large/complex modules for SRP and readability"
+  priority: P2
+  status: todo
+  pr: null
+  coverage_delta: null
+  notes: null
+- task: "Remove dead/unused code"
+  priority: P2
+  status: todo
+  pr: null
+  coverage_delta: null
+  notes: null
+- task: "Review and update all compliance docs"
+  priority: P3
+  status: todo
+  pr: null
+  coverage_delta: null
+  notes: null
+- task: "Harden Docker/infra for production"
+  priority: P3
+  status: todo
+  pr: null
+  coverage_delta: null
+  notes: null
