@@ -53,22 +53,24 @@ class TestExternalServiceMocking:
         assert result == "Mocked Anthropic response"
         mock_client.messages.create.assert_called_once()
 
-    @patch('redis.Redis')
-    def test_redis_mock(self, mock_redis_class):
+    def test_redis_mock(self, mock_redis):
         """Test Redis mocking for caching/session storage."""
-        mock_redis = Mock()
-        mock_redis.get.return_value = b'cached_value'
-        mock_redis.set.return_value = True
-        mock_redis_class.return_value = mock_redis
+        # The mock_redis fixture from conftest.py patches redis.from_url
+        # and returns a MagicMock instance.
+        import redis
+        redis_client = redis.from_url("redis://dummy")
+
+        # Configure the mock's methods
+        redis_client.get.return_value = b'cached_value'
+        redis_client.set.return_value = True
         
         # Simulate using Redis
-        redis_client = mock_redis_class.from_url("redis://localhost:6379")
         redis_client.set("key", "value")
         result = redis_client.get("key")
         
         assert result == b'cached_value'
-        mock_redis.set.assert_called_with("key", "value")
-        mock_redis.get.assert_called_with("key")
+        redis_client.set.assert_called_with("key", "value")
+        redis_client.get.assert_called_with("key")
 
     @patch('httpx.AsyncClient')
     async def test_external_http_api_mock(self, mock_httpx_client):
