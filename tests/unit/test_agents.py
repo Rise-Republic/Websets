@@ -41,11 +41,10 @@ class TestBaseAgent:
     @patch('app.agents.base.Anthropic')
     def test_anthropic_client_creation(self, mock_anthropic, mock_settings):
         """Test Anthropic client creation."""
-        mock_settings.anthropic_api_key = "test-anthropic-key"
         agent = self.TestAgent(provider="anthropic")
         client = agent.client
         
-        mock_anthropic.assert_called_once_with(api_key="test-anthropic-key")
+        mock_anthropic.assert_called_once_with(api_key="test-anthropic-key-from-fixture")
         assert client == mock_anthropic.return_value
 
     def test_unsupported_provider_raises_error(self, mock_settings):
@@ -96,33 +95,32 @@ Some text after'''
             agent._parse_json_response(response)
 
     @patch('app.agents.base.OpenAI')
-    async def test_call_llm_openai_success(self, mock_openai, mock_settings):
+    def test_call_llm_openai_success(self, mock_openai, mock_settings):
         """Test successful OpenAI LLM call."""
         # Setup mock
         mock_response = Mock()
         mock_response.choices = [Mock()]
         mock_response.choices[0].message.content = "Test response"
         mock_openai.return_value.chat.completions.create.return_value = mock_response
-        
+
         agent = self.TestAgent(provider="openai")
         result = agent._call_llm("Test prompt")
-        
+
         assert result == "Test response"
         mock_openai.return_value.chat.completions.create.assert_called_once()
 
     @patch('app.agents.base.Anthropic')
-    async def test_call_llm_anthropic_success(self, mock_anthropic, mock_settings):
+    def test_call_llm_anthropic_success(self, mock_anthropic, mock_settings):
         """Test successful Anthropic LLM call."""
         # Setup mock
         mock_response = Mock()
         mock_response.content = [Mock()]
         mock_response.content[0].text = "Test response"
-        mock_settings.anthropic_api_key = "test-key"
         mock_anthropic.return_value.messages.create.return_value = mock_response
-        
+
         agent = self.TestAgent(provider="anthropic")
         result = agent._call_llm("Test prompt")
-        
+
         assert result == "Test response"
         mock_anthropic.return_value.messages.create.assert_called_once()
 

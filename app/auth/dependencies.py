@@ -8,7 +8,7 @@ from app.auth.jwt_handler import verify_token
 from app.auth.rbac import require_roles, require_permissions
 from app.auth.user_utils import get_current_active_user
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(

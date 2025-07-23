@@ -98,3 +98,14 @@ def sample_user_data():
         "password": "TestPassword123!",
         "full_name": "Test User"
     }
+
+@pytest.fixture
+def mock_settings(mocker):
+    """Mock application settings."""
+    mock = mocker.patch('app.config.settings', autospec=True)
+    mock.jwt_secret_key = "test-secret-key-that-is-long-enough-for-testing-purposes"
+    mock.jwt_algorithm = "HS256"
+    mock.access_token_expire_minutes = 30
+    mock.openai_api_key = "test-openai-key"
+    mock.anthropic_api_key = "test-anthropic-key-from-fixture"
+    return mock
