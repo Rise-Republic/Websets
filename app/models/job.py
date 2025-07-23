@@ -23,11 +23,11 @@ class Job(Base):
     __tablename__ = "jobs"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     
     # Job configuration
     prompt = Column(Text, nullable=False)
-    status = Column(Enum(JobStatus), default=JobStatus.PENDING, nullable=False)
+    status = Column(Enum(JobStatus), default=JobStatus.PENDING, nullable=False, index=True)
     
     # Planning phase
     plan = Column(JSONB, nullable=True)
@@ -38,7 +38,7 @@ class Job(Base):
     extracted_records = Column(Integer, default=0)
     
     # Metadata
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     

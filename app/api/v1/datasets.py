@@ -1,4 +1,5 @@
 from typing import List, Optional, Dict, Any
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -232,12 +233,14 @@ async def search_dataset(
         )
         
         # Filter results for this dataset and get record details
+        record_ids = [uuid.UUID(res['record_id']) for res in search_results if res.get('dataset_id') == dataset_id]
+        records = db.query(DataRecord).filter(DataRecord.id.in_(record_ids)).all() if record_ids else []
+        record_map = {str(r.id): r for r in records}
+
         filtered_results = []
         for result in search_results:
             if result.get('dataset_id') == dataset_id:
-                record_id = result.get('record_id')
-                record = db.query(DataRecord).filter(DataRecord.id == record_id).first()
-                
+                record = record_map.get(result.get('record_id'))
                 if record:
                     filtered_results.append(SearchResult(
                         record=DataRecordResponse(

@@ -11,7 +11,7 @@ class Dataset(Base):
     __tablename__ = "datasets"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=False)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=False, index=True)
     
     # Metadata
     name = Column(String, nullable=False)
@@ -39,7 +39,7 @@ class DataRecord(Base):
     __tablename__ = "data_records"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    dataset_id = Column(UUID(as_uuid=True), ForeignKey("datasets.id"), nullable=False)
+    dataset_id = Column(UUID(as_uuid=True), ForeignKey("datasets.id"), nullable=False, index=True)
     
     # Source information
     source_url = Column(String, nullable=False)
