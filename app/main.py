@@ -5,6 +5,7 @@ from loguru import logger
 from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
+from app.telemetry import configure_tracing
 from app.logging_utils import configure_logging
 from app.database import create_tables
 from app.api import auth_router, jobs_router, datasets_router, health_router
@@ -28,6 +29,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+configure_tracing(app)
 
 # Add rate limiting
 app.state.limiter = limiter

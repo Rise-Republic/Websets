@@ -74,10 +74,12 @@ class Settings(BaseSettings):
     max_concurrent_crawls: int = 5
     request_delay_ms: int = 1000
     user_agent: str = "WebSetMiner/1.0"
-    
+
     # Environment
     environment: str = "development"
     log_level: str = "INFO"
+    enable_tracing: bool = False
+    otlp_endpoint: str = "http://localhost:4318"
     allowed_origins: list[str] = [
         "http://localhost:3000",
         "http://localhost:5173",
