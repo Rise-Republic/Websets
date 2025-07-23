@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 .env
 .venv/
+.mypy_cache/
+.ruff_cache/

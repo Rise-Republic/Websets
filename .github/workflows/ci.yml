@@ -38,6 +38,10 @@ jobs:
           pip install -r requirements.txt -r requirements-dev.txt
       - name: Install Node dependencies
         run: npm ci
+      - name: Run pre-commit
+        run: pre-commit run --all-files --show-diff-on-failure
+      - name: Run mypy
+        run: mypy app
       - name: Run backend tests
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
