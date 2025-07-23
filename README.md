@@ -215,7 +215,9 @@ pre-commit run --all-files
 
 ### Running Security Scans
 Security scans run automatically in CI using **Bandit**, **Safety**, and **Trivy**.
-Install security tooling and run the scans locally before pushing changes:
+The workflow executes on every push and on a weekly schedule so vulnerabilities
+are caught even when the code is idle. Install the tools locally before pushing
+changes:
 
 ```bash
 # Install tools
@@ -331,7 +333,8 @@ Monitor these key metrics:
 - Implement rate limiting
 - Validate all user inputs
 - Use environment variables for secrets
-- Regular security updates
+- Regular security updates managed automatically via Dependabot
+- Dependency review on pull requests prevents introducing vulnerable packages
 
 ### Rate Limiting
 ```python
