@@ -245,6 +245,9 @@ alembic upgrade head
 
 ## Production Deployment
 
+For HTTPS configuration and container hardening guidance see
+[PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md).
+
 ### Docker Production Build
 ```bash
 # Build optimized image
