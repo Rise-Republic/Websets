@@ -1,5 +1,5 @@
-from typing import List, Dict, Any, Optional
-from celery import current_task
+from typing import List, Dict, Any
+
 from sqlalchemy.orm import Session
 from loguru import logger
 import asyncio
@@ -10,7 +10,6 @@ from app.database import SessionLocal
 from app.models import Job, JobStatus, DiscoveredURL, CrawlResult, Dataset, DataRecord
 from app.agents import PlannerAgent, DiscoveryAgent, SchemaInferenceAgent
 from app.crawler import BrowserCrawler
-from app.storage import VectorStore, EmbeddingGenerator
 from app.tasks.progress_tracker import ProgressContext, JobProgressTracker
 
 
@@ -85,13 +84,13 @@ def execute_planning_phase(job: Job, db: Session, progress: ProgressContext = No
             asyncio.run(progress.log("Starting planning phase", "info"))
         
         planner = PlannerAgent()
-        plan = planner.create_plan(job.prompt)
-        
-        job.plan = plan.dict()
+        plan = asyncio.run(planner.execute(job.prompt))
+
+        job.plan = plan
         db.commit()
-        
+
         if progress:
-            asyncio.run(progress.update_step(100, {"plan": plan.dict()}))
+            asyncio.run(progress.update_step(100, {"plan": plan}))
             asyncio.run(progress.log("Planning phase completed", "success"))
         
         return plan.dict()
@@ -109,7 +108,7 @@ def execute_discovery_phase(job: Job, plan: Dict[str, Any], db: Session, progres
             asyncio.run(progress.log("Starting discovery phase", "info"))
         
         discovery_agent = DiscoveryAgent()
-        discovered_urls = discovery_agent.discover_urls(plan)
+        discovered_urls = asyncio.run(discovery_agent.execute(plan))
         
         # Store discovered URLs
         for url in discovered_urls:
@@ -149,7 +148,7 @@ def execute_crawling_phase(job: Job, urls: List[str], db: Session, progress: Pro
             
             try:
                 crawler = BrowserCrawler()
-                result = asyncio.run(crawler.crawl_page(url))
+                result = asyncio.run(crawler.crawl_url(url, str(job.id)))
                 
                 crawl_result = CrawlResult(
                     job_id=job.id,
@@ -230,11 +229,14 @@ def execute_extraction_phase(job: Job, crawl_results: List[Dict[str, Any]], db: 
                 
                 # Use schema inference agent to extract data
                 schema_agent = SchemaInferenceAgent()
-                extracted = schema_agent.extract_data(
-                    crawl_result.html_content,
-                    job.prompt,
-                    job.plan
+                result_data = asyncio.run(
+                    schema_agent.execute(
+                        crawl_result.html_content,
+                        crawl_result.url,
+                        job.plan,
+                    )
                 )
+                extracted = result_data.get("data", [])
                 
                 # Store extracted records
                 for record in extracted:
@@ -273,78 +275,6 @@ def execute_extraction_phase(job: Job, crawl_results: List[Dict[str, Any]], db: 
             asyncio.run(progress.log(f"Extraction failed: {str(e)}", "error"))
         raise
 
-
-def execute_vectorization_phase(job: Job, dataset: Dataset, db: Session):
-    """Execute vectorization phase for semantic search."""
-    
-    # Initialize embedding generator and vector store
-    embedding_gen = EmbeddingGenerator()
-    vector_store = VectorStore(dimension=embedding_gen.get_embedding_dimension())
-    
-    # Load existing vector store if available
-    vector_store.load()
-    
-    # Get data records
-    data_records = db.query(DataRecord).filter(DataRecord.dataset_id == dataset.id).all()
-    
-    if not data_records:
-        logger.warning(f"No data records found for vectorization in dataset {dataset.id}")
-        return
-    
-    # Generate embeddings for records
-    embeddings = []
-    metadata = []
-    
-    for record in data_records:
-        try:
-            # Generate embedding for the record
-            embedding = embedding_gen.embed_data_record(record.data)
-            embeddings.append(embedding)
-            
-            # Prepare metadata
-            record_metadata = {
-                'record_id': str(record.id),
-                'dataset_id': str(dataset.id),
-                'job_id': str(job.id),
-                'source_url': record.source_url,
-                'source_title': record.source_title or '',
-                'data_preview': str(record.data)[:200],  # First 200 chars
-                'confidence_score': record.confidence_score or 0.0
-            }
-            metadata.append(record_metadata)
-            
-        except Exception as e:
-            logger.error(f"Failed to generate embedding for record {record.id}: {e}")
-            continue
-    
-    if embeddings:
-        # Add vectors to store
-        embeddings_array = np.array(embeddings)
-        vector_ids = vector_store.add_vectors(embeddings_array, metadata)
-        
-        # Update records with vector IDs
-        for i, record in enumerate(data_records[:len(vector_ids)]):
-            record.embedding_id = vector_ids[i]
-        
-        # Save vector store
-        vector_store.save()
-        
-        db.commit()
-        
-        logger.info(f"Generated {len(embeddings)} embeddings for dataset {dataset.id}")
-
-
-@celery_app.task
-def crawl_urls_task(urls: List[str], job_id: str):
-    """Standalone task for crawling URLs."""
-    return asyncio.run(crawl_urls_batch(urls, job_id))
-
-
-@celery_app.task
-def extract_data_task(html_content: str, url: str, plan: Dict[str, Any]):
-    """Standalone task for data extraction."""
-    schema_agent = SchemaInferenceAgent()
-    return asyncio.run(schema_agent.execute(html_content, url, plan))
 
 
 @celery_app.task
