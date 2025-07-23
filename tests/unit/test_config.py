@@ -1,7 +1,6 @@
 import os
 import sys
 import unittest
-import warnings
 from unittest.mock import patch, MagicMock
 
 # Add app path to allow importing config
@@ -11,7 +10,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 class TestConfigLoading(unittest.TestCase):
 
     def setUp(self):
-        warnings.warn("This is a test deprecation warning.", DeprecationWarning)
         """Backup and clear relevant environment variables before each test."""
         self.backup_environ = os.environ.copy()
         # Unload the config module to ensure it's re-evaluated in each test
