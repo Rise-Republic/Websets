@@ -13,7 +13,7 @@ def _require_env(var: str) -> str:
     return value
 
 class VaultClient:
-    """Simple wrapper around hvac.Client with sanity checks."""
+    """Simple wrapper around hvac.Client with extra helpers."""
 
     def __init__(self, url: str | None = None, token: str | None = None) -> None:
         self.url = url or _require_env("VAULT_ADDR")
@@ -29,6 +29,16 @@ class VaultClient:
         """Retrieve a secret from Vault at the given path and key."""
         secret = self.client.secrets.kv.v2.read_secret_version(path=path)
         return secret["data"]["data"].get(key)
+
+    def rotate_secret(self, path: str, key: str, length: int = 32) -> str:
+        """Generate a new random secret, store it in Vault, and return it."""
+        import secrets
+
+        new_value = secrets.token_hex(length)
+        self.client.secrets.kv.v2.create_or_update_secret(
+            path=path, secret={key: new_value}
+        )
+        return new_value
 
 
 def cli_test_connection() -> None:
