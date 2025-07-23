@@ -139,21 +139,26 @@ def execute_crawling_phase(job: Job, urls: List[str], db: Session, progress: Pro
     try:
         if progress:
             asyncio.run(progress.log("Starting crawling phase", "info"))
-        
+
+        async def run_crawls():
+            async with BrowserCrawler() as crawler:
+                return await crawler.crawl_multiple_urls(urls, str(job.id))
+
+        raw_results = asyncio.run(run_crawls())
+
         crawl_results = []
-        
-        for i, url in enumerate(urls):
+
+        for result in raw_results:
+            url = result.get("url")
             if progress:
-                asyncio.run(progress.log(f"Crawling URL {i+1}/{len(urls)}: {url}", "info"))
-            
+                asyncio.run(progress.log(f"Processed {url}", "info"))
+
             try:
-                crawler = BrowserCrawler()
-                result = asyncio.run(crawler.crawl_url(url, str(job.id)))
                 
                 crawl_result = CrawlResult(
                     job_id=job.id,
                     url=url,
-                    html_content=result.get("html", ""),
+                    html_content=result.get("html_content", ""),
                     screenshot_path=result.get("screenshot_path"),
                     title=result.get("title", ""),
                     meta_description=result.get("meta_description", ""),
@@ -166,7 +171,7 @@ def execute_crawling_phase(job: Job, urls: List[str], db: Session, progress: Pro
                     "url": url,
                     "crawl_result_id": str(crawl_result.id),
                     "title": result.get("title", ""),
-                    "content_length": len(result.get("html", ""))
+                    "content_length": len(result.get("html_content", ""))
                 })
                 
                 if progress:
@@ -177,7 +182,7 @@ def execute_crawling_phase(job: Job, urls: List[str], db: Session, progress: Pro
                 
             except Exception as e:
                 if progress:
-                    asyncio.run(progress.log(f"Failed to crawl {url}: {str(e)}", "warning"))
+                    asyncio.run(progress.log(f"Failed to save result for {url}: {str(e)}", "warning"))
                     asyncio.run(progress.increment({
                         "url": url,
                         "status": "failed",

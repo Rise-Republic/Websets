@@ -327,9 +327,11 @@ logger.info("Job started", job_id=job.id, user_id=user.id)
 Monitor these key metrics:
 - Job completion rate
 - Crawl success rate
+- Average crawl duration
 - Data extraction quality scores
 - API response times
 - Worker queue length
+- Celery queue length
 
 ## Security
 
