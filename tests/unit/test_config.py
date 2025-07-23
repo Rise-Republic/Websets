@@ -74,7 +74,10 @@ class TestConfigLoading(unittest.TestCase):
             f.write(env_content)
         
         # Ensure the .env file is cleaned up after the test
-        self.addCleanup(os.remove, '.env')
+        def cleanup_env_file():
+            if os.path.exists('.env'):
+                os.remove('.env')
+        self.addCleanup(cleanup_env_file)
 
         # Act
         from app.config import settings
