@@ -385,8 +385,8 @@ Anthropic API authentication failed
 # Check environment variables
 docker exec -it websets-app-1 env | grep -E "(OPENAI|ANTHROPIC)"
 
-# Update .env file with valid API keys
-# Restart containers after updating .env
+# Update Vault secrets if keys are invalid
+# Restart containers after updating Vault entries
 docker compose restart
 ```
 

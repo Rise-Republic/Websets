@@ -56,4 +56,6 @@ docker run -d \
   webset-miner:latest
 ```
 
+The `.env` file should contain only non-secret settings. Vault or Docker secrets supply the sensitive credentials.
+
 Following these practices helps ensure the application is delivered over HTTPS and that containers are resilient against common attacks.

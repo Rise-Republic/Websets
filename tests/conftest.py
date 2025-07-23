@@ -30,8 +30,8 @@ def event_loop():
 
 
 @pytest.fixture(autouse=True)
-def mock_env_vars(monkeypatch):
-    """Set environment variables for tests."""
+def mock_env_vars(monkeypatch, mocker):
+    """Set environment variables and stub Vault for tests."""
     monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
     monkeypatch.setenv("DATABASE_URL", "sqlite:///./test.db")
     monkeypatch.setenv("REDIS_URL", "redis://localhost:6379")
@@ -39,6 +39,24 @@ def mock_env_vars(monkeypatch):
     monkeypatch.setenv("CELERY_RESULT_BACKEND", "redis://localhost:6379")
     monkeypatch.setenv("JWT_SECRET_KEY", "test-secret-key-that-is-long-enough-for-testing-purposes")
     monkeypatch.setenv("ENVIRONMENT", "testing")
+
+    monkeypatch.setenv("VAULT_ADDR", "http://test-vault")
+    monkeypatch.setenv("VAULT_TOKEN", "test-token")
+
+    mock_vault = mocker.MagicMock()
+    mock_vault.secrets.kv.v2.read_secret_version.return_value = {
+        'data': {
+            'data': {
+                'OPENAI_API_KEY': "test-openai-key",
+                'DATABASE_URL': "sqlite:///./test.db",
+                'JWT_SECRET_KEY': "test-secret-key-that-is-long-enough-for-testing-purposes",
+                'REDIS_URL': "redis://localhost:6379",
+                'CELERY_BROKER_URL': "redis://localhost:6379",
+                'CELERY_RESULT_BACKEND': "redis://localhost:6379",
+            }
+        }
+    }
+    mocker.patch('app.secrets.vault.hvac.Client', return_value=mock_vault)
 
 
 @pytest.fixture

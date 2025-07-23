@@ -35,10 +35,10 @@ make setup
 
 2. **Configure environment:**
 ```bash
-# Copy the sample env file and add your API keys
+# Copy the sample env file and adjust non-secret settings
 cp .env.example .env
 ```
-If using Vault, seed your secrets using `vault_secrets_template.json`.
+Seed Vault with secrets from `vault_secrets_template.json`.
 
 You can also open the repository in a [Dev Container](.devcontainer/devcontainer.json) which will
 run `make setup` automatically after creation.
@@ -160,29 +160,28 @@ curl -X POST "http://localhost:8000/datasets/DATASET_ID/search" \
 
 ### Environment Variables
 
-Key configuration options in `.env` (or Vault):
+Secrets are stored in Vault using `vault_secrets_template.json`:
 
 ```env
-# API Keys
 OPENAI_API_KEY=your_openai_api_key_here
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
-
-# Database
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/webset_miner
-
-# Crawler Settings
-MAX_CONCURRENT_CRAWLS=5
-REQUEST_DELAY_MS=1000
-USER_AGENT=WebSetMiner/1.0
-
-# Security
 JWT_SECRET_KEY=your_super_secret_jwt_key_here
-# Auth0
 AUTH0_DOMAIN=dev-your-domain.us.auth0.com
 AUTH0_CLIENT_ID=your-client-id
 AUTH0_CLIENT_SECRET=your-client-secret
 AUTH0_AUDIENCE=https://api.websets.local
 AUTH0_ISSUER=https://dev-your-domain.us.auth0.com/
+```
+
+Non-secret configuration in `.env`:
+
+```env
+MAX_CONCURRENT_CRAWLS=5
+REQUEST_DELAY_MS=1000
+USER_AGENT=WebSetMiner/1.0
+ENVIRONMENT=development
+LOG_LEVEL=INFO
 ```
 
 ### Scaling Configuration

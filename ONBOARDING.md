@@ -14,7 +14,7 @@ The `setup` target installs Python and Node dependencies, sets up Playwright, an
 
 ## 2. Configure Secrets
 
-Edit `.env` with your API keys or load secrets into Vault using `vault_secrets_template.json`.
+Load all sensitive secrets into Vault using `vault_secrets_template.json`. The `.env` file only contains non-secret settings.
 
 ## 3. Start Services
 
