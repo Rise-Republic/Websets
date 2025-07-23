@@ -7,15 +7,19 @@ from unittest.mock import Mock, patch
 @pytest.mark.unit
 class TestBaseAgent:
     @pytest.fixture(autouse=True)
-    def agent_imports(self):
+    def setup_agent(self, monkeypatch, mock_settings):
+        """Set up the agent for testing, including mocking settings."""
+        monkeypatch.setattr('app.agents.base.settings', mock_settings)
         from app.agents.base import BaseAgent
-        
+
         class TestAgent(BaseAgent):
             """Concrete implementation for testing."""
+
             async def execute(self):
                 return "test execution"
-        
+
         self.TestAgent = TestAgent
+
     def test_agent_initialization(self):
         """Test agent initialization."""
         agent = self.TestAgent()

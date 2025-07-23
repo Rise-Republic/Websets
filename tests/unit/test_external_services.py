@@ -13,21 +13,22 @@ class TestExternalServiceMocking:
         
         self.MockAgent = MockAgent
     
-    @patch('openai.ChatCompletion.create')
-    def test_openai_api_mock(self, mock_openai_create, mock_settings):
+    @patch('app.agents.base.OpenAI')
+    def test_openai_api_mock(self, mock_openai_class, mock_settings):
         """Test OpenAI API mocking."""
         # Setup mock response
         mock_response = Mock()
         mock_response.choices = [Mock()]
         mock_response.choices[0].message.content = "Mocked OpenAI response"
-        mock_openai_create.return_value = mock_response
-        
+
+        mock_client = Mock()
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_openai_class.return_value = mock_client
+
         # Test the mock
         agent = self.MockAgent(provider="openai")
-        with patch.object(agent, 'client') as mock_client:
-            mock_client.chat.completions.create.return_value = mock_response
-            result = agent._call_llm("test prompt")
-            
+        result = agent._call_llm("test prompt")
+
         assert result == "Mocked OpenAI response"
         mock_client.chat.completions.create.assert_called_once()
 

@@ -1,12 +1,12 @@
 import pytest
 from datetime import timedelta
+from app.auth.jwt_handler import create_access_token
 
 @pytest.mark.unit
 class TestJWTHandler:
     @pytest.fixture(autouse=True)
     def jwt_imports(self):
         from app.auth.jwt_handler import (
-            create_access_token,
             verify_token,
             get_password_hash,
             verify_password
