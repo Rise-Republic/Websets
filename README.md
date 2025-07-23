@@ -209,6 +209,23 @@ pip install pytest pytest-asyncio
 pytest tests/
 ```
 
+### Running Security Scans
+Install security tooling and run the scans locally before pushing changes:
+
+```bash
+# Install tools
+pip install bandit safety
+
+# Bandit static analysis
+bandit -r app -x tests -lll
+
+# Safety dependency vulnerability scan
+safety check -r requirements.txt
+
+# Trivy filesystem scan (requires Docker)
+docker run --rm -v $(pwd):/repo aquasec/trivy fs --severity CRITICAL /repo
+```
+
 ### Adding New Agents
 
 1. Create agent class inheriting from `BaseAgent`
