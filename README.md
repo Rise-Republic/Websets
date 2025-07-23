@@ -104,6 +104,17 @@ User Prompt → Planning → URL Discovery → Crawling → Schema Inference →
 - `GET /health/` - Basic health check
 - `GET /health/detailed` - Detailed health check
 
+### OpenAPI Documentation
+
+Generate a full OpenAPI specification by running:
+
+```bash
+python scripts/generate_openapi_spec.py
+```
+
+The spec is written to `openapi.json` and can be used with tooling such as
+Swagger UI for interactive docs.
+
 ## Usage Examples
 
 ### 1. Register and Login
@@ -385,6 +396,10 @@ For support and questions:
 - All sensitive secrets (API keys, DB passwords) should be loaded from Vault, not .env or plaintext files.
 - Set `VAULT_ADDR` and `VAULT_TOKEN` environment variables for the app.
 - Use `app/secrets/vault.py` to fetch secrets at runtime.
+
+Docker deployments can use [Docker secrets](secrets/README.md) to inject
+credentials without storing them in the compose file. Place secret files in
+`./secrets` and reference them in `docker-compose.yml`.
 
 Example:
 ```python
