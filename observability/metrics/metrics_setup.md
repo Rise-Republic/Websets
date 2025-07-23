@@ -5,11 +5,12 @@ This guide describes exposing Prometheus metrics, provisioning Grafana dashboard
 
 ## Steps
 1. Expose Prometheus metrics in all services (latency, error rate, volume, custom metrics).
-2. Deploy Prometheus and Grafana via Helm.
-3. Create version-controlled Grafana dashboards (JSON/Terraform/Jsonnet).
-4. Auto-provision dashboards per environment.
-5. Enable multi-tenancy, time comparison, and drill-down.
-6. Integrate trace IDs and SLO metrics into dashboards.
+2. Instrument Python/Node services with OpenTelemetry and export metrics via the Prometheus exporter.
+3. Deploy Prometheus and Grafana via Helm. Mount `monitoring/prometheus/rules/key_metrics.yml` for alerting rules.
+4. Create version-controlled Grafana dashboards (JSON/Terraform/Jsonnet). Example dashboard JSON lives in `monitoring/grafana/dashboards/websets_overview.json`.
+5. Auto-provision dashboards per environment.
+6. Enable multi-tenancy, time comparison, and drill-down.
+7. Integrate trace IDs and SLO metrics into dashboards.
 
 ## Automation
 - Terraform/Jsonnet for dashboard provisioning.
