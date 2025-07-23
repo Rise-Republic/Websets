@@ -10,6 +10,7 @@ An autonomous LLM-powered system for discovering, extracting, and structuring pu
 - **Zero-Shot Extraction**: Schema inference and data extraction without manual configuration
 - **Dual Storage**: PostgreSQL for relational data + ChromaDB, Pinecone, Qdrant, or Weaviate for vector search
 - **Secure API**: JWT authentication with role-based access control
+- **Audit Logging**: All requests recorded in an immutable audit trail
 - **Background Processing**: Celery + Redis for scalable job execution
 - **Production Ready**: Docker containerization and monitoring capabilities
 
