@@ -17,7 +17,7 @@ An autonomous LLM-powered system for discovering, extracting, and structuring pu
 
 ### Prerequisites
 
-- Docker and Docker Compose (or Docker CLI plugin)
+- Docker and Docker Compose
 - Python 3.10+
 - OpenAI API key (required)
 - Anthropic API key (optional)
@@ -46,7 +46,7 @@ pip install -r requirements.txt
 
 3. **Start services:**
 ```bash
-docker compose up -d
+docker-compose up -d
 ```
 
 4. **Run your first mining job:**
@@ -224,7 +224,7 @@ alembic upgrade head
 docker build -t webset-miner:latest .
 
 # Deploy with production compose
-docker compose -f docker compose.prod.yml up -d
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
 ### Kubernetes Deployment
@@ -326,7 +326,7 @@ async def create_job(...):
 3. **Database connection errors**
    ```bash
    # Check PostgreSQL status
-   docker compose logs db
+   docker-compose logs db
    ```
 
 4. **LLM API rate limits**

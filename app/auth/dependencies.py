@@ -8,11 +8,11 @@ from app.auth.jwt_handler import verify_token
 from app.auth.rbac import require_roles, require_permissions
 from app.auth.user_utils import get_current_active_user
 
-security = HTTPBearer(auto_error=False)
+security = HTTPBearer()
 
 
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security, use_cache=False),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ) -> User:
     credentials_exception = HTTPException(
@@ -21,11 +21,7 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
-    if credentials is None:
-        raise credentials_exception
-
-    token = credentials.credentials
-    email = verify_token(token)
+    email = verify_token(credentials.credentials)
     if email is None:
         raise credentials_exception
     

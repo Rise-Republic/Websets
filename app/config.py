@@ -3,39 +3,6 @@ from typing import Optional
 from pydantic import field_validator
 import os
 import sys
-from loguru import logger
-
-# Import VaultClient to fetch secrets
-from app.secrets.vault import VaultClient
-
-
-def load_secrets_from_vault():
-    """
-    Load secrets from HashiCorp Vault and set them as environment variables.
-    This function is called before settings are loaded.
-    """
-    vault_addr = os.getenv("VAULT_ADDR")
-    vault_token = os.getenv("VAULT_TOKEN")
-    vault_secret_path = os.getenv("VAULT_SECRET_PATH", "secret/data/websets")
-
-    if vault_addr and vault_token:
-        logger.info(f"Attempting to load secrets from Vault at {vault_addr}")
-        try:
-            vault_client = VaultClient(url=vault_addr, token=vault_token)
-            secrets = vault_client.client.secrets.kv.v2.read_secret_version(path=vault_secret_path)
-            if secrets and 'data' in secrets and 'data' in secrets['data']:
-                secret_data = secrets['data']['data']
-                for key, value in secret_data.items():
-                    os.environ[key.upper()] = str(value)
-                logger.info(f"Successfully loaded {len(secret_data)} secrets from Vault path '{vault_secret_path}'.")
-            else:
-                logger.warning("Vault secret path found, but no data was returned.")
-        except Exception as e:
-            logger.error(f"Failed to load secrets from Vault: {e}")
-            # Exit if Vault connection fails to prevent running with missing secrets
-            sys.exit(1)
-    else:
-        logger.info("VAULT_ADDR or VAULT_TOKEN not set. Skipping Vault secret loading.")
 
 
 class Settings(BaseSettings):
@@ -108,25 +75,26 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174", "https://yourdomain.com"]
     
-    model_config = {
-        "env_file": ".env" if not os.getenv("VAULT_ADDR") else None,
-        "env_file_encoding": "utf-8",
-        "extra": "ignore"
-    }
+    class Config:
+        env_file = ".env"
 
 
 def validate_settings():
     """Validate critical settings at startup."""
-    # Load secrets from Vault before initializing settings
-    load_secrets_from_vault()
-
     try:
         settings = Settings()
-    
+        
+        # Check for required environment variables
+        required_vars = ['JWT_SECRET_KEY', 'DATABASE_URL', 'OPENAI_API_KEY']
+        missing_vars = [var for var in required_vars if not os.getenv(var)]
+        
+        if missing_vars:
+            print(f"Error: Missing required environment variables: {', '.join(missing_vars)}")
+            sys.exit(1)
             
         return settings
     except Exception as e:
-        logger.error(f"Error validating settings: {e}")
+        print(f"Error validating settings: {e}")
         sys.exit(1)
 
 

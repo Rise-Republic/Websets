@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Float
-from app.models.types import GUID as UUID, JsonEncodedDict
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -10,13 +10,13 @@ from app.database import Base
 class Dataset(Base):
     __tablename__ = "datasets"
     
-    id = Column(UUID, primary_key=True, default=uuid.uuid4)
-    job_id = Column(UUID, ForeignKey("jobs.id"), nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=False)
     
     # Metadata
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
-    schema = Column(JsonEncodedDict, nullable=True)  # Inferred schema
+    schema = Column(JSONB, nullable=True)  # Inferred schema
     
     # Statistics
     total_records = Column(Integer, default=0)
@@ -38,15 +38,15 @@ class Dataset(Base):
 class DataRecord(Base):
     __tablename__ = "data_records"
     
-    id = Column(UUID, primary_key=True, default=uuid.uuid4)
-    dataset_id = Column(UUID, ForeignKey("datasets.id"), nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    dataset_id = Column(UUID(as_uuid=True), ForeignKey("datasets.id"), nullable=False)
     
     # Source information
     source_url = Column(String, nullable=False)
     source_title = Column(String, nullable=True)
     
     # Extracted data
-    data = Column(JsonEncodedDict, nullable=False)
+    data = Column(JSONB, nullable=False)
     
     # Vector embedding for similarity search
     embedding_id = Column(String, nullable=True)  # Reference to vector store
