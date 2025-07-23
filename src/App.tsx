@@ -1,10 +1,10 @@
 import React from 'react';
-import { AuthContext, useAuthProvider } from './hooks/useAuth';
+import { useAuth } from './hooks/useAuth';
 import LoginForm from './components/Auth/LoginForm';
 import Dashboard from './components/Dashboard/Dashboard';
 
-function AppContent() {
-  const { isAuthenticated, isLoading } = useAuthProvider();
+function App() {
+  const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -18,16 +18,6 @@ function AppContent() {
   }
 
   return isAuthenticated ? <Dashboard /> : <LoginForm />;
-}
-
-function App() {
-  const authValue = useAuthProvider();
-
-  return (
-    <AuthContext.Provider value={authValue}>
-      <AppContent />
-    </AuthContext.Provider>
-  );
 }
 
 export default App;

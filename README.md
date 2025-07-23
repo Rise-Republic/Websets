@@ -116,21 +116,11 @@ Swagger UI for interactive docs.
 
 ## Usage Examples
 
-### 1. Register and Login
+### 1. Login via Auth0
+Use the hosted login page to obtain an access token. After logging in you can call the API with the returned token:
 ```bash
-# Register
-curl -X POST "http://localhost:8000/auth/register" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "securepassword",
-    "full_name": "John Doe"
-  }'
-
-# Login
-curl -X POST "http://localhost:8000/auth/login" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=user@example.com&password=securepassword"
+ACCESS_TOKEN="<your Auth0 access token>"
+curl -H "Authorization: Bearer $ACCESS_TOKEN" http://localhost:8000/v1/jobs/
 ```
 
 ### 2. Create Mining Jobs
@@ -187,6 +177,12 @@ USER_AGENT=WebSetMiner/1.0
 
 # Security
 JWT_SECRET_KEY=your_super_secret_jwt_key_here
+# Auth0
+AUTH0_DOMAIN=dev-your-domain.us.auth0.com
+AUTH0_CLIENT_ID=your-client-id
+AUTH0_CLIENT_SECRET=your-client-secret
+AUTH0_AUDIENCE=https://api.websets.local
+AUTH0_ISSUER=https://dev-your-domain.us.auth0.com/
 ```
 
 ### Scaling Configuration

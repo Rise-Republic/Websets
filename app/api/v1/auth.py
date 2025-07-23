@@ -260,6 +260,12 @@ async def refresh_token(request: Request, data: RefreshTokenRequest, db: Session
     db.commit()
     return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
 
+
+@router.get("/debug")
+async def auth_debug(current_user: User = Depends(get_current_active_user), request: Request = None):
+    perms = getattr(request.state, "token_permissions", []) if request else []
+    return {"user": current_user.email, "permissions": perms}
+
 # Prometheus metrics endpoint
 @router.get("/metrics")
 def metrics():

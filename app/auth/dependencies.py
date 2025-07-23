@@ -4,16 +4,30 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from app.database import get_db
 from app.models.user import User
+from jose import jwt
 from app.auth.jwt_handler import verify_token
+from app.auth.auth0_utils import verify_auth0_token
 from app.auth.rbac import require_roles, require_permissions
 from app.auth.user_utils import get_current_active_user
 
 security = HTTPBearer()
 
 
+async def decode_token(token: str):
+    try:
+        header = jwt.get_unverified_header(token)
+        if header.get("alg") == "HS256":
+            email = verify_token(token)
+            return {"sub": email}
+        return await verify_auth0_token(token)
+    except Exception:
+        return None
+
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    request: Request | None = None
 ) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -21,14 +35,17 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
-    email = verify_token(credentials.credentials)
-    if email is None:
+    payload = await decode_token(credentials.credentials)
+    if not payload:
         raise credentials_exception
-    
+
+    email = payload.get("email") or payload.get("sub")
     user = db.query(User).filter(User.email == email).first()
     if user is None:
         raise credentials_exception
-    
+
+    request.state.token_permissions = payload.get("permissions", [])
+
     return user
 
 
@@ -38,7 +55,7 @@ async def get_current_active_user(current_user: User = Depends(get_current_user)
     return current_user
 
 
-def get_current_user_optional(request: Request) -> Optional[User]:
+async def get_current_user_optional(request: Request) -> Optional[User]:
     """Get current user from request without raising exceptions."""
     try:
         authorization = request.headers.get("Authorization")
@@ -46,9 +63,10 @@ def get_current_user_optional(request: Request) -> Optional[User]:
             return None
         
         token = authorization.split(" ")[1]
-        email = verify_token(token)
-        if email is None:
+        payload = await decode_token(token)
+        if not payload:
             return None
+        email = payload.get("email") or payload.get("sub")
         
         # We need a database session here, but can't inject it
         # This is a simplified version for rate limiting purposes
