@@ -28,7 +28,7 @@
 - [ ] Expose Prometheus metrics for all critical flows
 - [ ] Add dashboards for job, API, and infra health
 - [ ] Define and implement alert rules for failures, latency, and resource exhaustion
-- [ ] Document SLOs/SLIs for core APIs
+- [x] Document SLOs/SLIs for core APIs
 
 - [x] Add GitHub Actions or GitLab CI for build, test, deploy
 - [x] Integrate SAST/DAST tools (Bandit, Trivy, Snyk)
