@@ -19,9 +19,7 @@ fi
 # Install Python dependencies
 echo "Installing Python dependencies..."
 
-# Ensure a clean virtual environment
-sudo rm -rf .venv
-
+# Create Python virtual environment if missing
 if [ ! -d ".venv" ]; then
     echo "Creating Python virtual environment..."
     python3 -m venv .venv
@@ -37,9 +35,12 @@ if [ -f frontend/package.json ]; then
     (cd frontend && bash -c "npm ci")
 fi
 
-# Install Playwright browsers
-echo "Installing Playwright browsers..."
-./.venv/bin/playwright install chromium
+# Install Playwright browsers if missing
+PLAYWRIGHT_DIR="${PLAYWRIGHT_BROWSERS_PATH:-$HOME/.cache/ms-playwright}"
+if [ ! -d "$PLAYWRIGHT_DIR/chromium" ]; then
+    echo "Installing Playwright browsers..."
+    ./.venv/bin/playwright install chromium
+fi
 
 echo "Setup completed!"
 echo ""
