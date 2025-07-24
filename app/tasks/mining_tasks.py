@@ -311,9 +311,8 @@ def execute_extraction_phase(
                         id=uuid.uuid4(),
                         dataset_id=dataset.id,
                         tenant_id=job.tenant_id,
-                        crawl_result_id=crawl_result.id,
+                        source_url=crawl_result.url,
                         data=record,
-                        url=crawl_result.url,
                     )
                     records_to_save.append(data_record)
                     extracted_data.append(record)
@@ -323,7 +322,7 @@ def execute_extraction_phase(
                         progress.increment(
                             {
                                 "extracted_records": len(records),
-                                "url": crawl_result.url,
+                                "source_url": crawl_result.url,
                             }
                         )
                     )
