@@ -6,7 +6,7 @@ This directory contains multiple test suites organized by scope:
 - **integration/** – Tests that hit the API and database. They use the `@pytest.mark.integration` marker and may require services such as PostgreSQL or Redis running locally.
 - **performance/** – Benchmarks and stress tests. They are marked `@pytest.mark.slow` and are skipped in regular CI runs.
 
-Additional test categories include `contract/` which holds API contract checks marked with `@pytest.mark.contract`.
+Additional test categories include `contract/` for API contract checks marked with `@pytest.mark.contract` and `e2e/` for end-to-end scenarios marked with `@pytest.mark.e2e`.
 
 ## Running Tests
 
@@ -21,6 +21,9 @@ pytest -m integration
 
 # Performance tests
 pytest -m slow
+
+# End-to-end tests
+pytest -m e2e
 ```
 
 ## Artifacts
@@ -41,4 +44,3 @@ Generate a coverage summary:
 ```bash
 pytest --cov=app --cov-report=term-missing
 ```
-
