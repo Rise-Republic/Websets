@@ -82,6 +82,7 @@ curl -X POST "http://localhost:8000/jobs/" \
 - [Runbooks](docs/runbooks)
   - [Backups & Disaster Recovery](docs/runbooks/backups.md)
 - [Full Stack with Docker Compose](docs/docker_compose_full_stack.md)
+- [Authentication Guide](docs/authentication.md)
 
 ## Architecture
 
@@ -104,9 +105,14 @@ User Prompt → Planning → URL Discovery → Crawling → Schema Inference →
 ## API Endpoints
 
 ### Authentication
-- `POST /auth/register` - Register new user
-- `POST /auth/login` - Login and get JWT token
-- `GET /auth/me` - Get current user info
+- `POST /v1/auth/register` - Register new user
+- `GET /v1/auth/verify-email` - Confirm email address *(planned)*
+- `POST /v1/auth/login` - Login and obtain access + refresh tokens
+- `POST /v1/auth/mfa/verify` - Verify MFA challenge when required
+- `POST /v1/auth/refresh` - Refresh expired access token
+- `POST /v1/auth/password-reset/request` - Send password reset link
+- `POST /v1/auth/password-reset/confirm` - Confirm new password
+- `GET /v1/auth/me` - Get current user info
 
 ### Jobs
 - `POST /jobs/` - Create new mining job
@@ -197,6 +203,11 @@ AUTH0_AUDIENCE=https://api.websets.local
 AUTH0_ISSUER=https://dev-your-domain.us.auth0.com/
 MINIO_ROOT_USER=<minio-user>
 MINIO_ROOT_PASSWORD=<minio-password>
+SMTP_HOST=<smtp-host>
+SMTP_PORT=<smtp-port>
+SMTP_USERNAME=<smtp-user>
+SMTP_PASSWORD=<smtp-pass>
+EMAIL_FROM=no-reply@example.com
 ```
 
 Populate these secrets using Vault and create Docker secrets for any services
