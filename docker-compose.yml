@@ -1,33 +1,36 @@
+x-service-common: &service-common
+  build: .
+  environment:
+    - DATABASE_URL
+    - VAULT_ADDR
+    - REDIS_URL=rediss://redis:6379
+    - CELERY_BROKER_URL=rediss://redis:6379
+    - CELERY_RESULT_BACKEND=rediss://redis:6379
+    - QDRANT_URL=https://qdrant:6333
+    - WEAVIATE_URL=https://weaviate:8080
+    - MINIO_ENDPOINT=https://minio:9000
+    - MINIO_CA_CERT=/certs/ca.crt
+    - MINIO_CLIENT_CERT=/certs/app.crt
+    - MINIO_CLIENT_KEY=/certs/app.key
+  volumes:
+    - ./app:/app/app
+    - ./data:/app/data
+    - ./certs:/certs:ro
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    vault:
+      condition: service_healthy
+  restart: unless-stopped
+
 services:
   app:
-    build: .
+    <<: *service-common
     ports:
       - "8000:8000"
       - "9090:9090"  # Metrics port
-    environment:
-      - DATABASE_URL
-      - VAULT_ADDR
-      - REDIS_URL=rediss://redis:6379
-      - CELERY_BROKER_URL=rediss://redis:6379
-      - CELERY_RESULT_BACKEND=rediss://redis:6379
-      - QDRANT_URL=https://qdrant:6333
-      - WEAVIATE_URL=https://weaviate:8080
-      - MINIO_ENDPOINT=https://minio:9000
-      - MINIO_CA_CERT=/certs/ca.crt
-      - MINIO_CLIENT_CERT=/certs/app.crt
-      - MINIO_CLIENT_KEY=/certs/app.key
-    volumes:
-      - ./app:/app/app
-      - ./data:/app/data
-      - ./certs:/certs:ro
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      vault:
-        condition: service_healthy
-    restart: unless-stopped
     deploy:
       resources:
         limits:
@@ -41,32 +44,8 @@ services:
       start_period: 40s
 
   worker:
-    build: .
+    <<: *service-common
     command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2
-    environment:
-      - DATABASE_URL
-      - VAULT_ADDR
-      - REDIS_URL=rediss://redis:6379
-      - CELERY_BROKER_URL=rediss://redis:6379
-      - CELERY_RESULT_BACKEND=rediss://redis:6379
-      - QDRANT_URL=https://qdrant:6333
-      - WEAVIATE_URL=https://weaviate:8080
-      - MINIO_ENDPOINT=https://minio:9000
-      - MINIO_CA_CERT=/certs/ca.crt
-      - MINIO_CLIENT_CERT=/certs/app.crt
-      - MINIO_CLIENT_KEY=/certs/app.key
-    volumes:
-      - ./app:/app/app
-      - ./data:/app/data
-      - ./certs:/certs:ro
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      vault:
-        condition: service_healthy
-    restart: unless-stopped
     deploy:
       resources:
         limits:
@@ -80,38 +59,14 @@ services:
       start_period: 60s
 
   beat:
-    build: .
+    <<: *service-common
     command: celery -A app.tasks.celery_app beat --loglevel=info
-    environment:
-      - DATABASE_URL
-      - VAULT_ADDR
-      - REDIS_URL=rediss://redis:6379
-      - CELERY_BROKER_URL=rediss://redis:6379
-      - CELERY_RESULT_BACKEND=rediss://redis:6379
-      - QDRANT_URL=https://qdrant:6333
-      - WEAVIATE_URL=https://weaviate:8080
-      - MINIO_ENDPOINT=https://minio:9000
-      - MINIO_CA_CERT=/certs/ca.crt
-      - MINIO_CLIENT_CERT=/certs/app.crt
-      - MINIO_CLIENT_KEY=/certs/app.key
-    volumes:
-      - ./app:/app/app
-      - ./data:/app/data
-      - ./certs:/certs:ro
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      vault:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "true"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    restart: unless-stopped
     deploy:
       resources:
         limits:
