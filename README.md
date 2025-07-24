@@ -316,10 +316,11 @@ new fixture:
 
 ### Linting
 This project uses **pre-commit** with Ruff for formatting and linting.
-Install the hooks and run them on all files before committing:
+Install the hooks with `pre-commit install` and run them on all files before committing:
 
 ```bash
 pip install pre-commit
+pre-commit install
 pre-commit run --all-files
 ```
 
