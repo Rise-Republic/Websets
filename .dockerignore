@@ -6,6 +6,7 @@
 **/__pycache__/
 
 # Test artifacts
+tests/
 tests/__pycache__/
 test.db
 test_warnings.txt
@@ -23,10 +24,19 @@ dist-ssr/
 
 # Version control
 .git
+.github/
 
 # Secrets
 secrets/
 
+# Development scripts and configurations
+scripts/
+k8s/
+monitoring/
+observability/
+supabase/
+
 # Temporary data directories
 /data/minio/.minio.sys/tmp/
+data/
 
