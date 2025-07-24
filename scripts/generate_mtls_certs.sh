@@ -1,7 +1,7 @@
 #!/bin/bash
 # Generate self-signed CA and service certificates for mTLS
 set -e
-CERT_DIR=${1:-certs}
+CERT_DIR=${CERT_DIR:-${1:-certs}}
 mkdir -p "$CERT_DIR"
 
 # Create CA

@@ -57,6 +57,10 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.secret_rotation.rotate_api_keys",
         "schedule": 7 * 24 * 3600,  # Weekly
     },
+    "check-cert-expiration": {
+        "task": "app.tasks.cert_management.check_certificate_expiration",
+        "schedule": 24 * 3600,  # Daily
+    },
     "purge-expired-data": {
         "task": "app.tasks.gdpr_tasks.purge_expired_data",
         "schedule": 24 * 3600,  # Daily
