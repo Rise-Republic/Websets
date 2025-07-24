@@ -1,4 +1,4 @@
-.PHONY: setup lint fmt test start stop docker-build
+.PHONY: setup lint fmt test start stop docker-build dev
 
 # Setup development environment
 setup:
@@ -29,3 +29,10 @@ stop:
 # Build Docker image for deployment
 docker-build:
 	docker build -t webset-miner .
+
+# Full local development environment
+dev:
+	bash scripts/setup.sh
+	docker compose up -d
+	alembic upgrade head
+	vault kv put secret/websets @vault_secrets_template.json

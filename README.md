@@ -27,52 +27,16 @@ For detailed onboarding instructions see [ONBOARDING.md](ONBOARDING.md).
 
 ### Setup
 
-1. **Clone and setup the project:**
+1. **Clone and start the development environment:**
 ```bash
 git clone <repository>
 cd webset-miner
-make setup
+make dev
 ```
 
-`make setup` installs Python and Node dev dependencies, sets up Playwright, and creates a `.env` file from `.env.example` if it doesn't exist.
+`make dev` runs `scripts/setup.sh`, applies database migrations, seeds Vault from `vault_secrets_template.json`, and starts the Docker Compose stack. A `.env` file will be created automatically if it doesn't exist.
 
-2. **Configure environment:**
-```bash
-# Copy the sample env file and adjust non-secret settings
-cp .env.example .env
-```
-Seed Vault with secrets from `vault_secrets_template.json`:
-
-```bash
-# Set your Vault address and token
-export VAULT_ADDR=http://localhost:8200
-export VAULT_TOKEN=<your-root-token>
-
-# Load all secrets defined in the template
-vault kv put secret/websets @vault_secrets_template.json
-
-# Create Docker secrets for MinIO from Vault values
-vault kv get -field=MINIO_ROOT_USER secret/websets | \
-  docker secret create minio_root_user -
-vault kv get -field=MINIO_ROOT_PASSWORD secret/websets | \
-  docker secret create minio_root_password -
-vault kv get -field=MINIO_KMS_SECRET_KEY secret/websets | \
-  docker secret create minio_kms_key -
-vault kv get -field=MINIO_SSE_MASTER_KEY secret/websets | \
-  docker secret create minio_sse_master_key -
-vault kv get -field=POSTGRES_ENCRYPTION_KEY secret/websets | \
-  docker secret create postgres_encryption_key -
-```
-
-You can also open the repository in a [Dev Container](.devcontainer/devcontainer.json) which will
-run `make setup` automatically after creation.
-
-3. **Start services:**
-```bash
-docker-compose up -d
-```
-
-4. **Run your first mining job:**
+2. **Run your first mining job:**
 ```bash
 # Using the CLI script
 python scripts/run_job.py "AI startups in Europe hiring ML engineers"
