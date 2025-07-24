@@ -124,6 +124,12 @@ CI includes:
 3. Test user interactions, not implementation details
 4. Use custom render utilities for components requiring context
 
+## End-to-End Tests (Playwright)
+
+- Located in `tests/e2e/`
+- Run with `npm run e2e`
+- Launches the Vite dev server and automates key user flows with Playwright
+
 ## Troubleshooting
 
 ### Common Issues
