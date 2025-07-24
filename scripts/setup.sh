@@ -17,7 +17,7 @@ fi
 
 # Install Python dependencies
 echo "Installing Python dependencies..."
-pip install -r requirements.txt -r requirements-dev.txt
+pip3 install -r requirements.txt -r requirements-dev.txt
 
 # Install Node dependencies if package.json exists
 if [ -f package.json ]; then
