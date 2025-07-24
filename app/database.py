@@ -1,16 +1,23 @@
-from sqlalchemy import create_engine, MetaData
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import sessionmaker
+"""Database setup and session helpers."""
+
+from typing import Generator
+
+from sqlalchemy import MetaData, create_engine
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
+
 from app.config import settings
 
-engine = create_engine(settings.database_url)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+engine = create_engine(settings.database_url, pool_pre_ping=True)
+SessionLocal = sessionmaker(
+    autocommit=False, autoflush=False, bind=engine, class_=Session
+)
 
 Base = declarative_base()
 metadata = MetaData()
 
 
-def get_db():
+def get_db() -> Generator[Session, None, None]:
+    """Yield a transactional database session."""
     db = SessionLocal()
     try:
         yield db
