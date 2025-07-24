@@ -322,6 +322,7 @@ images are built and pushed to GitHub Container Registry on every push
 to `main` or a tagged release. Each image is scanned with **Trivy** for
 critical vulnerabilities. If no issues are found, the workflow deploys
 the updated containers over SSH using `docker-compose`.
+For branch cleanup and release tagging see [RELEASE_PROCESS.md](RELEASE_PROCESS.md).
 
 ## Monitoring
 
