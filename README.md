@@ -503,6 +503,10 @@ To create a local `.env` file with all secrets:
 python fetch_vault_env.py > .env
 ```
 
+If Vault is unreachable and `ENVIRONMENT` is set to `testing`, the application
+falls back to secrets provided via environment variables. This allows running
+tests without a Vault server.
+
 ## 🚀 MinIO Security Automation & Compliance
 - All bucket policies and scripts are versioned and reviewed in git.
 - CI/CD pipelines apply, audit, and rotate policies and secrets automatically.

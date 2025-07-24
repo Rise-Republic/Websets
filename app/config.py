@@ -1,4 +1,3 @@
-
 from pydantic_settings import BaseSettings
 from typing import Optional
 from pydantic import field_validator
@@ -27,49 +26,51 @@ class Settings(BaseSettings):
     auth0_client_secret: Optional[str] = None
     auth0_audience: Optional[str] = None
     auth0_issuer: Optional[str] = None
-    
-    @field_validator('jwt_secret_key')
+
+    @field_validator("jwt_secret_key")
     @classmethod
     def validate_jwt_secret(cls, v):
         if not v:
-            raise ValueError('JWT secret key is required')
+            raise ValueError("JWT secret key is required")
         if len(v) < 32:
-            raise ValueError('JWT secret key must be at least 32 characters long for security')
-        if v == 'your-secret-key' or v == 'secret' or v == 'changeme':
-            raise ValueError('JWT secret key cannot be a default or weak value')
+            raise ValueError(
+                "JWT secret key must be at least 32 characters long for security"
+            )
+        if v == "your-secret-key" or v == "secret" or v == "changeme":
+            raise ValueError("JWT secret key cannot be a default or weak value")
         return v
-    
+
     # Storage
     data_dir: str = "./data"
     vector_store_path: str = "./data/vector_store"
     vector_store_provider: str = "chromadb"  # chromadb, pinecone, weaviate, qdrant
-    
+
     # Vector Store Configurations
     # Pinecone
     pinecone_api_key: Optional[str] = None
     pinecone_environment: str = "us-east1-gcp"
-    
+
     # Weaviate
     weaviate_url: str = "http://localhost:8080"
     weaviate_api_key: Optional[str] = None
-    
+
     # Qdrant
     qdrant_url: Optional[str] = None  # e.g., "http://localhost:6333"
     qdrant_api_key: Optional[str] = None
-    
+
     # Object Storage
     object_storage_provider: str = "local"  # local, s3, gcs
-    
+
     # AWS S3 Configuration
     aws_access_key_id: Optional[str] = None
     aws_secret_access_key: Optional[str] = None
     aws_region: str = "us-east-1"
     s3_bucket_name: Optional[str] = None
-    
+
     # Google Cloud Storage Configuration
     gcs_bucket_name: Optional[str] = None
     gcs_credentials_path: Optional[str] = None
-    
+
     # Crawler Settings
     max_concurrent_crawls: int = 5
     request_delay_ms: int = 1000
@@ -88,10 +89,8 @@ class Settings(BaseSettings):
         "http://localhost:5176",
         "https://yourdomain.com",
     ]
-    
-    model_config = {
-        "extra": "ignore"
-    }
+
+    model_config = {"extra": "ignore"}
 
 
 # --- Vault integration for secrets ---
@@ -107,48 +106,58 @@ def get_secret_from_vault(client: VaultClient, path: str, key: str) -> str | Non
         raise
 
 
+def _load_settings_from_env() -> Settings:
+    """Load secrets directly from the environment for local testing."""
+    secret_values = {
+        "openai_api_key": os.getenv("OPENAI_API_KEY"),
+        "anthropic_api_key": os.getenv("ANTHROPIC_API_KEY"),
+        "database_url": os.getenv("DATABASE_URL"),
+        "redis_url": os.getenv("REDIS_URL"),
+        "celery_broker_url": os.getenv("CELERY_BROKER_URL"),
+        "celery_result_backend": os.getenv("CELERY_RESULT_BACKEND"),
+        "jwt_secret_key": os.getenv("JWT_SECRET_KEY"),
+        "auth0_domain": os.getenv("AUTH0_DOMAIN"),
+        "auth0_client_id": os.getenv("AUTH0_CLIENT_ID"),
+        "auth0_client_secret": os.getenv("AUTH0_CLIENT_SECRET"),
+        "auth0_audience": os.getenv("AUTH0_AUDIENCE"),
+        "auth0_issuer": os.getenv("AUTH0_ISSUER"),
+    }
+
+    settings = Settings(**secret_values)
+    required_vars = ["jwt_secret_key", "database_url", "openai_api_key"]
+    missing = [var for var in required_vars if not getattr(settings, var)]
+    if missing:
+        print(f"Error: Missing required secrets: {', '.join(missing)}")
+        sys.exit(1)
+    return settings
+
+
 def validate_settings():
-    """Validate critical settings at startup and require Vault."""
+    """Validate critical settings at startup, falling back to env vars when Vault is unavailable."""
     try:
-        # Check if Vault integration should be disabled for local development
-        disable_vault = os.getenv("DISABLE_VAULT_FOR_LOCAL_DEV", "false").lower() == "true"
+        load_dotenv(".env")
+
+        disable_vault = (
+            os.getenv("DISABLE_VAULT_FOR_LOCAL_DEV", "false").lower() == "true"
+        )
+        environment = os.getenv("ENVIRONMENT", "development").lower()
 
         if disable_vault:
             print("[config.py] Vault integration bypassed for local development.")
-            # Load secrets directly from environment variables
-            secret_values = {
-                'openai_api_key': os.getenv('OPENAI_API_KEY'),
-                'anthropic_api_key': os.getenv('ANTHROPIC_API_KEY'),
-                'database_url': os.getenv('DATABASE_URL'),
-                'redis_url': os.getenv('REDIS_URL'),
-                'celery_broker_url': os.getenv('CELERY_BROKER_URL'),
-                'celery_result_backend': os.getenv('CELERY_RESULT_BACKEND'),
-                'jwt_secret_key': os.getenv('JWT_SECRET_KEY'),
-                'auth0_domain': os.getenv('AUTH0_DOMAIN'),
-                'auth0_client_id': os.getenv('AUTH0_CLIENT_ID'),
-                'auth0_client_secret': os.getenv('AUTH0_CLIENT_SECRET'),
-                'auth0_audience': os.getenv('AUTH0_AUDIENCE'),
-                'auth0_issuer': os.getenv('AUTH0_ISSUER'),
-            }
-            # Only pass expected fields to Settings
-            settings = Settings(**secret_values)
-            # Check for required variables
-            required_vars = ['jwt_secret_key', 'database_url', 'openai_api_key']
-            missing_vars = [var for var in required_vars if not getattr(settings, var)]
-            if missing_vars:
-                print(f"Error: Missing required secrets: {', '.join(missing_vars)}")
-                sys.exit(1)
-            return settings
-        else:
-            # Original Vault logic
-            load_dotenv(".env")
-            vault_addr = os.getenv("VAULT_ADDR")
-            vault_token = os.getenv("VAULT_TOKEN")
-            vault_path = os.getenv("VAULT_SECRET_PATH", "secret/websets")
-            if not vault_addr or not vault_token:
-                print("Error: VAULT_ADDR and VAULT_TOKEN must be set for secrets")
-                sys.exit(1)
+            return _load_settings_from_env()
 
+        vault_addr = os.getenv("VAULT_ADDR")
+        vault_token = os.getenv("VAULT_TOKEN")
+        vault_path = os.getenv("VAULT_SECRET_PATH", "secret/websets")
+
+        if not vault_addr or not vault_token:
+            print("Error: VAULT_ADDR and VAULT_TOKEN must be set for secrets")
+            if environment == "testing":
+                print("[config.py] Falling back to environment variables for testing.")
+                return _load_settings_from_env()
+            sys.exit(1)
+
+        try:
             print("[config.py] VAULT_ env vars:")
             for k, v in os.environ.items():
                 if k.startswith("VAULT_"):
@@ -158,35 +167,50 @@ def validate_settings():
             client.verify_secret_path(vault_path)
 
             secret_values = {
-                'openai_api_key': get_secret_from_vault(client, vault_path, 'OPENAI_API_KEY'),
-                'anthropic_api_key': client.get_secret(vault_path, 'ANTHROPIC_API_KEY'),
-                'database_url': get_secret_from_vault(client, vault_path, 'DATABASE_URL'),
-                'redis_url': client.get_secret(vault_path, 'REDIS_URL'),
-                'celery_broker_url': client.get_secret(vault_path, 'CELERY_BROKER_URL'),
-                'celery_result_backend': client.get_secret(vault_path, 'CELERY_RESULT_BACKEND'),
-                'jwt_secret_key': get_secret_from_vault(client, vault_path, 'JWT_SECRET_KEY'),
-                'auth0_domain': client.get_secret(vault_path, 'AUTH0_DOMAIN'),
-                'auth0_client_id': client.get_secret(vault_path, 'AUTH0_CLIENT_ID'),
-                'auth0_client_secret': client.get_secret(vault_path, 'AUTH0_CLIENT_SECRET'),
-                'auth0_audience': client.get_secret(vault_path, 'AUTH0_AUDIENCE'),
-                'auth0_issuer': client.get_secret(vault_path, 'AUTH0_ISSUER'),
+                "openai_api_key": get_secret_from_vault(
+                    client, vault_path, "OPENAI_API_KEY"
+                ),
+                "anthropic_api_key": client.get_secret(vault_path, "ANTHROPIC_API_KEY"),
+                "database_url": get_secret_from_vault(
+                    client, vault_path, "DATABASE_URL"
+                ),
+                "redis_url": client.get_secret(vault_path, "REDIS_URL"),
+                "celery_broker_url": client.get_secret(vault_path, "CELERY_BROKER_URL"),
+                "celery_result_backend": client.get_secret(
+                    vault_path, "CELERY_RESULT_BACKEND"
+                ),
+                "jwt_secret_key": get_secret_from_vault(
+                    client, vault_path, "JWT_SECRET_KEY"
+                ),
+                "auth0_domain": client.get_secret(vault_path, "AUTH0_DOMAIN"),
+                "auth0_client_id": client.get_secret(vault_path, "AUTH0_CLIENT_ID"),
+                "auth0_client_secret": client.get_secret(
+                    vault_path, "AUTH0_CLIENT_SECRET"
+                ),
+                "auth0_audience": client.get_secret(vault_path, "AUTH0_AUDIENCE"),
+                "auth0_issuer": client.get_secret(vault_path, "AUTH0_ISSUER"),
             }
             print("[config.py] Required secrets loaded:")
             for k, v in secret_values.items():
                 print(f"  {k}={'***' if v else None}")
                 if v is None:
                     print(f"[config.py] WARNING: Secret '{k}' is missing (None)")
-            # Only pass expected fields to Settings
             settings = Settings(**secret_values)
-            # Check for required variables
-            required_vars = ['jwt_secret_key', 'database_url', 'openai_api_key']
+            required_vars = ["jwt_secret_key", "database_url", "openai_api_key"]
             missing_vars = [var for var in required_vars if not getattr(settings, var)]
             if missing_vars:
                 print(f"Error: Missing required secrets: {', '.join(missing_vars)}")
                 sys.exit(1)
             return settings
+        except Exception as e:  # Vault unavailable
+            print(f"[config.py] Vault unavailable: {e}")
+            if environment == "testing":
+                print("[config.py] Falling back to environment variables for testing.")
+                return _load_settings_from_env()
+            raise
     except Exception as e:
         print(f"Error validating settings: {e}")
         sys.exit(1)
+
 
 settings = validate_settings()
