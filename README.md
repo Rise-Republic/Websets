@@ -103,6 +103,7 @@ docker-compose.yml  # Local services
 - [API Reference](docs/API_REFERENCE.md)
 - [Configuration](docs/CONFIGURATION.md)
 - [Operational Runbook](docs/OPERATIONAL_RUNBOOK.md)
+- [Secret Rotation Guide](docs/SECRET_ROTATION.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Testing Guide](docs/TESTING_GUIDE.md)
 - [Migrations Guide](docs/MIGRATIONS.md)

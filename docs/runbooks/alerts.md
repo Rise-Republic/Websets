@@ -27,3 +27,5 @@ This runbook describes standard procedures for handling common alerts.
 1. Confirm burn rate in Grafana and Prometheus.
 2. Identify failing components contributing to the burn.
 3. Roll back recent changes or escalate if the trend continues.
+
+See also [Secret Rotation Guide](../SECRET_ROTATION.md) for keeping credentials fresh.

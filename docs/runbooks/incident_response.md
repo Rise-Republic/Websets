@@ -7,3 +7,5 @@ Follow this guide when escalating an incident affecting Websets.
 3. **Mitigate** – Roll back recent changes or deploy hotfixes to restore service.
 4. **Communicate** – Provide updates every 15 minutes until resolved.
 5. **Postmortem** – After resolution, document root cause and remediation steps.
+
+See also [Secret Rotation Guide](../SECRET_ROTATION.md) for responding to compromised credentials.
