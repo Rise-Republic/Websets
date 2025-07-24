@@ -7,6 +7,7 @@ import hashlib
 import os
 import re
 import secrets
+from loguru import logger
 
 import pyotp
 from prometheus_client import Counter, generate_latest
@@ -148,7 +149,7 @@ async def register(
     except Exception as e:
         import traceback
 
-        print(traceback.format_exc())
+        logger.exception(traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Registration failed: {str(e)}",

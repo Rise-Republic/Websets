@@ -5,6 +5,7 @@ Usage: python scripts/run_job.py "Your mining prompt here"
 """
 
 import sys
+import os
 import asyncio
 import argparse
 from pathlib import Path
@@ -24,9 +25,10 @@ def create_test_user_if_not_exists():
     try:
         user = db.query(User).first()
         if not user:
+            password = os.getenv("WEBSETS_TEST_USER_PASSWORD", "testpassword123")
             user = User(
                 email="test@websetminer.com",
-                hashed_password=get_password_hash("testpassword123"),
+                hashed_password=get_password_hash(password),
                 full_name="Test User",
                 is_active=True
             )
