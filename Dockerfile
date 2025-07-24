@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11-slim@sha256:6310ad99788c86b074f6277f2199636da09e0d3c25b176d4e58ab7c6d1fe110e
 
 # Create application user
 RUN useradd --create-home --system appuser
