@@ -34,6 +34,16 @@ Key metrics include:
 
 Metrics are scraped by Prometheus. Import `monitoring/grafana/dashboards/websets_overview.json` into Grafana to visualize them.
 
+## Observability Smoke Tests
+
+Run a quick check that metrics and tracing infrastructure are reachable:
+
+```bash
+pytest -m smoke
+```
+
+This executes `tests/smoke/test_observability.py` which verifies the `/health/metrics` endpoint and the OTLP collector health endpoint.
+
 ## Backup and Restore
 
 PostgreSQL data is backed up with `scripts/backup_db.sh`. Example:
