@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # WebSet Miner setup script
 
@@ -22,7 +23,7 @@ pip3 install -r requirements.txt -r requirements-dev.txt
 # Install Node dependencies if package.json exists
 if [ -f package.json ]; then
     echo "Installing Node dependencies..."
-    npm ci
+    bash -c "npm ci"
 fi
 
 # Install Playwright browsers
