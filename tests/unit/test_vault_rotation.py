@@ -94,3 +94,19 @@ class TestVaultSecretRotation(unittest.TestCase):
                     vault.cli_test_connection()
 
         mock_print.assert_called_with("Vault connectivity test failed: boom")
+
+    @patch("app.secrets.vault.hvac.Client")
+    def test_fetch_all(self, mock_client_cls):
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.secrets.kv.v2.read_secret_version.return_value = {
+            "data": {"data": {"A": "1"}}
+        }
+
+        vc = vault.VaultClient(url="http://vault", token="t")
+        data = vc.fetch_all("secret/websets")
+
+        self.assertEqual(data, {"A": "1"})
+        mock_client.secrets.kv.v2.read_secret_version.assert_called_with(
+            path="secret/websets"
+        )

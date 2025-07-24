@@ -12,7 +12,7 @@ make setup
 # Generate mTLS certs if missing
 if [ ! -d certs ] || [ -z "$(ls certs/*.crt 2>/dev/null)" ]; then
     echo "Generating mTLS certificates..."
-    scripts/generate_mtls_certs.sh
+    python scripts/generate_mtls_certs.py
 fi
 
 # Build and start all services
