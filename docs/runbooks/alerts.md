@@ -15,3 +15,5 @@ This runbook describes standard procedures for handling common alerts.
 2. Identify offending jobs or users consuming excessive resources.
 3. Scale workers or throttle jobs as needed.
 4. Document actions in the incident channel.
+
+For credentials or access related alerts, see the [Secret Rotation guide](../SECRET_ROTATION.md).

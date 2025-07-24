@@ -22,3 +22,5 @@ When a tenant leaves the service, purge their data:
 python scripts/tenant_lifecycle.py decommission --tenant-id <TENANT_ID>
 ```
 All users, jobs, datasets, discovery records, crawl results and access logs tied to the tenant are removed. Ensure backups and exports have been handled prior to running this command.
+
+After decommissioning a tenant, rotate any shared credentials as described in the [Secret Rotation guide](../SECRET_ROTATION.md).

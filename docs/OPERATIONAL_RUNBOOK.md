@@ -50,3 +50,4 @@ docker exec -i websets-db-1 psql -U postgres -d websets < backup.sql
 
 Redis is mostly ephemeral but can be saved using `redis-cli BGSAVE`. For vector data (Qdrant/Weaviate) back up the `data/` volume or use the database's snapshot feature.
 
+Review the [Secret Rotation guide](SECRET_ROTATION.md) periodically to ensure credentials remain healthy.
