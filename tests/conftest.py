@@ -54,6 +54,8 @@ def mock_env_vars(monkeypatch, mocker):
     monkeypatch.setenv("REDIS_URL", "redis://localhost:6379")
     monkeypatch.setenv("CELERY_BROKER_URL", "redis://localhost:6379")
     monkeypatch.setenv("CELERY_RESULT_BACKEND", "redis://localhost:6379")
+    monkeypatch.setenv("VECTOR_STORE_PROVIDER", "chromadb")
+    monkeypatch.setenv("VECTOR_STORE_PATH", "./data/vector_store")
     monkeypatch.setenv(
         "JWT_SECRET_KEY", "test-secret-key-that-is-long-enough-for-testing-purposes"
     )
