@@ -11,7 +11,7 @@ This directory contains various utility scripts used during development and depl
 - `apply_minio_policy.sh` - apply the MinIO bucket policy from `app/storage/minio_policy.json`.
 - `audit_minio_policy.sh` - print and log current MinIO bucket policies.
 - `rotate_minio_secrets.sh` - rotate local MinIO credentials.
-- `generate_mtls_certs.sh` - generate a shared CA and per-service certificates
+- `generate_mtls_certs.py` - generate a shared CA and per-service certificates
   (`app`, `minio`, `vault`, `redis`, `qdrant`, `weaviate`).
 
 ## Python scripts

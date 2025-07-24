@@ -1,6 +1,7 @@
 """
 HashiCorp Vault integration for secure secret management
 """
+
 import os
 import hvac
 
@@ -11,6 +12,7 @@ def _require_env(var: str) -> str:
     if not value:
         raise EnvironmentError(f"{var} environment variable is not set")
     return value
+
 
 class VaultClient:
     """Simple wrapper around hvac.Client with extra helpers."""
@@ -29,6 +31,11 @@ class VaultClient:
         """Retrieve a secret from Vault at the given path and key."""
         secret = self.client.secrets.kv.v2.read_secret_version(path=path)
         return secret["data"]["data"].get(key)
+
+    def fetch_all(self, path: str) -> dict[str, str]:
+        """Return all secrets stored at the given path."""
+        secret = self.client.secrets.kv.v2.read_secret_version(path=path)
+        return secret["data"]["data"]
 
     def rotate_secret(self, path: str, key: str, length: int = 32) -> str:
         """Generate a new random secret, store it in Vault, and return it."""

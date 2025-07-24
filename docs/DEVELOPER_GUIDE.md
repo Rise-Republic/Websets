@@ -67,7 +67,7 @@ Secrets are pulled from Vault by default. During development they can be read fr
 
 ### mTLS Toggle
 
-Service to service communication can be secured with mutual TLS. Generate certificates using `scripts/generate_mtls_certs.sh` and set `MINIO_CLIENT_CERT`, `MINIO_CLIENT_KEY` and related variables. Omit these variables to disable mTLS locally.
+Service to service communication can be secured with mutual TLS. Generate certificates using `scripts/generate_mtls_certs.py` and set `MINIO_CLIENT_CERT`, `MINIO_CLIENT_KEY` and related variables. Omit these variables to disable mTLS locally.
 
 ## Debugging Tips
 

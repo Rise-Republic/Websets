@@ -9,9 +9,7 @@ class TestFetchVaultEnvScript(unittest.TestCase):
     def test_main_outputs_env_lines(self, mock_vault_cls):
         mock_client = MagicMock()
         mock_vault_cls.return_value = mock_client
-        mock_client.client.secrets.kv.v2.read_secret_version.return_value = {
-            "data": {"data": {"A": "1", "B": "2"}}
-        }
+        mock_client.fetch_all.return_value = {"A": "1", "B": "2"}
 
         with patch("builtins.print") as mock_print:
             fve.main()

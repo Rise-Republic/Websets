@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Breaking changes must be called out under a `Removed` or `Changed` section with clear upgrade instructions.
 
 ## [Unreleased]
-- Work in progress.
+- Added Python script `generate_mtls_certs.py` for cross-platform mTLS certificate generation.
+- Updated `VaultClient` with `fetch_all` helper and simplified `fetch_vault_env.py`.
+- Updated docs and scripts to reference the new certificate generation tool.
 
 ### Template
 Use the sections below when preparing a release.

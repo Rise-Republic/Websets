@@ -2,7 +2,7 @@
 
 ## TLS Configuration
 - Generate TLS certificates (use Let’s Encrypt, cert-manager, or your CA).
-- For local development run `scripts/generate_mtls_certs.sh` to create a self-signed CA and client certificates for all services.
+- For local development run `scripts/generate_mtls_certs.py` to create a self-signed CA and client certificates for all services.
 - Mount certs in MinIO container:
   - `/certs/private.key`
   - `/certs/public.crt`

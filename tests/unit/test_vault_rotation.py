@@ -51,6 +51,22 @@ class TestVaultSecretRotation(unittest.TestCase):
         )
 
     @patch("app.secrets.vault.hvac.Client")
+    def test_fetch_all(self, mock_client_cls):
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.secrets.kv.v2.read_secret_version.return_value = {
+            "data": {"data": {"A": "1", "B": "2"}}
+        }
+
+        vc = vault.VaultClient(url="http://vault", token="t")
+        all_data = vc.fetch_all("secret/websets")
+
+        self.assertEqual(all_data, {"A": "1", "B": "2"})
+        mock_client.secrets.kv.v2.read_secret_version.assert_called_with(
+            path="secret/websets"
+        )
+
+    @patch("app.secrets.vault.hvac.Client")
     def test_cli_test_connection_success(self, mock_client_cls):
         mock_client = MagicMock()
         mock_client_cls.return_value = mock_client
