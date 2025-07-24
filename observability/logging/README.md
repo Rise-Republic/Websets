@@ -11,7 +11,10 @@ This service uses **loguru** for structured logging. A custom configuration in `
 ## Usage Example
 ```python
 from app.logging_utils import configure_logging
-configure_logging("INFO")
+configure_logging("INFO", json=True)
 ```
+
+JSON output makes it easier for log aggregation platforms to parse events. The
+application enables this mode by default when started via `app.main`.
 
 Tests under `tests/unit/test_logging_redaction.py` verify that sensitive data is not written to logs.

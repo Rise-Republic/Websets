@@ -17,12 +17,26 @@ def _patch_record(record):
     record["message"] = redact_message(record["message"])
 
 
-def configure_logging(level: str = "INFO") -> None:
-    """Configure loguru with redaction and standard formatting."""
+def configure_logging(level: str = "INFO", json: bool = False) -> None:
+    """Configure loguru with redaction.
+
+    Parameters
+    ----------
+    level: str
+        Minimum log level to output.
+    json: bool, optional
+        When True logs are serialized to JSON for easier ingestion by
+        log aggregation systems.
+    """
+
     logger.remove()
     logger.configure(patcher=_patch_record)
-    logger.add(
-        sys.stdout,
-        level=level,
-        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
-    )
+
+    if json:
+        logger.add(sys.stdout, level=level, serialize=True)
+    else:
+        logger.add(
+            sys.stdout,
+            level=level,
+            format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+        )
