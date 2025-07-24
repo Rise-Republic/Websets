@@ -15,7 +15,7 @@ jobs:
   apply-policy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Apply MinIO Policy
         run: bash scripts/apply_minio_policy.sh
         env:
@@ -28,7 +28,7 @@ jobs:
   rotate-secrets:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Rotate MinIO Secrets
         run: bash scripts/rotate_minio_secrets.sh
         env:
@@ -38,14 +38,14 @@ jobs:
   audit-policy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Audit MinIO Policy
         run: bash scripts/audit_minio_policy.sh
         env:
           MINIO_ALIAS: ${{ secrets.MINIO_ALIAS }}
           MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
       - name: Archive Audit Log
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: minio-policy-audit
           path: app/storage/minio_policy_audit.log
