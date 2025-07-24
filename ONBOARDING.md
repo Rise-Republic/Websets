@@ -15,7 +15,7 @@ cd webset-miner
 make setup
 ```
 
-The `setup` target installs Python and Node dependencies, sets up Playwright, and creates an `.env` file from `.env.example` if needed.
+The `setup` target installs Python and Node **dev** dependencies, sets up Playwright, and creates an `.env` file from `.env.example` if needed.
 
 ## 2. Configure Secrets
 

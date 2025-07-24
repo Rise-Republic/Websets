@@ -34,6 +34,8 @@ cd webset-miner
 make setup
 ```
 
+`make setup` installs Python and Node dev dependencies, sets up Playwright, and creates a `.env` file from `.env.example` if it doesn't exist.
+
 2. **Configure environment:**
 ```bash
 # Copy the sample env file and adjust non-secret settings
