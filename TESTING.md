@@ -34,6 +34,10 @@ python -m pytest tests/unit/test_auth.py
 python -m pytest -v
 ```
 
+### Type Checking
+
+Run `mypy --strict` to perform static type checks using `mypy.ini`.
+
 ### Test Configuration
 - `pytest.ini` - Main pytest configuration
 - Test database: SQLite in-memory for unit tests
