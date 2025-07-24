@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, Text, Enum, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from app.models.types import GUID as UUID, JsonEncodedDict
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -22,15 +22,15 @@ class JobStatus(enum.Enum):
 class Job(Base):
     __tablename__ = "jobs"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    id = Column(UUID, primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
     
     # Job configuration
     prompt = Column(Text, nullable=False)
     status = Column(Enum(JobStatus), default=JobStatus.PENDING, nullable=False, index=True)
     
     # Planning phase
-    plan = Column(JSONB, nullable=True)
+    plan = Column(JsonEncodedDict, nullable=True)
     
     # Progress tracking
     total_urls = Column(Integer, default=0)
