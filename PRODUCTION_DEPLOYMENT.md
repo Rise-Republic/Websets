@@ -44,8 +44,10 @@ server {
 
 - **Use multi-stage builds** to produce a slim runtime image and reduce attack surface.
 - **Run as a non-root user** (already configured in the provided Dockerfile).
-- **Drop unnecessary Linux capabilities** and set the filesystem to read-only where possible.
-- **Keep dependencies up to date** and scan images with tools like `trivy` during CI/CD.
+- **Drop unnecessary Linux capabilities**, apply a hardened seccomp profile, and mount the filesystem read-only (use `--tmpfs /tmp` when writable scratch space is required).
+- **Enable the `no-new-privileges` option** so processes cannot gain additional rights even if a binary has the setuid bit.
+- **Keep dependencies up to date** and scan images with tools like `trivy` or `dockle` during CI/CD.
+- **Sign images with `cosign`** and verify signatures before deploying.
 - **Store secrets outside the image.** Inject them at runtime using Docker secrets or Vault.
 
 Example Docker run command with tightened security:
@@ -53,7 +55,10 @@ Example Docker run command with tightened security:
 docker run -d \
   --read-only \
   --cap-drop=ALL \
+  --security-opt no-new-privileges \
+  --security-opt seccomp=seccomp_profile.json \
   --user appuser \
+  --tmpfs /tmp \
   --env-file .env \
   webset-miner:latest
 ```
