@@ -3,8 +3,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 
-@pytest.mark.e2e
-def test_root_endpoint_e2e(monkeypatch):
+@pytest.mark.system
+def test_root_endpoint_system(monkeypatch):
     from app import middleware
     monkeypatch.setattr(middleware.rate_limiting.limiter, "limit", lambda *a, **k: (lambda f: f))
     monkeypatch.setattr(middleware.rate_limiting.user_limiter, "limit", lambda *a, **k: (lambda f: f))

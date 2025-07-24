@@ -11,7 +11,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "e2e": "playwright test"
+    "system": "playwright test"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.1.0",
