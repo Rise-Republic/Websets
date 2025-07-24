@@ -52,10 +52,11 @@ flowchart TD
 ## Running Locally
 
 1. Create `.env` from `.env.example` (it omits `VAULT_TOKEN`) and set `DISABLE_VAULT_FOR_LOCAL_DEV=true`. Provide `VAULT_TOKEN` via an environment variable or Docker secret.
-2. Start services:
+2. Start all services and seed data with the helper target:
    ```bash
-   docker-compose up -d
+   make dev
    ```
+   This installs dependencies, generates mTLS certificates, seeds Vault and starts the Docker Compose stack.
 3. Run the API with auto reload:
    ```bash
    uvicorn app.main:app --reload

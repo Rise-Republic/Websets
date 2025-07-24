@@ -8,8 +8,9 @@ mkdir -p "$CERT_DIR"
 openssl req -x509 -newkey rsa:4096 -sha256 -days 365 \
   -nodes -keyout "$CERT_DIR/ca.key" -out "$CERT_DIR/ca.crt" \
   -subj "/CN=websets-ca"
+chmod 600 "$CERT_DIR/ca.key"
 
-SERVICES=(app minio vault redis qdrant weaviate)
+SERVICES=(app minio vault redis qdrant weaviate prometheus)
 
 for svc in "${SERVICES[@]}"; do
   openssl req -newkey rsa:2048 -nodes \
@@ -19,6 +20,7 @@ for svc in "${SERVICES[@]}"; do
     -CA "$CERT_DIR/ca.crt" -CAkey "$CERT_DIR/ca.key" -CAcreateserial \
     -out "$CERT_DIR/${svc}.crt" -days 365 -sha256
   rm "$CERT_DIR/${svc}.csr"
+  chmod 600 "$CERT_DIR/${svc}.key"
 done
 
 echo "mTLS certificates generated in $CERT_DIR"
