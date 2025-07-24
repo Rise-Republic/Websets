@@ -2,6 +2,11 @@
 
 Follow these steps to get a local environment running quickly.
 
+> **Important**
+> The repository history was rewritten to remove sensitive data. If you cloned
+> the project before this rewrite, delete your old copy and clone it again.
+> After cloning, run `make setup` to reinstall all dependencies.
+
 ## 1. Clone and Setup
 
 ```bash
@@ -26,6 +31,18 @@ docker-compose up -d
 
 ```bash
 python scripts/run_job.py "AI startups in Silicon Valley"
+```
+
+## 5. Run Tests
+
+Run backend tests with **pytest** and frontend tests with **Jest**:
+
+```bash
+# Backend
+pytest
+
+# Frontend
+npm test
 ```
 
 ## Troubleshooting
