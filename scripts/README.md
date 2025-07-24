@@ -19,5 +19,6 @@ This directory contains various utility scripts used during development and depl
 - `run_job.py` - CLI helper to create and optionally execute a mining job.
 - `test_vault.py` - simple connectivity check for Vault secrets.
 - `generate_openapi_spec.py` - export the FastAPI OpenAPI spec to `openapi.json`.
+- `tenant_lifecycle.py` - automate tenant provisioning, configuration and decomissioning.
 
 See `README_minio_security.md` for additional security related notes around the MinIO scripts.
