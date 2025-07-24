@@ -321,11 +321,14 @@ deployments.
 ## CI/CD Pipeline
 
 Automated builds, tests, and deployments run via **GitHub Actions**.
-The pipeline caches Python and Node dependencies to speed up runs and
-executes tests before building Docker images. Images are published to
-GitHub Container Registry and scanned with **Trivy** for critical
-vulnerabilities. If no issues are found, the workflow deploys the
-updated containers over SSH using `docker-compose`.
+
+- The pipeline caches Python and Node dependencies to speed up runs.
+- Tests execute **before** building Docker images.
+- Docker images are then built and pushed to GitHub Container Registry on every push to `main` or a tagged release.
+- Images are scanned with **Trivy** for critical vulnerabilities.
+- If no issues are found, the workflow deploys the updated containers over SSH using `docker-compose`.
+
+For branch cleanup and release tagging, see [RELEASE_PROCESS.md](RELEASE_PROCESS.md).
 
 ## Monitoring
 
