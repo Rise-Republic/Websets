@@ -19,6 +19,12 @@ fi
 echo "Installing Python dependencies..."
 pip install -r requirements.txt -r requirements-dev.txt
 
+# Install Node dependencies if package.json exists
+if [ -f package.json ]; then
+    echo "Installing Node dependencies..."
+    npm ci
+fi
+
 # Install Playwright browsers
 echo "Installing Playwright browsers..."
 playwright install chromium
