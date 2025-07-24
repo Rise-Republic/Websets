@@ -1,9 +1,9 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import DatasetViewer from './DatasetViewer';
-import * as api from '../../services/api';
+import * as api from '@/services/api';
 
-jest.mock('../../services/api');
+jest.mock('@/services/api');
 const mockApi = api as jest.Mocked<typeof api>;
 
 const dataset = { id: '1', name: 'DS1', description: '', record_count: 2, created_at: '2024-01-01T00:00:00Z', job_id: 'j1' } as api.Dataset;

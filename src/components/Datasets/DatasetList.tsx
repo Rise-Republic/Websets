@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import apiService, { Dataset } from '../../services/api';
+import apiService, { Dataset } from '@/services/api';
 
 interface DatasetListProps {
   onDatasetSelect?: (dataset: Dataset) => void;

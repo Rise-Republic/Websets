@@ -2,10 +2,10 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import LoginForm from './LoginForm';
-import * as useAuthHook from '../../hooks/useAuth';
+import * as useAuthHook from '@/hooks/useAuth';
 
 // Mock the useAuth hook
-jest.mock('../../hooks/useAuth');
+jest.mock('@/hooks/useAuth');
 const mockUseAuth = useAuthHook as jest.Mocked<typeof useAuthHook>;
 
 describe('LoginForm', () => {

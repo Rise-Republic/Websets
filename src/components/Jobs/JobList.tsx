@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import apiService, { Job } from '../../services/api';
+import apiService, { Job } from '@/services/api';
 
 interface JobListProps {
   onJobSelect?: (job: Job) => void;
