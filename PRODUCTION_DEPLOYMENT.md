@@ -13,7 +13,7 @@ This guide covers best practices for deploying WebSet Miner securely in a produc
 ## mTLS Between Services
 
 - Generate a shared certificate authority and client certificates using `scripts/generate_mtls_certs.sh`.
-- Mount the certificates into each service container and configure `MINIO_CA_CERT`, `MINIO_CLIENT_CERT`, and `MINIO_CLIENT_KEY` for the app. Set `MINIO_ENDPOINT=https://minio:9000` so the Python client uses TLS.
+- Mount the certificates into each service container (`vault`, `redis`, `qdrant`, `weaviate`, `minio`, and the app) and configure `MINIO_CA_CERT`, `MINIO_CLIENT_CERT`, and `MINIO_CLIENT_KEY` for the app. Set `MINIO_ENDPOINT=https://minio:9000` so the Python client uses TLS.
 If services run on separate nodes, copy the generated certs to each host and mount them so internal traffic is mutually authenticated.
 - The provided Celery task `rotate_minio_credentials` keeps object storage credentials fresh in Vault.
 
