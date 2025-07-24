@@ -42,6 +42,9 @@ jobs:
         run: pre-commit run --all-files --show-diff-on-failure
       - name: Run mypy
         run: mypy app
+      - name: Prepare artifacts directory
+        run: mkdir -p artifacts
+
       - name: Run backend tests
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
@@ -51,6 +54,17 @@ jobs:
           JWT_SECRET_KEY: test-secret-key-for-ci-that-is-long-enough
           OPENAI_API_KEY: test-openai-key
           ENVIRONMENT: testing
-        run: pytest -v
+        run: |
+          pytest -v --cov=app \
+            --cov-report=xml:artifacts/coverage.xml \
+            --junitxml=artifacts/junit.xml
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: |
+            artifacts/coverage.xml
+            artifacts/junit.xml
       - name: Run frontend tests
         run: npm test
