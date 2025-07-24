@@ -108,3 +108,34 @@ jobs:
             cd /opt/websets
             docker pull ghcr.io/${{ github.repository }}:${{ github.sha }}
             IMAGE_TAG=${{ github.sha }} docker-compose up -d
+
+      - name: Post-deploy health check
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /opt/websets
+            PROMETHEUS_URL=${PROMETHEUS_URL:-http://localhost:9090}
+            ERROR_RATE=$(curl -sf "$PROMETHEUS_URL/api/v1/query" \
+              --data-urlencode "query=rate(websets_http_requests_total{status_code!~\"2..\"}[5m]) / rate(websets_http_requests_total[5m])" \
+              | jq -r '.data.result[0].value[1]' 2>/dev/null || echo "1")
+            LATENCY=$(curl -sf "$PROMETHEUS_URL/api/v1/query" \
+              --data-urlencode "query=histogram_quantile(0.95, sum(rate(websets_http_request_duration_seconds_bucket[5m])) by (le))" \
+              | jq -r '.data.result[0].value[1]' 2>/dev/null || echo "10")
+            ERROR_RATE_THRESHOLD=0.05
+            LATENCY_THRESHOLD=1
+            CURRENT_COLOR=$(kubectl get service webset-miner -o jsonpath='{.spec.selector.app}' | sed 's/webset-miner-//')
+            PREVIOUS_COLOR=$([ "$CURRENT_COLOR" = "blue" ] && echo green || echo blue)
+            failed=false
+            if ! awk 'BEGIN{exit !(('$ERROR_RATE' < '$ERROR_RATE_THRESHOLD'))}'; then
+              failed=true
+            fi
+            if ! awk 'BEGIN{exit !(('$LATENCY' < '$LATENCY_THRESHOLD'))}'; then
+              failed=true
+            fi
+            if [ "$failed" = true ]; then
+              ./scripts/blue_green_deploy.sh "$PREVIOUS_COLOR"
+            fi
