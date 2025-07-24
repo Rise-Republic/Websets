@@ -1,6 +1,4 @@
 import { useEffect, ReactNode } from 'react';
-import { useAuth0 } from '@auth0/auth0-react';
-import apiService from '@/services/api';
 import { useGlobalStore } from '@/store/global';
 
 export const useAuth = () =>
@@ -28,29 +26,12 @@ export const useAuthProvider = () => {
 };
 
 const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const { isAuthenticated, isLoading, user, getAccessTokenSilently, logout } = useAuth0();
-  const { setUser, setAuthenticated, setLoading, reset } = useGlobalStore();
+  const checkAuth = useGlobalStore((s) => s.checkAuth);
 
   useEffect(() => {
-    setUser(user);
-    setAuthenticated(isAuthenticated);
-    setLoading(isLoading);
-  }, [user, isAuthenticated, isLoading, setUser, setAuthenticated, setLoading]);
-
-  apiService.setTokenProvider(async () => {
-    try {
-      return await getAccessTokenSilently();
-    } catch {
-      return null;
-    }
-  });
-
-  useEffect(() => {
-    return () => {
-      logout({ logoutParams: { returnTo: window.location.origin } });
-      reset();
-    };
-  }, [logout, reset]);
+    // Check authentication status on app start
+    checkAuth();
+  }, [checkAuth]);
 
   return <>{children}</>;
 };
