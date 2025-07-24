@@ -59,27 +59,40 @@ class TestConfigLoading(unittest.TestCase):
         self.assertEqual(settings.jwt_secret_key, 'a-very-secure-jwt-secret-key-from-vault')
         mock_hvac_client.assert_called_with(url='http://fake-vault:8200', token='fake-token')
 
-    @patch.dict(os.environ, {}, clear=True)
-    def test_missing_vault_config_exits(self):
-        """Application should exit if Vault variables are not set."""
-        with self.assertRaises(SystemExit):
-            from app.config import validate_settings
-            validate_settings()
+    @patch.dict(os.environ, {
+        'OPENAI_API_KEY': 'env_openai_key',
+        'DATABASE_URL': 'env_db_url',
+        'JWT_SECRET_KEY': 'a-very-secure-jwt-secret-key-from-env',
+        'REDIS_URL': 'redis://localhost:6379',
+        'CELERY_BROKER_URL': 'redis://localhost:6379',
+        'CELERY_RESULT_BACKEND': 'redis://localhost:6379',
+        'ENVIRONMENT': 'development'
+    }, clear=True)
+    def test_missing_vault_config_falls_back_to_env(self):
+        """Should load secrets from env when Vault config is missing."""
+        from app.config import validate_settings
+        settings = validate_settings()
+        self.assertEqual(settings.openai_api_key, 'env_openai_key')
+        self.assertEqual(settings.database_url, 'env_db_url')
+        self.assertEqual(settings.jwt_secret_key, 'a-very-secure-jwt-secret-key-from-env')
 
     @patch('app.secrets.vault.hvac.Client')
-    def test_vault_connection_failure_exits(self, mock_hvac_client):
-        """Test that the application exits if Vault connection fails."""
-        # Arrange
+    def test_vault_connection_failure_falls_back(self, mock_hvac_client):
+        """Fallback to env variables if Vault connection fails in non-production."""
         mock_hvac_client.side_effect = Exception("Vault connection failed")
         os.environ['VAULT_ADDR'] = 'http://fake-vault:8200'
         os.environ['VAULT_TOKEN'] = 'fake-token'
+        os.environ['OPENAI_API_KEY'] = 'env_openai_key'
+        os.environ['DATABASE_URL'] = 'env_db_url'
+        os.environ['JWT_SECRET_KEY'] = 'a-very-secure-jwt-secret-key-from-env'
+        os.environ['REDIS_URL'] = 'redis://localhost:6379'
+        os.environ['CELERY_BROKER_URL'] = 'redis://localhost:6379'
+        os.environ['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379'
+        os.environ['ENVIRONMENT'] = 'development'
 
-        # Act & Assert
-        with self.assertRaises(SystemExit) as cm:
-            # Importing the module will trigger the load and validation logic
-            from app.config import validate_settings
-            validate_settings()
-        self.assertEqual(cm.exception.code, 1)
+        from app.config import validate_settings
+        settings = validate_settings()
+        self.assertEqual(settings.openai_api_key, 'env_openai_key')
 
 if __name__ == '__main__':
     unittest.main()
