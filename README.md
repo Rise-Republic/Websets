@@ -74,6 +74,13 @@ curl -X POST "http://localhost:8000/jobs/" \
   -d '{"prompt": "AI startups in Europe hiring ML engineers"}'
 ```
 
+5. **Explore the API interactively:**
+
+After the services start you can open [http://localhost:8000/docs](http://localhost:8000/docs)
+for a Swagger UI or [http://localhost:8000/redoc](http://localhost:8000/redoc)
+for a ReDoc view. Use the **Authorize** button to enter your JWT token and send
+requests directly from the browser.
+
 ### Folder Structure
 
 ```
