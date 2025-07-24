@@ -1,0 +1,71 @@
+datasources:
+  apiVersion: 1
+  
+  datasources:
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: http://prometheus:9090
+      isDefault: true
+      editable: true
+dashboards:
+  websets-overview.json: |
+    {
+      "title": "Websets Overview",
+      "panels": [
+        {
+          "type": "graph",
+          "title": "HTTP Requests per Second",
+          "targets": [
+            {
+              "expr": "rate(websets_http_requests_total[1m])"
+            }
+          ]
+        },
+        {
+          "type": "graph",
+          "title": "Error Rate",
+          "targets": [
+            {
+              "expr": "rate(websets_http_requests_total{status_code!~'2..'}[1m]) / rate(websets_http_requests_total[1m])"
+            }
+          ]
+        },
+        {
+          "type": "graph",
+          "title": "P95 Request Duration",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(websets_http_request_duration_seconds_bucket[5m])) by (le))"
+            }
+          ]
+        }
+      ]
+    }
+  websets-slo.json: |
+    {
+      "title": "Websets SLO Dashboard",
+      "panels": [
+        {
+          "type": "gauge",
+          "title": "Availability",
+          "targets": [
+            { "expr": "slo_availability" }
+          ]
+        },
+        {
+          "type": "graph",
+          "title": "P95 Latency",
+          "targets": [
+            { "expr": "slo_latency_p95" }
+          ]
+        },
+        {
+          "type": "graph",
+          "title": "Error Budget Burn",
+          "targets": [
+            { "expr": "slo_error_budget_burn_rate" }
+          ]
+        }
+      ]
+    }
