@@ -229,6 +229,9 @@ pip install pre-commit
 pre-commit run --all-files
 ```
 
+### Editor Configuration
+The repository defines basic formatting rules in [.editorconfig](.editorconfig). Python files use 4-space indents while the frontend code under `src/` uses 2 spaces. Most editors will pick up these settings automatically and ensure newlines end with `LF`.
+
 ### Running Security Scans
 Security scans run automatically in CI using **Bandit**, **Safety**, and **Trivy**.
 The workflow executes on every push and on a weekly schedule so vulnerabilities
@@ -427,6 +430,7 @@ async def create_job(...):
 3. Add tests for new functionality
 4. Ensure all tests pass
 5. Submit a pull request
+6. Pull requests touching `/app` or `/src` will automatically request reviews from the code owners defined in [.github/CODEOWNERS](.github/CODEOWNERS).
 
 ## License
 
