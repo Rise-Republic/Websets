@@ -59,27 +59,34 @@ class TestConfigLoading(unittest.TestCase):
         self.assertEqual(settings.jwt_secret_key, 'a-very-secure-jwt-secret-key-from-vault')
         mock_hvac_client.assert_called_with(url='http://fake-vault:8200', token='fake-token')
 
-    @patch.dict(os.environ, {}, clear=True)
-    def test_missing_vault_config_exits(self):
-        """Application should exit if Vault variables are not set."""
-        with self.assertRaises(SystemExit):
-            from app.config import validate_settings
-            validate_settings()
+    @patch.dict(os.environ, {
+        'OPENAI_API_KEY': 'env-openai',
+        'DATABASE_URL': 'env-db-url',
+        'JWT_SECRET_KEY': 'a-very-secure-jwt-key-from-env',
+    }, clear=True)
+    def test_missing_vault_config_uses_env(self):
+        """Should fall back to environment variables when Vault config missing."""
+        from app.config import validate_settings
+        settings = validate_settings()
+        self.assertEqual(settings.openai_api_key, 'env-openai')
+        self.assertEqual(settings.database_url, 'env-db-url')
+        self.assertEqual(settings.jwt_secret_key, 'a-very-secure-jwt-key-from-env')
 
     @patch('app.secrets.vault.hvac.Client')
-    def test_vault_connection_failure_exits(self, mock_hvac_client):
-        """Test that the application exits if Vault connection fails."""
-        # Arrange
+    def test_vault_connection_failure_falls_back(self, mock_hvac_client):
+        """Should use env vars if Vault connection fails."""
         mock_hvac_client.side_effect = Exception("Vault connection failed")
         os.environ['VAULT_ADDR'] = 'http://fake-vault:8200'
         os.environ['VAULT_TOKEN'] = 'fake-token'
+        os.environ['OPENAI_API_KEY'] = 'env-openai'
+        os.environ['DATABASE_URL'] = 'env-db-url'
+        os.environ['JWT_SECRET_KEY'] = 'a-very-secure-jwt-key-from-env'
 
-        # Act & Assert
-        with self.assertRaises(SystemExit) as cm:
-            # Importing the module will trigger the load and validation logic
-            from app.config import validate_settings
-            validate_settings()
-        self.assertEqual(cm.exception.code, 1)
+        from app.config import validate_settings
+        settings = validate_settings()
+        self.assertEqual(settings.openai_api_key, 'env-openai')
+        self.assertEqual(settings.database_url, 'env-db-url')
+        self.assertEqual(settings.jwt_secret_key, 'a-very-secure-jwt-key-from-env')
 
 if __name__ == '__main__':
     unittest.main()
