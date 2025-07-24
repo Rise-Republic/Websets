@@ -75,6 +75,7 @@ docker-compose.yml  # Local services
 - [Configuration](docs/CONFIGURATION.md)
 - [Operational Runbook](docs/OPERATIONAL_RUNBOOK.md)
 - [Secret Rotation Guide](docs/SECRET_ROTATION.md)
+- [Secrets Management](docs/SECRETS_MANAGEMENT.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Testing Guide](docs/TESTING_GUIDE.md)
 - [Migrations Guide](docs/MIGRATIONS.md)
@@ -630,7 +631,9 @@ For support and questions:
 
 - All sensitive secrets (API keys, DB passwords) should be loaded from Vault, not .env or plaintext files.
 - Set `VAULT_ADDR` and provide `VAULT_TOKEN` via an environment variable or Docker secret (not included in `.env.example`).
-- Use `app/secrets/vault.py` to fetch secrets at runtime.
+- Use `app/secrets/vault.py` to fetch secrets at runtime. See
+  [Secrets Management](docs/SECRETS_MANAGEMENT.md) for policies and rotation
+  details.
 
 Docker deployments can use [Docker secrets](secrets/README.md) to inject
 credentials without storing them in the compose file. Place secret files in
