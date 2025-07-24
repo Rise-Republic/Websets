@@ -267,6 +267,12 @@ ENVIRONMENT=development
 LOG_LEVEL=INFO
 ```
 
+### Response Caching
+
+The API caches responses from the dataset records endpoint in Redis for five
+minutes. Set `REDIS_URL` to your Redis instance. Cache entries are cleared when
+records are added or a dataset is deleted.
+
 ### Scaling Configuration
 
 For production deployments, adjust these settings:
