@@ -1,142 +1,35 @@
-import { createContext, useContext, useEffect, ReactNode } from 'react';
+import { useEffect, ReactNode } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import apiService from '@/services/api';
-import { useAuthStore } from '@/store/auth';
+import { useGlobalStore } from '@/store/global';
 
-interface AuthContextType {
-  user: any;
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  login: () => void;
-  logout: () => void;
-}
-
-export const AuthContext = createContext<AuthContextType | null>(null);
-
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return ctx;
-};
+export const useAuth = () =>
+  useGlobalStore((state) => ({
+    user: state.user,
+    isLoading: state.isLoading,
+    isAuthenticated: state.isAuthenticated,
+    login: state.login,
+    register: state.register,
+    logout: state.logout,
+    requestPasswordReset: state.requestPasswordReset,
+    confirmPasswordReset: state.confirmPasswordReset,
+    error: state.error,
+  }));
 
 export const useAuthProvider = () => {
-  const {
-    user,
-    isLoading,
-    isAuthenticated,
-    error,
-    setUser,
-    setLoading,
-    setAuthenticated,
-    setError,
-    reset,
-  } = useAuthStore();
+  const auth = useAuth();
+  const checkAuth = useGlobalStore((s) => s.checkAuth);
 
   useEffect(() => {
-    const check = async () => {
-      if ((apiService as any).isAuthenticated?.()) {
-        try {
-          const current = await apiService.getCurrentUser();
-          setUser(current);
-          setAuthenticated(true);
-        } catch (err: any) {
-          setError(err.message);
-          apiService.logout();
-          reset();
-        }
-      }
-      setLoading(false);
-    };
-    check();
-  }, []);
+    checkAuth();
+  }, [checkAuth]);
 
-  const login = async (email: string, password: string) => {
-    setLoading(true);
-    try {
-      await apiService.login(email, password);
-      const current = await apiService.getCurrentUser();
-      setUser(current);
-      setAuthenticated(true);
-      setError(null);
-    } catch (err: any) {
-      setUser(null);
-      setAuthenticated(false);
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const register = async (email: string, password: string, fullName: string) => {
-    setLoading(true);
-    try {
-      await apiService.register(email, password, fullName);
-      await login(email, password);
-    } catch (err: any) {
-      setError(err.message);
-      setLoading(false);
-      throw err;
-    }
-  };
-
-  const requestPasswordReset = async (email: string) => {
-    setLoading(true);
-    try {
-      await apiService.passwordResetRequest(email);
-      setError(null);
-    } catch (err: any) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const confirmPasswordReset = async (token: string, newPassword: string) => {
-    setLoading(true);
-    try {
-      await apiService.passwordResetConfirm(token, newPassword);
-      setError(null);
-    } catch (err: any) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const logout = () => {
-    apiService.logout();
-    reset();
-  };
-
-  return {
-    user,
-    isLoading,
-    isAuthenticated,
-    login,
-    register,
-    logout,
-    requestPasswordReset,
-    confirmPasswordReset,
-    error,
-  };
+  return auth;
 };
 
 const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const { isAuthenticated, isLoading, user, loginWithRedirect, logout, getAccessTokenSilently } = useAuth0();
-  const {
-    setUser,
-    setAuthenticated,
-    setLoading,
-    reset,
-    user: storeUser,
-    isLoading: storeLoading,
-    isAuthenticated: storeAuthenticated,
-  } = useAuthStore();
+  const { isAuthenticated, isLoading, user, getAccessTokenSilently, logout } = useAuth0();
+  const { setUser, setAuthenticated, setLoading, reset } = useGlobalStore();
 
   useEffect(() => {
     setUser(user);
@@ -152,18 +45,14 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   });
 
-  const value: AuthContextType = {
-    user: storeUser,
-    isLoading: storeLoading,
-    isAuthenticated: storeAuthenticated,
-    login: () => loginWithRedirect(),
-    logout: () => {
+  useEffect(() => {
+    return () => {
       logout({ logoutParams: { returnTo: window.location.origin } });
       reset();
-    },
-  };
+    };
+  }, [logout, reset]);
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <>{children}</>;
 };
 
 export { AuthProvider };

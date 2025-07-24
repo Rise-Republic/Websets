@@ -1,6 +1,6 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAuth, useAuthProvider } from './useAuth';
-import { useAuthStore } from '@/store/auth';
+import { useGlobalStore } from '@/store/global';
 import * as apiService from '@/services/api';
 
 // Mock the API service
@@ -25,7 +25,7 @@ describe('useAuthProvider', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockDefaultApiService.isAuthenticated.mockReturnValue(false);
-    useAuthStore.getState().reset();
+    useGlobalStore.getState().reset();
   });
 
   test('initializes with correct default state', async () => {
@@ -278,15 +278,3 @@ describe('useAuthProvider', () => {
   });
 });
 
-describe('useAuth', () => {
-  test('throws error when used outside AuthProvider', () => {
-    // Mock console.error to avoid cluttering test output
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    
-    expect(() => {
-      renderHook(() => useAuth());
-    }).toThrow('useAuth must be used within AuthProvider');
-
-    consoleSpy.mockRestore();
-  });
-});
