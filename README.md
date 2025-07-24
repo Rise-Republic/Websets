@@ -395,6 +395,21 @@ Automated builds, tests, and deployments run via **GitHub Actions**.
 
 For branch cleanup and release tagging, see [RELEASE_PROCESS.md](RELEASE_PROCESS.md).
 
+### Local CI Run
+
+To execute the same checks on your workstation run:
+
+```bash
+bash scripts/ci-run.sh
+```
+
+The script spins up the compose stack, waits for services to become healthy, runs static analysis, backend tests and frontend tests, then tears everything down. Exit code `0` indicates success.
+
+### GitHub Actions Workflow
+
+The workflow in `.github/workflows/ci.yml` performs the same steps in CI. Logs for service startup and tests appear in the Actions UI under the `Run CI pipeline` step. Any failing health check or test will mark the job as failed.
+
+
 ## Monitoring
 
 ### Health Checks
