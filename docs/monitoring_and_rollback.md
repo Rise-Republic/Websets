@@ -15,3 +15,16 @@ WebSet Miner exposes Prometheus metrics and includes alerting rules under `monit
    ```
 2. Verify service health via `kubectl rollout status` and Grafana dashboards.
 3. Document the incident using `docs/runbooks/incident_response.md` and restore from backups if needed following `docs/runbooks/backups.md`.
+
+## Automated Rollback Triggers
+
+The deployment workflow performs a post-deploy health check against Prometheus.
+If the 95th percentile latency exceeds **1 second** or the HTTP error rate is
+above **5%**, the workflow runs:
+
+```bash
+scripts/blue_green_deploy.sh <previous_color>
+```
+
+The previous color is derived from the current `webset-miner` service selector
+so traffic routes back to the last stable deployment.
