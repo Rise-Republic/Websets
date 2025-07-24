@@ -1,0 +1,32 @@
+# Python virtual environments
+.venv/
+
+# Python bytecode
+**/*.pyc
+**/__pycache__/
+
+# Test artifacts
+tests/__pycache__/
+test.db
+test_warnings.txt
+
+# Node and build output
+node_modules/
+dist/
+dist-ssr/
+
+# Local environment files
+.env
+
+# Logs
+*.log
+
+# Version control
+.git
+
+# Secrets
+secrets/
+
+# Temporary data directories
+/data/minio/.minio.sys/tmp/
+
