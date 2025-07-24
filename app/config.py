@@ -102,6 +102,13 @@ class Settings(BaseSettings):
 
 
 # --- Vault integration for secrets ---
+def _get_secret_as_str(client: VaultClient, path: str, key: str) -> str | None:
+    """Retrieve a secret from Vault and ensure it's a string or None."""
+    value = client.get_secret(path, key)
+    if value is None:
+        return None
+    return str(value)
+
 def get_secret_from_vault(client: VaultClient, path: str, key: str) -> str | None:
     """Fetch a secret key from Vault and raise on failure."""
     try:
@@ -197,30 +204,30 @@ def validate_settings() -> Settings:
                 "openai_api_key": get_secret_from_vault(
                     client, vault_path, "OPENAI_API_KEY"
                 ),
-                "anthropic_api_key": client.get_secret(vault_path, "ANTHROPIC_API_KEY"),
+                "anthropic_api_key": _get_secret_as_str(client, vault_path, "ANTHROPIC_API_KEY"),
                 "database_url": get_secret_from_vault(
                     client, vault_path, "DATABASE_URL"
                 ),
-                "redis_url": client.get_secret(vault_path, "REDIS_URL"),
-                "celery_broker_url": client.get_secret(vault_path, "CELERY_BROKER_URL"),
-                "celery_result_backend": client.get_secret(
-                    vault_path, "CELERY_RESULT_BACKEND"
+                "redis_url": _get_secret_as_str(client, vault_path, "REDIS_URL"),
+                "celery_broker_url": _get_secret_as_str(client, vault_path, "CELERY_BROKER_URL"),
+                "celery_result_backend": _get_secret_as_str(
+                    client, vault_path, "CELERY_RESULT_BACKEND"
                 ),
                 "jwt_secret_key": get_secret_from_vault(
                     client, vault_path, "JWT_SECRET_KEY"
                 ),
-                "auth0_domain": client.get_secret(vault_path, "AUTH0_DOMAIN"),
-                "auth0_client_id": client.get_secret(vault_path, "AUTH0_CLIENT_ID"),
-                "auth0_client_secret": client.get_secret(
-                    vault_path, "AUTH0_CLIENT_SECRET"
+                "auth0_domain": _get_secret_as_str(client, vault_path, "AUTH0_DOMAIN"),
+                "auth0_client_id": _get_secret_as_str(client, vault_path, "AUTH0_CLIENT_ID"),
+                "auth0_client_secret": _get_secret_as_str(
+                    client, vault_path, "AUTH0_CLIENT_SECRET"
                 ),
-                "auth0_audience": client.get_secret(vault_path, "AUTH0_AUDIENCE"),
-                "auth0_issuer": client.get_secret(vault_path, "AUTH0_ISSUER"),
-                "smtp_host": client.get_secret(vault_path, "SMTP_HOST"),
+                "auth0_audience": _get_secret_as_str(client, vault_path, "AUTH0_AUDIENCE"),
+                "auth0_issuer": _get_secret_as_str(client, vault_path, "AUTH0_ISSUER"),
+                "smtp_host": _get_secret_as_str(client, vault_path, "SMTP_HOST"),
                 "smtp_port": int(client.get_secret(vault_path, "SMTP_PORT") or 25),
-                "smtp_username": client.get_secret(vault_path, "SMTP_USERNAME"),
-                "smtp_password": client.get_secret(vault_path, "SMTP_PASSWORD"),
-                "email_from": client.get_secret(vault_path, "EMAIL_FROM"),
+                "smtp_username": _get_secret_as_str(client, vault_path, "SMTP_USERNAME"),
+                "smtp_password": _get_secret_as_str(client, vault_path, "SMTP_PASSWORD"),
+                "email_from": _get_secret_as_str(client, vault_path, "EMAIL_FROM"),
             }
             # Remove any keys with missing values so defaults apply
             secret_values = {k: v for k, v in secret_values.items() if v is not None}
