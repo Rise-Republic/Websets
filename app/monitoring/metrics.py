@@ -344,7 +344,11 @@ class MetricsCollector:
                 },
             }
         except Exception as e:
-            return {"timestamp": datetime.utcnow().isoformat(), "error": str(e)}
+            logger.error(f"Failed to summarize metrics: {e}")
+            return {
+                "timestamp": datetime.utcnow().isoformat(),
+                "metrics_available": False,
+            }
 
 
 class MetricsMiddleware(BaseHTTPMiddleware):
