@@ -197,6 +197,12 @@ AUTH0_AUDIENCE=https://api.websets.local
 AUTH0_ISSUER=https://dev-your-domain.us.auth0.com/
 MINIO_ROOT_USER=<minio-user>
 MINIO_ROOT_PASSWORD=<minio-password>
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USERNAME=<smtp-user>
+SMTP_PASSWORD=<smtp-pass>
+EMAIL_FROM=no-reply@websets.local
+FRONTEND_URL=http://localhost:3000
 ```
 
 Populate these secrets using Vault and create Docker secrets for any services

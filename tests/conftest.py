@@ -8,7 +8,7 @@ import os
 import sys
 
 # Add the app directory to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 # Test database URL
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
@@ -37,7 +37,15 @@ def mock_env_vars(monkeypatch, mocker):
     monkeypatch.setenv("REDIS_URL", "redis://localhost:6379")
     monkeypatch.setenv("CELERY_BROKER_URL", "redis://localhost:6379")
     monkeypatch.setenv("CELERY_RESULT_BACKEND", "redis://localhost:6379")
-    monkeypatch.setenv("JWT_SECRET_KEY", "test-secret-key-that-is-long-enough-for-testing-purposes")
+    monkeypatch.setenv(
+        "JWT_SECRET_KEY", "test-secret-key-that-is-long-enough-for-testing-purposes"
+    )
+    monkeypatch.setenv("SMTP_HOST", "smtp.test")
+    monkeypatch.setenv("SMTP_PORT", "587")
+    monkeypatch.setenv("SMTP_USERNAME", "user")
+    monkeypatch.setenv("SMTP_PASSWORD", "pass")
+    monkeypatch.setenv("EMAIL_FROM", "noreply@test")
+    monkeypatch.setenv("FRONTEND_URL", "http://frontend")
     monkeypatch.setenv("ENVIRONMENT", "testing")
 
     monkeypatch.setenv("VAULT_ADDR", "http://test-vault")
@@ -45,25 +53,32 @@ def mock_env_vars(monkeypatch, mocker):
 
     mock_vault = mocker.MagicMock()
     mock_vault.secrets.kv.v2.read_secret_version.return_value = {
-        'data': {
-            'data': {
-                'OPENAI_API_KEY': "test-openai-key",
-                'DATABASE_URL': "sqlite:///./test.db",
-                'JWT_SECRET_KEY': "test-secret-key-that-is-long-enough-for-testing-purposes",
-                'REDIS_URL': "redis://localhost:6379",
-                'CELERY_BROKER_URL': "redis://localhost:6379",
-                'CELERY_RESULT_BACKEND': "redis://localhost:6379",
+        "data": {
+            "data": {
+                "OPENAI_API_KEY": "test-openai-key",
+                "DATABASE_URL": "sqlite:///./test.db",
+                "JWT_SECRET_KEY": "test-secret-key-that-is-long-enough-for-testing-purposes",
+                "REDIS_URL": "redis://localhost:6379",
+                "CELERY_BROKER_URL": "redis://localhost:6379",
+                "CELERY_RESULT_BACKEND": "redis://localhost:6379",
+                "SMTP_HOST": "smtp.test",
+                "SMTP_PORT": "587",
+                "SMTP_USERNAME": "user",
+                "SMTP_PASSWORD": "pass",
+                "EMAIL_FROM": "noreply@test",
+                "FRONTEND_URL": "http://frontend",
             }
         }
     }
-    mocker.patch('app.secrets.vault.hvac.Client', return_value=mock_vault)
-    mocker.patch('hvac.Client', return_value=mock_vault)
+    mocker.patch("app.secrets.vault.hvac.Client", return_value=mock_vault)
+    mocker.patch("hvac.Client", return_value=mock_vault)
 
 
 @pytest.fixture
 def db_session():
     """Create a fresh database session for each test."""
     from app.database import Base
+
     Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
     try:
@@ -74,7 +89,7 @@ def db_session():
 
 
 @pytest.fixture
-def client(db_session):
+def client(db_session, mock_redis):
     """Create a test client with database dependency override."""
     from app.main import app
     from app.database import get_db
@@ -94,21 +109,21 @@ def client(db_session):
 @pytest.fixture
 def mock_openai(mocker):
     """Mock OpenAI API calls."""
-    return mocker.patch('openai.ChatCompletion.create')
+    return mocker.patch("openai.ChatCompletion.create")
 
 
 @pytest.fixture
 def mock_anthropic(mocker):
     """Mock Anthropic API calls."""
-    return mocker.patch('anthropic.Anthropic')
+    return mocker.patch("anthropic.Anthropic")
 
 
 @pytest.fixture
 def mock_redis(mocker):
     """Mock Redis client."""
-    mocker.patch('redis.from_url', return_value=mocker.MagicMock())
-    mocker.patch('redis.Redis.from_url', return_value=mocker.MagicMock())
-    return mocker.patch('redis.Redis', return_value=mocker.MagicMock())
+    mocker.patch("redis.from_url", return_value=mocker.MagicMock())
+    mocker.patch("redis.Redis.from_url", return_value=mocker.MagicMock())
+    return mocker.patch("redis.Redis", return_value=mocker.MagicMock())
 
 
 @pytest.fixture
@@ -117,16 +132,23 @@ def sample_user_data():
     return {
         "email": "test@example.com",
         "password": "TestPassword123!",
-        "full_name": "Test User"
+        "full_name": "Test User",
     }
+
 
 @pytest.fixture
 def mock_settings(mocker):
     """Mock application settings."""
-    mock = mocker.patch('app.config.settings', autospec=True)
+    mock = mocker.patch("app.config.settings", autospec=True)
     mock.jwt_secret_key = "test-secret-key-that-is-long-enough-for-testing-purposes"
     mock.jwt_algorithm = "HS256"
     mock.access_token_expire_minutes = 30
     mock.openai_api_key = "test-openai-key"
     mock.anthropic_api_key = "test-anthropic-key-from-fixture"
+    mock.smtp_host = "smtp.test"
+    mock.smtp_port = 587
+    mock.smtp_username = "user"
+    mock.smtp_password = "pass"
+    mock.email_from = "noreply@test"
+    mock.frontend_url = "http://frontend"
     return mock
