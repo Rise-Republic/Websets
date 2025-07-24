@@ -67,6 +67,19 @@ The `.env` file should contain only non-secret settings. Vault or Docker secrets
 
 Following these practices helps ensure the application is delivered over HTTPS and that containers are resilient against common attacks.
 
+## Database Security
+
+- Mount the PostgreSQL data directory on an encrypted volume or use your cloud provider's disk encryption features.
+- Use TLS for all database connections by adding `?sslmode=require` to `DATABASE_URL`.
+- The compose file sets `POSTGRES_ENCRYPTION_KEY_FILE` so the server uses encrypted storage.
+
+## Object Storage Encryption
+
+- MinIO can automatically encrypt objects at rest.
+- Provide a KMS secret via `MINIO_KMS_SECRET_KEY` and a bucket key with `MINIO_SSE_MASTER_KEY`.
+- Store these values as Docker secrets referenced by `docker-compose.yml`.
+- Ensure `MINIO_KMS_AUTO_ENCRYPTION=on` is enabled so uploads are encrypted by default.
+
 ## Backups and Recovery
 
 Regularly dump the PostgreSQL database and keep the files in secure storage. See

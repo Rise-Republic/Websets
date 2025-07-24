@@ -316,6 +316,8 @@ services:
       MINIO_ROOT_USER_FILE: /run/secrets/minio_root_user
       MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio_root_password
       MINIO_KMS_SECRET_KEY_FILE: /run/secrets/minio_kms_key
+      MINIO_KMS_SECRET_KEY: "minio-key:file:///run/secrets/minio_kms_key"
+      MINIO_SSE_MASTER_KEY: "sse-key:file:///run/secrets/minio_sse_master_key"
       MINIO_KMS_AUTO_ENCRYPTION: "on"
     command: server /data --console-address ":9001"
     volumes:
@@ -325,6 +327,7 @@ services:
       - minio_root_user
       - minio_root_password
       - minio_kms_key
+      - minio_sse_master_key
     healthcheck:
       test: ["CMD", "curl", "--cacert", "/certs/ca.crt", "-f", "https://localhost:9000/minio/health/live"]
       interval: 30s
@@ -359,3 +362,5 @@ secrets:
     file: ./secrets/grafana_admin_password
   minio_kms_key:
     file: ./secrets/minio_kms_key
+  minio_sse_master_key:
+    file: ./secrets/minio_sse_master_key
