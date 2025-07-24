@@ -3,6 +3,7 @@ from fastapi import status
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("mock_redis")
 class TestGDPREndpoints:
     def _auth_headers(self, client, user_data):
         client.post("/auth/register", json=user_data)
@@ -11,16 +12,24 @@ class TestGDPREndpoints:
         token = resp.json()["access_token"]
         return {"Authorization": f"Bearer {token}"}
 
-    def test_export_data(self, client, sample_user_data):
+    def test_export_data(self, client, sample_user_data, mocker):
+        log_mock = mocker.patch("app.middleware.audit_middleware.DataAccessAudit.log_data_access")
         headers = self._auth_headers(client, sample_user_data)
         resp = client.get("/gdpr/export", headers=headers)
         assert resp.status_code == status.HTTP_200_OK
         assert resp.json()["user"]["email"] == sample_user_data["email"]
+        log_mock.assert_called_once()
+        kwargs = log_mock.call_args.kwargs
+        assert kwargs.get("access_type") == "export"
 
-    def test_delete_data(self, client, sample_user_data, db_session):
+    def test_delete_data(self, client, sample_user_data, db_session, mocker):
+        log_mock = mocker.patch("app.middleware.audit_middleware.DataAccessAudit.log_data_access")
         headers = self._auth_headers(client, sample_user_data)
         resp = client.delete("/gdpr/delete", headers=headers)
         assert resp.status_code == status.HTTP_204_NO_CONTENT
         from app.models.user import User
         assert db_session.query(User).count() == 0
+        log_mock.assert_called_once()
+        kwargs = log_mock.call_args.kwargs
+        assert kwargs.get("access_type") == "delete"
 
