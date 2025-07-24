@@ -4,7 +4,10 @@ from .jobs import router as jobs_router
 from .datasets import router as datasets_router
 from .health import router as health_router
 from .websockets import router as websockets_router
-from .gdpr import router as gdpr_router
+# The GDPR endpoints live in the parent ``app.api`` package.
+# Use a relative import to access them so this package can be
+# imported without duplicating the module.
+from ..gdpr import router as gdpr_router
 
 v1_router = APIRouter(prefix="/v1")
 
