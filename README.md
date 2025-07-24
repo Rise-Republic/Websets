@@ -105,8 +105,10 @@ User Prompt → Planning → URL Discovery → Crawling → Schema Inference →
 
 ### Authentication
 - `POST /auth/register` - Register new user
-- `POST /auth/login` - Login and get JWT token
+- `POST /auth/login` - Login and get JWT token (returns 202 with `X-MFA-Required` when MFA enabled)
 - `GET /auth/me` - Get current user info
+- `POST /auth/mfa/setup` - Enable TOTP MFA and receive a secret key
+- `POST /auth/mfa/verify` - Verify MFA code and obtain tokens
 
 ### Jobs
 - `POST /jobs/` - Create new mining job
