@@ -39,7 +39,8 @@ configure_tracing(app)
 app.state.limiter = limiter
 app.state.user_limiter = user_limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
-app.add_middleware(HTTPSRedirectMiddleware)
+# Disable HTTPS redirect for local development to avoid SSL protocol errors
+# app.add_middleware(HTTPSRedirectMiddleware)
 
 # Add CORS middleware
 cors_origins = settings.allowed_origins

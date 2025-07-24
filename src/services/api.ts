@@ -1,8 +1,8 @@
 // API Service for Websets Backend
-// Allow overriding the backend URL via Vite or Node environment variables
+// Allow overriding the backend URL via Vite environment variables
 const API_BASE =
-  process.env.VITE_API_BASE ||
-  'http://localhost:8000';
+  import.meta.env.VITE_API_BASE ||
+  'http://localhost:8001';
 const API_VERSION = 'v1'; // Default to v1
 const VERSIONED_API_BASE = `${API_BASE}/${API_VERSION}`;
 
