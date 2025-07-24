@@ -33,11 +33,14 @@ x-service-common: &service-common
 services:
   app:
     <<: *service-common
-    network_mode: host
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+    build: .                       # or image: websets-app:latest
+    network_mode: host             # ↩ joins host namespace
+    command: ["uvicorn", "app.main:app",
+              "--host", "0.0.0.0",
+              "--port", "8001"]
     environment:
-      - VAULT_ADDR=http://localhost:8200
-      - VAULT_TOKEN=root
+      VAULT_ADDR: http://localhost:8200  # host side
+      VAULT_TOKEN: root
     depends_on:
       vault:
         condition: service_healthy
@@ -46,15 +49,31 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "--cacert", "/certs/ca.crt", "-f", "https://localhost:8001/health/live"]
+      test: ["CMD", "curl", "-f", "-L", "http://127.0.0.1:8001/health/live"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1g
 
   worker:
     <<: *service-common
     command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2
+    environment:
+      - VAULT_ADDR=http://localhost:8200
+      - VAULT_TOKEN=root
+      - OPENAI_API_KEY=sk-dev-openai-key-for-local-development-only-0123456789
+    depends_on:
+      vault:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -70,6 +89,17 @@ services:
   beat:
     <<: *service-common
     command: celery -A app.tasks.celery_app beat --loglevel=info
+    environment:
+      - VAULT_ADDR=http://localhost:8200
+      - VAULT_TOKEN=root
+      - OPENAI_API_KEY=sk-dev-openai-key-for-local-development-only-0123456789
+    depends_on:
+      vault:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "true"]
       interval: 30s
