@@ -20,6 +20,13 @@ def test_escape_and_validate():
         agent._sanitize_prompt("bad\x01input")
 
 
+def test_validate_prompt_too_long():
+    agent = DummyAgent()
+    long_prompt = "a" * 4001
+    with pytest.raises(ValueError):
+        agent._validate_prompt(long_prompt)
+
+
 @patch("app.agents.planner.PlannerAgent._parse_json_response")
 @patch("app.agents.planner.PlannerAgent._call_llm")
 @pytest.mark.asyncio
