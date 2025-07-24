@@ -10,14 +10,10 @@ from app.repositories import UserRepository
 from app.models.user import User
 from app.auth.dependencies import get_current_active_user
 from app.auth.jwt_handler import verify_password, get_password_hash
+from app.api.dependencies import get_user_repository
 
 
 router = APIRouter(prefix="/users", tags=["v1-users"])
-
-
-def get_user_repository(db: Session = Depends(get_db)) -> UserRepository:
-    """Dependency injector for ``UserRepository``."""
-    return UserRepository(db)
 
 
 class UserProfileResponse(BaseModel):

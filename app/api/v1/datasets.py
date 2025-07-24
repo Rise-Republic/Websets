@@ -1,12 +1,10 @@
 from typing import List, Optional
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import datetime
 
-from app.database import get_db
-from app.models import Dataset, DataRecord, Job, User
+from app.models import User
 from app.auth.dependencies import get_current_active_user
 from app.storage import VectorStore, EmbeddingGenerator
 from app.middleware import rbac_required, user_limiter, tenant_limiter, RateLimits
@@ -17,6 +15,7 @@ from app.utils import (
     invalidate_dataset_records,
     sanitize_prompt,
 )
+from app.api.dependencies import get_dataset_repository
 
 router = APIRouter(prefix="/datasets", tags=["v1-datasets"])
 
@@ -81,20 +80,14 @@ async def list_datasets(
     page: int = 1,
     size: int = 20,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    dataset_repo: DatasetRepository = Depends(get_dataset_repository),
 ):
     """List user's datasets with pagination."""
 
-    # Build query to get datasets for user's jobs
-    query = db.query(Dataset).join(Job).filter(Job.tenant_id == current_user.tenant_id)
-
-    # Get total count
-    total = query.count()
-
-    # Apply pagination
-    offset = (page - 1) * size
-    datasets = (
-        query.order_by(Dataset.created_at.desc()).offset(offset).limit(size).all()
+    datasets, total = dataset_repo.list_datasets(
+        tenant_id=current_user.tenant_id,
+        page=page,
+        size=size,
     )
 
     # Convert to response format
@@ -126,16 +119,11 @@ async def list_datasets(
 async def get_dataset(
     dataset_id: str,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    dataset_repo: DatasetRepository = Depends(get_dataset_repository),
 ):
     """Get dataset details."""
 
-    dataset = (
-        db.query(Dataset)
-        .join(Job)
-        .filter(Dataset.id == dataset_id, Job.tenant_id == current_user.tenant_id)
-        .first()
-    )
+    dataset = dataset_repo.get_dataset(dataset_id, current_user.tenant_id)
 
     if not dataset:
         raise HTTPException(
@@ -164,7 +152,7 @@ async def get_dataset_records(
     page: int = 1,
     size: int = 50,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    dataset_repo: DatasetRepository = Depends(get_dataset_repository),
 ):
     """Get records from a dataset with pagination."""
 
@@ -176,26 +164,14 @@ async def get_dataset_records(
         return cached
 
     # Verify dataset access
-    dataset = (
-        db.query(Dataset)
-        .join(Job)
-        .filter(Dataset.id == dataset_id, Job.tenant_id == current_user.tenant_id)
-        .first()
-    )
+    dataset = dataset_repo.get_dataset(dataset_id, current_user.tenant_id)
 
     if not dataset:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found"
         )
 
-    # Get records with pagination
-    query = db.query(DataRecord).filter(DataRecord.dataset_id == dataset_id)
-    total = query.count()
-
-    offset = (page - 1) * size
-    records = (
-        query.order_by(DataRecord.created_at.desc()).offset(offset).limit(size).all()
-    )
+    records, total = dataset_repo.get_dataset_records(dataset_id, page, size)
 
     DataAccessAudit.log_data_access(
         user_id=current_user.id,
@@ -242,17 +218,12 @@ async def search_dataset(
     dataset_id: str,
     search_request: SearchRequest,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    dataset_repo: DatasetRepository = Depends(get_dataset_repository),
 ):
     """Perform semantic search on dataset records."""
 
     # Verify dataset access
-    dataset = (
-        db.query(Dataset)
-        .join(Job)
-        .filter(Dataset.id == dataset_id, Job.tenant_id == current_user.tenant_id)
-        .first()
-    )
+    dataset = dataset_repo.get_dataset(dataset_id, current_user.tenant_id)
 
     if not dataset:
         raise HTTPException(
@@ -290,11 +261,7 @@ async def search_dataset(
             for res in search_results
             if res.get("dataset_id") == dataset_id
         ]
-        records = (
-            db.query(DataRecord).filter(DataRecord.id.in_(record_ids)).all()
-            if record_ids
-            else []
-        )
+        records = dataset_repo.get_records_by_ids(record_ids)
         record_map = {str(r.id): r for r in records}
 
         filtered_results = []
@@ -338,17 +305,12 @@ async def export_dataset(
     dataset_id: str,
     format: str = Query("json", regex="^(json|csv)$"),
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    dataset_repo: DatasetRepository = Depends(get_dataset_repository),
 ):
     """Export dataset in JSON or CSV format."""
 
     # Verify dataset access
-    dataset = (
-        db.query(Dataset)
-        .join(Job)
-        .filter(Dataset.id == dataset_id, Job.tenant_id == current_user.tenant_id)
-        .first()
-    )
+    dataset = dataset_repo.get_dataset(dataset_id, current_user.tenant_id)
 
     if not dataset:
         raise HTTPException(
@@ -356,7 +318,7 @@ async def export_dataset(
         )
 
     # Get all records
-    records = db.query(DataRecord).filter(DataRecord.dataset_id == dataset_id).all()
+    records = dataset_repo.get_all_records(dataset_id)
 
     DataAccessAudit.log_data_access(
         user_id=current_user.id,
@@ -455,16 +417,11 @@ async def export_dataset(
 async def delete_dataset(
     dataset_id: str,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    dataset_repo: DatasetRepository = Depends(get_dataset_repository),
 ):
     """Delete a dataset and all its records."""
 
-    dataset = (
-        db.query(Dataset)
-        .join(Job)
-        .filter(Dataset.id == dataset_id, Job.tenant_id == current_user.tenant_id)
-        .first()
-    )
+    dataset = dataset_repo.get_dataset(dataset_id, current_user.tenant_id)
 
     if not dataset:
         raise HTTPException(
@@ -472,8 +429,7 @@ async def delete_dataset(
         )
 
     # Delete dataset (cascade will handle records)
-    db.delete(dataset)
-    db.commit()
+    dataset_repo.delete_dataset(dataset)
 
     await invalidate_dataset_records(dataset_id)
 

@@ -1,15 +1,13 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
-from datetime import datetime
-from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
-from app.database import get_db
-from app.models import Job, JobStatus, User
+from app.models import JobStatus, User
 from app.auth.dependencies import get_current_active_user
 from app.tasks.mining_tasks import start_mining_job
 from app.utils import sanitize_prompt
 from app.middleware import rbac_required, user_limiter, tenant_limiter, RateLimits
+from app.api.dependencies import get_job_repository
 
 router = APIRouter(prefix="/jobs", tags=["v1-jobs"])
 
@@ -50,7 +48,7 @@ async def create_job(
     job_data: JobCreate,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    job_repo: JobRepository = Depends(get_job_repository),
 ):
     """Create a new mining job."""
     try:
@@ -59,16 +57,11 @@ async def create_job(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     # Create job record
-    job = Job(
+    job = job_repo.create_job(
         user_id=current_user.id,
         tenant_id=current_user.tenant_id,
         prompt=job_data.prompt,
-        status=JobStatus.PENDING,
     )
-
-    db.add(job)
-    db.commit()
-    db.refresh(job)
 
     # Start background task
     background_tasks.add_task(start_mining_job.delay, str(job.id))
@@ -97,29 +90,26 @@ async def list_jobs(
     size: int = 20,
     status: Optional[str] = None,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    job_repo: JobRepository = Depends(get_job_repository),
 ):
     """List user's jobs with pagination."""
 
-    # Build query
-    query = db.query(Job).filter(Job.tenant_id == current_user.tenant_id)
-
+    status_enum: Optional[JobStatus] = None
     if status:
         try:
             status_enum = JobStatus(status)
-            query = query.filter(Job.status == status_enum)
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid status: {status}",
             )
 
-    # Get total count
-    total = query.count()
-
-    # Apply pagination
-    offset = (page - 1) * size
-    jobs = query.order_by(Job.created_at.desc()).offset(offset).limit(size).all()
+    jobs, total = job_repo.list_jobs(
+        tenant_id=current_user.tenant_id,
+        status=status_enum,
+        page=page,
+        size=size,
+    )
 
     # Convert to response format
     job_responses = []
@@ -150,15 +140,11 @@ async def list_jobs(
 async def get_job(
     job_id: str,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    job_repo: JobRepository = Depends(get_job_repository),
 ):
     """Get job details."""
 
-    job = (
-        db.query(Job)
-        .filter(Job.id == job_id, Job.tenant_id == current_user.tenant_id)
-        .first()
-    )
+    job = job_repo.get_job(job_id, current_user.tenant_id)
 
     if not job:
         raise HTTPException(
@@ -187,15 +173,11 @@ async def get_job(
 async def cancel_job(
     job_id: str,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    job_repo: JobRepository = Depends(get_job_repository),
 ):
     """Cancel a running job."""
 
-    job = (
-        db.query(Job)
-        .filter(Job.id == job_id, Job.tenant_id == current_user.tenant_id)
-        .first()
-    )
+    job = job_repo.get_job(job_id, current_user.tenant_id)
 
     if not job:
         raise HTTPException(
@@ -208,9 +190,7 @@ async def cancel_job(
         )
 
     # Update job status
-    job.status = JobStatus.CANCELLED
-    job.completed_at = datetime.utcnow()
-    db.commit()
+    job_repo.cancel_job(job)
 
     return {"message": "Job cancelled successfully"}
 
@@ -223,15 +203,11 @@ async def restart_job(
     job_id: str,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    job_repo: JobRepository = Depends(get_job_repository),
 ):
     """Restart a failed or cancelled job."""
 
-    job = (
-        db.query(Job)
-        .filter(Job.id == job_id, Job.tenant_id == current_user.tenant_id)
-        .first()
-    )
+    job = job_repo.get_job(job_id, current_user.tenant_id)
 
     if not job:
         raise HTTPException(
@@ -245,13 +221,7 @@ async def restart_job(
         )
 
     # Reset job status
-    job.status = JobStatus.PENDING
-    job.started_at = None
-    job.completed_at = None
-    job.error_message = None
-    job.crawled_urls = 0
-    job.extracted_records = 0
-    db.commit()
+    job_repo.restart_job(job)
 
     # Start background task
     background_tasks.add_task(start_mining_job.delay, str(job.id))
