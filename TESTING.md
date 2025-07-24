@@ -9,6 +9,13 @@ This project includes comprehensive test suites for both backend and frontend co
 - PostgreSQL (for integration tests)
 - Redis (for integration tests)
 
+### Installing Dependencies
+Install the Python requirements for development and testing:
+
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
+```
+
 ### Test Structure
 - `tests/unit/` - Unit tests for business logic
 - `tests/integration/` - Integration tests for API endpoints
@@ -22,6 +29,8 @@ python -m pytest
 
 # Run with coverage
 python -m pytest --cov=app --cov-report=html
+# View the coverage report
+# open htmlcov/index.html in your browser
 
 # Run specific test categories
 python -m pytest -m unit
@@ -148,3 +157,10 @@ CI includes:
 - Use `pytest-xdist` for parallel test execution
 - Focus tests with `pytest -k "pattern"`
 - Skip slow tests in development with `pytest -m "not slow"`
+
+### Fixing Failing or Flaky Tests
+
+- Re-run the failing test with `pytest -k <name> -vv` to get detailed logs.
+- Ensure fixtures clean up state and avoid network dependencies.
+- For flaky tests, run `pytest --flake-finder --flake-runs=2` to reproduce.
+- If issues persist, mark the test with `@pytest.mark.skip` and open an issue describing the failure.
