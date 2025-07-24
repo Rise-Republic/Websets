@@ -49,6 +49,8 @@ services:
       WORKOS_CLIENT_ID: "client_01JEATKMYP9639H6QSH7XNZH0Q"
       WORKOS_API_KEY: "sk_test_a2V5XzAs3kU0VtLXSFZW1jVSMYcSWlOw..."
       WORKOS_REDIRECT_URI: "http://127.0.0.1:5173/callback"
+      WORKOS_COOKIE_PASSWORD: "yvHkj2U4tkv+oYGZon1EDfQVtbb4ro9cabdEAV9YH9A="
+      WORKOS_ENFORCE_MFA: "false"
     depends_on:
       vault:
         condition: service_healthy
@@ -152,6 +154,7 @@ services:
       - "8200:8200"
     environment:
       VAULT_ADDR: http://0.0.0.0:8200
+      VAULT_DEV_ROOT_TOKEN_ID: root
     cap_add:
       - IPC_LOCK
     volumes:
@@ -162,6 +165,7 @@ services:
       -dev
       -dev-root-token-id=root
       -dev-listen-address=0.0.0.0:8200
+      -dev-plugin-dir=/vault/plugins
     restart: unless-stopped
     deploy:
       resources:

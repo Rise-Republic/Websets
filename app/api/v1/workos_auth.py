@@ -10,7 +10,7 @@ from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.security import APIKeyCookie
 from starlette.middleware.base import BaseHTTPMiddleware
 from workos import WorkOSClient
-from workos.exceptions import AuthenticationError, SignatureVerificationError
+from workos.exceptions import AuthenticationException, BadRequestException
 from typing import Optional, Dict, Any, Callable
 
 # Configure logging
@@ -160,7 +160,7 @@ async def auth_callback(
         
         return response
         
-    except AuthenticationError as e:
+    except AuthenticationException as e:
         logger.warning(f"Authentication error: {str(e)}")
         raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
     except Exception as e:
