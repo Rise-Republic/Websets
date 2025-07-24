@@ -79,3 +79,19 @@ describe('authentication helpers', () => {
     expect(apiService.getToken()).toBeNull();
   });
 });
+
+describe('apiService internals', () => {
+  test('getBaseUrl switches with legacy mode', () => {
+    anyService.setLegacyMode(false);
+    expect(anyService.getBaseUrl('/x')).toMatch(/v1\/x$/);
+    anyService.setLegacyMode(true);
+    expect(anyService.getBaseUrl('/x')).toMatch(/\/x$/);
+  });
+
+  test('shouldRetry logic', () => {
+    expect(anyService.shouldRetry({ status: 0 }, 1)).toBe(true);
+    expect(anyService.shouldRetry({ status: 503 }, 2)).toBe(true);
+    expect(anyService.shouldRetry({ status: 400 }, 1)).toBe(false);
+    expect(anyService.shouldRetry({ status: 503 }, 3)).toBe(false);
+  });
+});
