@@ -69,7 +69,7 @@ npm test -- LoginForm.test.tsx
 ### Test Configuration
 - `jest.config.js` - Jest configuration
 - `src/setupTests.ts` - Global test setup
-- Coverage thresholds: 70% for all metrics
+ - Coverage thresholds: 80% for all metrics
 
 ## Coverage Targets
 
@@ -77,8 +77,8 @@ npm test -- LoginForm.test.tsx
 - **Target**: 80% coverage
 - **Location**: `htmlcov/index.html` (after running with `--cov-report=html`)
 
-### Frontend  
-- **Target**: 70% coverage
+### Frontend
+- **Target**: 80% coverage
 - **Location**: `coverage/lcov-report/index.html` (after running `npm run test:coverage`)
 
 ## Mocking Strategy
