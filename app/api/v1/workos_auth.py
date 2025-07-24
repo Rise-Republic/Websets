@@ -26,15 +26,38 @@ STATE_MAX_AGE = 300  # 5 minutes in seconds
 # Authentication options
 ENFORCE_MFA = os.getenv("WORKOS_ENFORCE_MFA", "false").lower() == "true"  # Make MFA optional by default
 ALLOW_PASSKEYS = True  # Enable passkey support
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+IS_PRODUCTION = ENVIRONMENT == "production"
 
 # Initialize WorkOS client
+api_key = os.getenv("WORKOS_API_KEY")
+client_id = os.getenv("WORKOS_CLIENT_ID")
+
+if not api_key or not client_id:
+    raise RuntimeError("WorkOS credentials missing: WORKOS_API_KEY and/or WORKOS_CLIENT_ID not set")
+
+# Log the client ID being used (for debugging)
+logger.debug(f"Using WorkOS client ID: {client_id}")
+
 workos_client = WorkOSClient(
-    api_key=os.getenv("WORKOS_API_KEY"),
-    client_id=os.getenv("WORKOS_CLIENT_ID")
+    api_key=api_key,
+    client_id=client_id
 )
 
 # Get session password from environment (in production, from Vault)
-WORKOS_COOKIE_PASSWORD = os.getenv("WORKOS_COOKIE_PASSWORD", "yvHkj2U4tkv+oYGZon1EDfQVtbb4ro9cabdEAV9YH9A=")
+cookie_password = os.getenv("WORKOS_COOKIE_PASSWORD")
+if not cookie_password:
+    if ENVIRONMENT == "production":
+        raise RuntimeError("WORKOS_COOKIE_PASSWORD not set in production environment")
+    else:
+        # Only use default in development, never in production
+        cookie_password = "yvHkj2U4tkv+oYGZon1EDfQVtbb4ro9cabdEAV9YH9A="
+        logger.warning(
+            "Using default WORKOS_COOKIE_PASSWORD in development. "
+            "This is insecure and should NEVER be used in production."
+        )
+
+WORKOS_COOKIE_PASSWORD = cookie_password
 
 # Session cookie security
 session_cookie = APIKeyCookie(name=COOKIE_NAME, auto_error=False)
@@ -82,9 +105,11 @@ async def initiate_login(request: Request):
         state = secrets.token_urlsafe(32)
         
         # Generate WorkOS authorization URL with state
+        redirect_uri = "http://localhost:8001/api/auth/callback"
+        # Note: organization_id parameter is not supported in this version of the SDK
         authorization_url = workos_client.user_management.get_authorization_url(
             provider="authkit",
-            redirect_uri=os.getenv("WORKOS_REDIRECT_URI", "http://localhost:8001/api/auth/callback"),
+            redirect_uri=redirect_uri,
             state=state
         )
         
@@ -94,7 +119,7 @@ async def initiate_login(request: Request):
             "workos_state",
             state,
             httponly=True,
-            secure=True,
+            secure=IS_PRODUCTION,  # Only use secure=True in production
             samesite="Lax",
             max_age=STATE_MAX_AGE,
             path="/api/auth"
@@ -149,7 +174,7 @@ async def auth_callback(
             COOKIE_NAME,
             encrypted_session,
             httponly=True,
-            secure=True,
+            secure=IS_PRODUCTION,  # Only use secure=True in production
             samesite="Lax",
             max_age=COOKIE_MAX_AGE,
             path="/"

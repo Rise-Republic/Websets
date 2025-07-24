@@ -46,9 +46,9 @@ services:
       DATABASE_URL: "postgresql://postgres:changeme@db:5432/webset_miner"
       OPENAI_API_KEY: "sk-dev-openai-key-for-local-development-only-0123456789"
       # WorkOS AuthKit Configuration
-      WORKOS_CLIENT_ID: "client_01JEATKMYP9639H6QSH7XNZH0Q"
-      WORKOS_API_KEY: "sk_test_a2V5XzAs3kU0VtLXSFZW1jVSMYcSWlOw..."
-      WORKOS_REDIRECT_URI: "http://127.0.0.1:5173/callback"
+      WORKOS_CLIENT_ID: "client_01JE4TKWY9039H6QSH7XNZHQ6Q"
+      WORKOS_API_KEY: "sk_test_a2V5XzAxSkU0VEtXSFZNWjVSMVc5WU0wVlkyNk5OLHZvaHZmQ0oxQ3FSamcxS3g4YVIyMHJrblk"
+      WORKOS_REDIRECT_URI: "http://localhost:8001/api/auth/callback"
       WORKOS_COOKIE_PASSWORD: "yvHkj2U4tkv+oYGZon1EDfQVtbb4ro9cabdEAV9YH9A="
       WORKOS_ENFORCE_MFA: "false"
     depends_on:

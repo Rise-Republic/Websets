@@ -4,7 +4,7 @@ const LoginForm: React.FC = () => {
   const handleSignIn = () => {
     console.log('Redirecting to WorkOS AuthKit...');
     // Redirect to WorkOS AuthKit hosted login
-    window.location.href = '/api/auth/login';
+    window.location.href = 'http://localhost:8001/api/auth/login';
   };
 
   return (
