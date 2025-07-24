@@ -16,7 +16,10 @@ For local development you can use self‑signed certificates for mutual TLS betw
 scripts/generate_mtls_certs.sh
 ```
 
-This creates a `certs/` directory containing `ca.crt`, `app.crt`, `app.key`, `minio.crt`, and `minio.key`. These files are mounted into the containers by `docker-compose.yml`.
+This creates a `certs/` directory containing `ca.crt` plus client and server
+certificates for each service (`app`, `minio`, `vault`, `redis`, `qdrant`, and
+`weaviate`). These files are mounted into the containers by
+`docker-compose.yml`.
 
 ## Start the Stack
 
