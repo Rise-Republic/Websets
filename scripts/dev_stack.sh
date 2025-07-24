@@ -23,7 +23,8 @@ done
 
 # Apply database migrations
 echo "Applying database migrations..."
-docker compose exec -T app alembic upgrade head
+# Pass database URL for Alembic via DB_URL
+docker compose exec -T app bash -c 'DB_URL="$DATABASE_URL" alembic upgrade head'
 
 # Seed default user if none exists
 if [ -z "${SEED_USER_EMAIL}" ] || [ -z "${SEED_USER_PASSWORD}" ]; then

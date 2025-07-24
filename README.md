@@ -397,11 +397,14 @@ npm outdated
 
 ```bash
 # Create migration
-alembic revision --autogenerate -m "Description"
+DB_URL=$DATABASE_URL alembic revision --autogenerate -m "Description"
 
 # Apply migrations
-alembic upgrade head
+DB_URL=$DATABASE_URL alembic upgrade head
 ```
+
+`DB_URL` should point to the same connection string as `DATABASE_URL`. Alembic
+reads this variable to determine the database to migrate.
 
 ## Production Deployment
 
