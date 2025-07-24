@@ -11,9 +11,9 @@
 - [ ] Add rate limiting and DDoS protection
 
 ## Phase 2: Compliance (Week 3-4)
-- [ ] Implement GDPR compliance features (data export, deletion, consent)
-- [ ] Add data retention policies
-- [ ] Add user consent management
+- [x] Implement GDPR compliance features (data export, deletion, consent)
+- [x] Add data retention policies
+- [x] Add user consent management
 - [ ] Add privacy controls (user data visibility, audit)
 - [ ] Add region tagging and residency enforcement
 

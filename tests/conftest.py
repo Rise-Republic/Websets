@@ -144,6 +144,7 @@ def sample_user_data():
         "email": "test@example.com",
         "password": "TestPassword123!",
         "full_name": "Test User",
+        "consent": True,
     }
 
 

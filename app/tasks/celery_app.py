@@ -10,6 +10,7 @@ celery_app = Celery(
     include=[
         "app.tasks.mining_tasks",
         "app.tasks.secret_rotation",
+        "app.tasks.gdpr_tasks",
     ],
 )
 
@@ -43,5 +44,9 @@ celery_app.conf.beat_schedule = {
     "rotate-minio-root-creds": {
         "task": "app.tasks.secret_rotation.rotate_minio_root_credentials",
         "schedule": 7 * 24 * 3600,  # Weekly
+    },
+    "purge-expired-data": {
+        "task": "app.tasks.gdpr_tasks.purge_expired_data",
+        "schedule": 24 * 3600,  # Daily
     },
 }
