@@ -61,3 +61,9 @@ docker run -d \
 The `.env` file should contain only non-secret settings. Vault or Docker secrets supply the sensitive credentials.
 
 Following these practices helps ensure the application is delivered over HTTPS and that containers are resilient against common attacks.
+
+## Backups and Recovery
+
+Regularly dump the PostgreSQL database and keep the files in secure storage. See
+[Backups & Disaster Recovery](docs/runbooks/backups.md) for the backup script
+and restoration steps.
