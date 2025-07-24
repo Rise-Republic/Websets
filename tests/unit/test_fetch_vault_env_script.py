@@ -13,8 +13,8 @@ class TestFetchVaultEnvScript(unittest.TestCase):
             "data": {"data": {"A": "1", "B": "2"}}
         }
 
-        with patch("builtins.print") as mock_print:
+        with patch("fetch_vault_env.logger.info") as mock_info:
             fve.main()
 
-        mock_print.assert_any_call("A=1")
-        mock_print.assert_any_call("B=2")
+        mock_info.assert_any_call("Fetched secret for A")
+        mock_info.assert_any_call("Fetched secret for B")

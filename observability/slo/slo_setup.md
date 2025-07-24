@@ -17,6 +17,6 @@ This guide describes SLI definitions, SLO dashboards, error budget, burn rate, a
 - CI/CD checks for SLO compliance.
 
 ## Webset Miner Example
-- The file `observability/slo/websets_slo.json` contains the SLO definition for the `webset-miner` service.
+- The file `monitoring/grafana/dashboards/websets_slo.json` contains the SLO definition for the `webset-miner` service.
 - Prometheus recording rules in `monitoring/prometheus/rules/slo_recording_rules.yml` generate `slo_*` metrics.
 - Grafana dashboard JSON lives in `monitoring/grafana/dashboards/websets_slo.json` and visualizes availability, latency, and burn rate.

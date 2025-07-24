@@ -7,7 +7,13 @@ sys.path.insert(
     0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "app"))
 )
 
-import app.config as config
+import importlib
+
+
+def load_config():
+    if 'app.config' in sys.modules:
+        del sys.modules['app.config']
+    return importlib.import_module('app.config')
 
 
 def test_disable_vault_in_production_exits(monkeypatch):

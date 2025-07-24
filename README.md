@@ -263,6 +263,12 @@ For production deployments, adjust these settings:
 # Install dev dependencies
 pip install -r requirements.txt -r requirements-dev.txt
 
+# Set minimal environment so tests run without Vault
+export DISABLE_VAULT=true
+export OPENAI_API_KEY=dummy
+export DATABASE_URL=sqlite://
+export JWT_SECRET_KEY=super-secret-key-change-me-1234567890
+
 # Unit tests only
 pytest -m unit
 

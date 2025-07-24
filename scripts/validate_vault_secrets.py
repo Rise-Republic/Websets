@@ -4,6 +4,7 @@
 import json
 import os
 import sys
+from loguru import logger
 from pathlib import Path
 
 # Ensure we can import app modules
@@ -21,7 +22,7 @@ def main() -> None:
         with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
             template = json.load(f)
     except Exception as exc:
-        print(f"Error reading template {TEMPLATE_PATH}: {exc}")
+        logger.error("Error reading template %s: %s", TEMPLATE_PATH, exc)
         sys.exit(1)
 
     # Determine if the template lists a single path or multiple paths
@@ -44,10 +45,14 @@ def main() -> None:
 
     if missing:
         for path, keys in missing.items():
-            print(f"Missing or empty secrets in '{path}': {', '.join(keys)}")
+            logger.error(
+                "Missing or empty secrets in '%s': %s",
+                path,
+                ", ".join(keys),
+            )
         sys.exit(1)
 
-    print("All required secrets are present in Vault.")
+    logger.info("All required secrets are present in Vault.")
 
 
 if __name__ == "__main__":

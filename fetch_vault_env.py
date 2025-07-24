@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Fetch secrets from Vault and print them in .env format."""
+"""Fetch secrets from Vault and log the keys fetched."""
 
 import os
 from typing import Dict
+from loguru import logger
 
 from app.secrets.vault import VaultClient
 
@@ -18,8 +19,8 @@ def fetch_all(path: str) -> Dict[str, str]:
 
 def main() -> None:
     secrets = fetch_all(VAULT_PATH)
-    for key, value in secrets.items():
-        print(f"{key}={value}")
+    for key in secrets:
+        logger.info(f"Fetched secret for {key}")
 
 
 if __name__ == "__main__":

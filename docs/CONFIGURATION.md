@@ -147,7 +147,7 @@ services:
 Override the compose file when starting services:
 
 ```bash
-docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 ```
 
 ## Object Storage Path Layout

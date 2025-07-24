@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta, datetime
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 import hashlib
 import os
 import re
@@ -11,7 +11,6 @@ from loguru import logger
 
 import pyotp
 from prometheus_client import Counter, generate_latest
-from app.utils.mailer import send_password_reset
 
 from app.database import get_db
 from app.models.user import User
@@ -76,8 +75,7 @@ class UserResponse(BaseModel):
     mfa_enabled: bool = False
     mfa_method: str = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Token(BaseModel):
