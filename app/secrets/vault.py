@@ -33,6 +33,11 @@ class VaultClient:
         secret = self.client.secrets.kv.v2.read_secret_version(path=path)
         return secret["data"]["data"].get(key)
 
+    def fetch_all(self, path: str) -> dict[str, str]:
+        """Return all secrets stored at the given path."""
+        secret = self.client.secrets.kv.v2.read_secret_version(path=path)
+        return secret["data"]["data"]
+
     def rotate_secret(self, path: str, key: str, length: int = 32) -> str:
         """Generate a new random secret, store it in Vault, and return it."""
         import secrets

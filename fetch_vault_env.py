@@ -13,8 +13,7 @@ VAULT_PATH = os.getenv("VAULT_SECRET_PATH", "secret/websets")
 def fetch_all(path: str) -> Dict[str, str]:
     """Return all secrets stored at the given path."""
     client = VaultClient()
-    secret = client.client.secrets.kv.v2.read_secret_version(path=path)
-    return secret["data"]["data"]
+    return client.fetch_all(path)
 
 
 def main() -> None:

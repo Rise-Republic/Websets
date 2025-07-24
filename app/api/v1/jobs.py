@@ -8,6 +8,7 @@ from app.tasks.mining_tasks import start_mining_job
 from app.utils import sanitize_prompt
 from app.middleware import rbac_required, user_limiter, tenant_limiter, RateLimits
 from app.api.dependencies import get_job_repository
+from app.repositories.job_repository import JobRepository
 
 router = APIRouter(prefix="/jobs", tags=["v1-jobs"])
 

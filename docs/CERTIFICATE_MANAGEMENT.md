@@ -12,10 +12,10 @@ python scripts/check_cert_expiration.py
 
 ## Rotation
 
-Self-signed certificates can be regenerated with `scripts/generate_mtls_certs.sh`. Set `CERT_DIR` to control the output path.
+Self-signed certificates can be regenerated with `scripts/generate_mtls_certs.py`. Set `CERT_DIR` to control the output path.
 
 ```bash
-CERT_DIR=/etc/websets/certs scripts/generate_mtls_certs.sh
+CERT_DIR=/etc/websets/certs scripts/generate_mtls_certs.py
 ```
 
 The Celery beat task `check_certificate_expiration` logs warnings daily so operators know when to rotate certificates.
