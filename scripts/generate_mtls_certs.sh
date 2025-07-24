@@ -9,7 +9,9 @@ openssl req -x509 -newkey rsa:4096 -sha256 -days 365 \
   -nodes -keyout "$CERT_DIR/ca.key" -out "$CERT_DIR/ca.crt" \
   -subj "/CN=websets-ca"
 
-for svc in app minio; do
+SERVICES=(app minio vault redis qdrant weaviate)
+
+for svc in "${SERVICES[@]}"; do
   openssl req -newkey rsa:2048 -nodes \
     -keyout "$CERT_DIR/${svc}.key" -out "$CERT_DIR/${svc}.csr" \
     -subj "/CN=${svc}"

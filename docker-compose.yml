@@ -9,9 +9,12 @@ services:
     environment:
       - DISABLE_VAULT_FOR_LOCAL_DEV=true
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/webset_miner
-      - REDIS_URL=redis://redis:6379
-      - CELERY_BROKER_URL=redis://redis:6379
-      - CELERY_RESULT_BACKEND=redis://redis:6379
+      - VAULT_ADDR=https://vault:8200
+      - REDIS_URL=rediss://redis:6379
+      - CELERY_BROKER_URL=rediss://redis:6379
+      - CELERY_RESULT_BACKEND=rediss://redis:6379
+      - QDRANT_URL=https://qdrant:6333
+      - WEAVIATE_URL=https://weaviate:8080
       - MINIO_ENDPOINT=https://minio:9000
       - MINIO_CA_CERT=/certs/ca.crt
       - MINIO_CLIENT_CERT=/certs/app.crt
@@ -32,7 +35,7 @@ services:
           cpus: '1.00'
           memory: 1g
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health/live"]
+      test: ["CMD", "curl", "--cacert", "/certs/ca.crt", "-f", "https://localhost:8000/health/live"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -44,9 +47,12 @@ services:
     environment:
       - DISABLE_VAULT_FOR_LOCAL_DEV=true
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/webset_miner
-      - REDIS_URL=redis://redis:6379
-      - CELERY_BROKER_URL=redis://redis:6379
-      - CELERY_RESULT_BACKEND=redis://redis:6379
+      - VAULT_ADDR=https://vault:8200
+      - REDIS_URL=rediss://redis:6379
+      - CELERY_BROKER_URL=rediss://redis:6379
+      - CELERY_RESULT_BACKEND=rediss://redis:6379
+      - QDRANT_URL=https://qdrant:6333
+      - WEAVIATE_URL=https://weaviate:8080
       - MINIO_ENDPOINT=https://minio:9000
       - MINIO_CA_CERT=/certs/ca.crt
       - MINIO_CLIENT_CERT=/certs/app.crt
@@ -79,9 +85,12 @@ services:
     environment:
       - DISABLE_VAULT_FOR_LOCAL_DEV=true
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/webset_miner
-      - REDIS_URL=redis://redis:6379
-      - CELERY_BROKER_URL=redis://redis:6379
-      - CELERY_RESULT_BACKEND=redis://redis:6379
+      - VAULT_ADDR=https://vault:8200
+      - REDIS_URL=rediss://redis:6379
+      - CELERY_BROKER_URL=rediss://redis:6379
+      - CELERY_RESULT_BACKEND=rediss://redis:6379
+      - QDRANT_URL=https://qdrant:6333
+      - WEAVIATE_URL=https://weaviate:8080
       - MINIO_ENDPOINT=https://minio:9000
       - MINIO_CA_CERT=/certs/ca.crt
       - MINIO_CLIENT_CERT=/certs/app.crt
@@ -130,10 +139,30 @@ services:
       timeout: 5s
       retries: 5
 
+  vault:
+    image: hashicorp/vault:1.15
+    ports:
+      - "8200:8200"
+    command: vault server -dev -dev-root-token-id=root -dev-listen-address=0.0.0.0:8200 \
+      -dev-tls-cert=/certs/vault.crt -dev-tls-key=/certs/vault.key -dev-tls-client-ca=/certs/ca.crt
+    volumes:
+      - ./certs:/certs:ro
+    healthcheck:
+      test: ["CMD", "curl", "--cacert", "/certs/ca.crt", "-f", "https://localhost:8200/v1/sys/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   redis:
     image: redis:7-alpine
+    command: ["redis-server", "--tls-port", "6379", "--port", "0",
+              "--tls-cert-file", "/certs/redis.crt",
+              "--tls-key-file", "/certs/redis.key",
+              "--tls-ca-cert-file", "/certs/ca.crt"]
     ports:
       - "6379:6379"
+    volumes:
+      - ./certs:/certs:ro
     restart: unless-stopped
     deploy:
       resources:
@@ -141,7 +170,7 @@ services:
           cpus: '0.25'
           memory: 256m
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-u", "rediss://localhost:6379", "PING"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -205,8 +234,13 @@ services:
       - "6333:6333"
     volumes:
       - qdrant_data:/qdrant/storage
+      - ./certs:/certs:ro
+    environment:
+      - QDRANT_TLS_CERT=/certs/qdrant.crt
+      - QDRANT_TLS_KEY=/certs/qdrant.key
+      - QDRANT_TLS_CA=/certs/ca.crt
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      test: ["CMD", "curl", "--cacert", "/certs/ca.crt", "-f", "https://localhost:6333/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -226,10 +260,13 @@ services:
       - AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true
       - PERSISTENCE_DATA_PATH=/var/lib/weaviate
       - DEFAULT_VECTORIZER_MODULE=none
+      - TLS_CERTIFICATE=/certs/weaviate.crt
+      - TLS_PRIVATE_KEY=/certs/weaviate.key
     volumes:
       - weaviate_data:/var/lib/weaviate
+      - ./certs:/certs:ro
     healthcheck:
-      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:8080/v1/.well-known/ready"]
+      test: ["CMD", "wget", "--spider", "--quiet", "https://localhost:8080/v1/.well-known/ready", "--ca-certificate=/certs/ca.crt"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -259,7 +296,7 @@ services:
       - minio_root_user
       - minio_root_password
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "--cacert", "/certs/ca.crt", "-f", "https://localhost:9000/minio/health/live"]
       interval: 30s
       timeout: 10s
       retries: 3
