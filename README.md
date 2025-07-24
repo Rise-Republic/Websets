@@ -543,6 +543,7 @@ traces together.
 - Always use HTTPS in production
 - Rotate JWT secret keys regularly
 - Implement rate limiting
+- Enforce per-tenant quotas
 - Validate all user inputs
 - Use environment variables for secrets
 - Regular security updates managed automatically via Dependabot
