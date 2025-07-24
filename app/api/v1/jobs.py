@@ -1,6 +1,6 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.models import JobStatus, User
 from app.auth.dependencies import get_current_active_user
@@ -29,8 +29,7 @@ class JobResponse(BaseModel):
     completed_at: Optional[str] = None
     error_message: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class JobListResponse(BaseModel):
