@@ -12,7 +12,7 @@ from app.telemetry import configure_tracing
 from app.logging_utils import configure_logging
 from app.database import create_tables
 from app.api.v1 import v1_router
-from app.api.v1.workos_auth import router as workos_auth_router
+from app.api.v1.workos_auth import router as workos_auth_router, SessionMiddleware
 from app.api.versioning import versioning_router
 from app.middleware import (
     limiter,
@@ -57,6 +57,7 @@ app.add_middleware(
 app.add_middleware(SecurityMiddleware)
 
 # Security middleware
+app.add_middleware(SessionMiddleware)  # WorkOS AuthKit session validation
 app.add_middleware(RBACMiddleware)
 app.add_middleware(AuditMiddleware)
 
