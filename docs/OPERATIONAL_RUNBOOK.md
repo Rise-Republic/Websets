@@ -64,8 +64,8 @@ Redis is mostly ephemeral but can be saved using `redis-cli BGSAVE`. For vector 
 
 Credentials in Vault should be rotated regularly. Celery beat runs tasks in
 `app.tasks.secret_rotation` to update MinIO credentials, the database password,
-JWT secrets and API keys. See [Secret Rotation Guide](SECRET_ROTATION.md) for
-manual rotation steps and helper scripts.
+JWT secrets and API keys. See [Secret Rotation Guide](SECRET_ROTATION.md) and
+[Secrets Management](SECRETS_MANAGEMENT.md) for policies and helper scripts.
 
 ## Smoke Tests
 
