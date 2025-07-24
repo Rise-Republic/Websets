@@ -11,6 +11,9 @@ if ! docker compose ps --services --filter status=running | grep -q '^vault$'; t
 fi
 
 echo "Seeding Vault with template secrets..."
-docker compose exec -T vault sh -c 'vault login -no-print root >/dev/null && vault kv put secret/websets @-' < "$TEMPLATE_PATH"
+# Copy template to vault container first
+docker compose cp "$TEMPLATE_PATH" vault:/tmp/vault_secrets.json
+# Then use the local file path within the container
+docker compose exec -T vault sh -c 'vault login -no-print root >/dev/null && vault kv put secret/websets @/tmp/vault_secrets.json'
 
 echo "Vault seeded"
