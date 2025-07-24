@@ -11,6 +11,7 @@ groups:
     annotations:
       summary: "High request latency"
       description: "More than 10% of requests are taking longer than 1s"
+      runbook: ../../docs/runbooks/alerts.md#high-request-latency
   - alert: HighErrorRate
     expr: rate(websets_http_requests_total{status_code!~"2.."}[5m]) / rate(websets_http_requests_total[5m]) > 0.05
     for: 5m
@@ -19,6 +20,7 @@ groups:
     annotations:
       summary: "High HTTP error rate"
       description: "Over 5% of requests are failing"
+      runbook: ../../docs/runbooks/alerts.md#high-error-rate
   - alert: SLOErrorBudgetBurn
     expr: slo_error_budget_burn_rate{tier="1"} > 2
     for: 5m
@@ -27,3 +29,4 @@ groups:
     annotations:
       summary: "SLO burn rate high"
       description: "Error budget is burning faster than expected"
+      runbook: ../../docs/runbooks/alerts.md#slo-error-budget-burn

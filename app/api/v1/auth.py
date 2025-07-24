@@ -52,6 +52,7 @@ class UserCreate(BaseModel):
     full_name: str = None
     mfa_enabled: bool = False
     mfa_method: str = "totp"  # or "email"/"sms"
+    consent: bool = False
 
     @field_validator("password")
     @classmethod
@@ -126,6 +127,8 @@ async def register(
             mfa_enabled=user_data.mfa_enabled,
             mfa_method=user_data.mfa_method,
             mfa_secret=mfa_secret,
+            consent_given=user_data.consent,
+            consent_given_at=datetime.utcnow() if user_data.consent else None,
             verification_token=hashlib.sha256(token.encode()).hexdigest(),
             verification_token_expiry=datetime.utcnow() + timedelta(hours=24),
         )
