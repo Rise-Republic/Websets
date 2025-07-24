@@ -268,8 +268,8 @@ pytest -m unit
 # Integration tests only
 pytest -m integration
 
-# End-to-end tests
-pytest -m e2e
+# System tests
+pytest -m system
 
 # All tests
 pytest

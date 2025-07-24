@@ -73,7 +73,7 @@ Run the smoke test suite after deploying new versions or performing maintenance 
 
 ```bash
 pytest -m smoke            # backend checks
-npm run e2e -- --grep \@smoke  # frontend checks
+npm run system -- --grep \@smoke  # frontend checks
 ```
 
 Successful runs end with `N passed` and exit code `0`. Any failure should be investigated immediately.
