@@ -30,8 +30,9 @@ stop:
 docker-build:
 	docker build -t webset-miner .
 
+# Launch full local development stack
 dev:
 	bash scripts/setup.sh
- docker compose up -d
- DB_URL=$$DATABASE_URL alembic upgrade head
- vault kv put secret/websets @vault_secrets_template.json
+	docker compose up -d
+	alembic upgrade head
+	vault kv put secret/websets @vault_secrets_template.json
