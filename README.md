@@ -219,6 +219,12 @@ Populate these secrets using Vault and create Docker secrets for any services
 that support the `*_FILE` pattern. `fetch_vault_env.py` can be used to generate
 a complete `.env` file from Vault for local development.
 
+### Mail Delivery
+
+Configure the SMTP variables above so password reset emails can be sent. The
+application builds a reset URL and delivers it to the user using these
+settings.
+
 In non-development environments the application will exit on startup if any of
 the required secrets are missing.
 
