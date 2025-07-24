@@ -124,10 +124,11 @@ services:
           cpus: '0.25'
           memory: 256m
     healthcheck:
-      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:8200/v1/sys/health"]
+      test: ["CMD", "wget", "--spider", "--no-check-certificate", "--quiet", "http://127.0.0.1:8200/v1/sys/health"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
   redis:
     image: redis:7-alpine
