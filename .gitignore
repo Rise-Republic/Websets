@@ -36,4 +36,6 @@ __pycache__/
 # Local Docker secrets
 secrets/minio_root_user.txt
 secrets/minio_root_password.txt
+secrets/minio_kms_key.txt
+secrets/postgres_encryption_key.txt
 artifacts/

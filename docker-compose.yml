@@ -129,6 +129,8 @@ services:
       - POSTGRES_DB=webset_miner
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+      - POSTGRES_INITDB_ARGS=--data-encryption
+      - POSTGRES_ENCRYPTION_KEY_FILE=/run/secrets/postgres_encryption_key
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -141,6 +143,7 @@ services:
           memory: 512m
     secrets:
       - postgres_password
+      - postgres_encryption_key
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -315,6 +318,8 @@ services:
       MINIO_BROWSER_REDIRECT_URL: https://localhost:9001
       MINIO_ROOT_USER_FILE: /run/secrets/minio_root_user
       MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio_root_password
+      MINIO_KMS_SECRET_KEY_FILE: /run/secrets/minio_kms_key
+      MINIO_KMS_AUTO_ENCRYPTION: "on"
     command: server /data --console-address ":9001"
     volumes:
       - ./data/minio:/data
@@ -322,6 +327,7 @@ services:
     secrets:
       - minio_root_user
       - minio_root_password
+      - minio_kms_key
     healthcheck:
       test: ["CMD", "curl", "--cacert", "/certs/ca.crt", "-f", "https://localhost:9000/minio/health/live"]
       interval: 30s
@@ -350,5 +356,9 @@ secrets:
     file: ./secrets/minio_root_password
   postgres_password:
     file: ./secrets/postgres_password
+  postgres_encryption_key:
+    file: ./secrets/postgres_encryption_key
   grafana_admin_password:
     file: ./secrets/grafana_admin_password
+  minio_kms_key:
+    file: ./secrets/minio_kms_key
