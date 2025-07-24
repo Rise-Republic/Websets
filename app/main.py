@@ -12,6 +12,7 @@ from app.telemetry import configure_tracing
 from app.logging_utils import configure_logging
 from app.database import create_tables
 from app.api.v1 import v1_router
+from app.api.v1.workos_auth import router as workos_auth_router
 from app.api.versioning import versioning_router
 from app.middleware import (
     limiter,
@@ -64,9 +65,8 @@ metrics = get_metrics_collector()
 app.add_middleware(MetricsMiddleware, metrics_collector=metrics)
 
 # Include routers
-app.include_router(v1_router)
-
-# API versioning routes
+app.include_router(v1_router, prefix="/v1")
+app.include_router(workos_auth_router, prefix="/api")  # WorkOS AuthKit routes
 app.include_router(versioning_router)
 
 

@@ -42,6 +42,13 @@ services:
     environment:
       VAULT_ADDR: http://vault:8200
       VAULT_TOKEN: root
+      # Required environment variables for app startup
+      DATABASE_URL: "postgresql://postgres:changeme@db:5432/webset_miner"
+      OPENAI_API_KEY: "sk-dev-openai-key-for-local-development-only-0123456789"
+      # WorkOS AuthKit Configuration
+      WORKOS_CLIENT_ID: "client_01JEATKMYP9639H6QSH7XNZH0Q"
+      WORKOS_API_KEY: "sk_test_a2V5XzAs3kU0VtLXSFZW1jVSMYcSWlOw..."
+      WORKOS_REDIRECT_URI: "http://127.0.0.1:5173/callback"
     depends_on:
       vault:
         condition: service_healthy
