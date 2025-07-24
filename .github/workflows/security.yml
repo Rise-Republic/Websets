@@ -40,3 +40,8 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
 
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          args: --config=.gitleaks.toml --no-git
+
