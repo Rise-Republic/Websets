@@ -4,8 +4,12 @@ from pydantic import field_validator
 import os
 import sys
 from dotenv import load_dotenv
+from loguru import logger
 from app.secrets.vault import VaultClient
 from app.read_secret import read_secret
+
+
+REQUIRED_VARS = ("jwt_secret_key", "database_url", "openai_api_key")
 
 
 class Settings(BaseSettings):
@@ -109,6 +113,7 @@ def _get_secret_as_str(client: VaultClient, path: str, key: str) -> str | None:
         return None
     return str(value)
 
+
 def get_secret_from_vault(client: VaultClient, path: str, key: str) -> str | None:
     """Fetch a secret key from Vault and raise on failure."""
     try:
@@ -117,7 +122,7 @@ def get_secret_from_vault(client: VaultClient, path: str, key: str) -> str | Non
             raise KeyError(f"Secret '{key}' not found at {path}")
         return value
     except Exception as e:
-        print(f"[config.py] Vault error retrieving '{key}': {e}")
+        logger.error("Vault error retrieving '%s': %s", key, e)
         raise
 
 
@@ -144,15 +149,14 @@ def _load_settings_from_env() -> Settings:
         "email_from": os.getenv("EMAIL_FROM", "no-reply@example.com"),
     }
     settings = Settings(**secret_values)
-    required_vars = ["jwt_secret_key", "database_url", "openai_api_key"]
-    missing_vars = [var for var in required_vars if not getattr(settings, var)]
+    missing_vars = [var for var in REQUIRED_VARS if not getattr(settings, var)]
     environment = os.getenv("ENVIRONMENT", "development").lower()
     if missing_vars:
         msg = f"Missing required secrets: {', '.join(missing_vars)}"
         if environment == "development":
-            print(f"[config.py] WARNING: {msg} (ignored in development)")
+            logger.warning("%s (ignored in development)", msg)
         else:
-            print(f"Error: {msg}")
+            logger.error(msg)
             sys.exit(1)
     return settings
 
@@ -168,11 +172,11 @@ def validate_settings() -> Settings:
 
         if disable_vault:
             if environment == "production":
-                print(
-                    "Error: DISABLE_VAULT_FOR_LOCAL_DEV set in production environment"
+                logger.error(
+                    "DISABLE_VAULT_FOR_LOCAL_DEV set in production environment"
                 )
                 sys.exit(1)
-            print("[config.py] Vault integration bypassed for local development.")
+            logger.info("Vault integration bypassed for local development.")
             return _load_settings_from_env()
 
         load_dotenv(".env")
@@ -184,18 +188,19 @@ def validate_settings() -> Settings:
 
         if not vault_configured:
             if environment != "production" or ci_mode:
-                print(
-                    "[config.py] Vault not configured; falling back to environment variables."
+                logger.info(
+                    "Vault not configured; falling back to environment variables."
                 )
                 return _load_settings_from_env()
-            print("Error: VAULT_ADDR and VAULT_TOKEN must be set for secrets")
+            logger.error("VAULT_ADDR and VAULT_TOKEN must be set for secrets")
             sys.exit(1)
 
         try:
-            print("[config.py] VAULT_ env vars:")
+            logger.debug("VAULT_ env vars:")
             for k, v in os.environ.items():
                 if k.startswith("VAULT_"):
-                    print(f"  {k}={v}")
+                    masked = "***" if "TOKEN" in k or "KEY" in k else v
+                    logger.debug("  %s=%s", k, masked)
 
             client = VaultClient()
             client.verify_secret_path(vault_path)
@@ -204,12 +209,16 @@ def validate_settings() -> Settings:
                 "openai_api_key": get_secret_from_vault(
                     client, vault_path, "OPENAI_API_KEY"
                 ),
-                "anthropic_api_key": _get_secret_as_str(client, vault_path, "ANTHROPIC_API_KEY"),
+                "anthropic_api_key": _get_secret_as_str(
+                    client, vault_path, "ANTHROPIC_API_KEY"
+                ),
                 "database_url": get_secret_from_vault(
                     client, vault_path, "DATABASE_URL"
                 ),
                 "redis_url": _get_secret_as_str(client, vault_path, "REDIS_URL"),
-                "celery_broker_url": _get_secret_as_str(client, vault_path, "CELERY_BROKER_URL"),
+                "celery_broker_url": _get_secret_as_str(
+                    client, vault_path, "CELERY_BROKER_URL"
+                ),
                 "celery_result_backend": _get_secret_as_str(
                     client, vault_path, "CELERY_RESULT_BACKEND"
                 ),
@@ -217,41 +226,48 @@ def validate_settings() -> Settings:
                     client, vault_path, "JWT_SECRET_KEY"
                 ),
                 "auth0_domain": _get_secret_as_str(client, vault_path, "AUTH0_DOMAIN"),
-                "auth0_client_id": _get_secret_as_str(client, vault_path, "AUTH0_CLIENT_ID"),
+                "auth0_client_id": _get_secret_as_str(
+                    client, vault_path, "AUTH0_CLIENT_ID"
+                ),
                 "auth0_client_secret": _get_secret_as_str(
                     client, vault_path, "AUTH0_CLIENT_SECRET"
                 ),
-                "auth0_audience": _get_secret_as_str(client, vault_path, "AUTH0_AUDIENCE"),
+                "auth0_audience": _get_secret_as_str(
+                    client, vault_path, "AUTH0_AUDIENCE"
+                ),
                 "auth0_issuer": _get_secret_as_str(client, vault_path, "AUTH0_ISSUER"),
                 "smtp_host": _get_secret_as_str(client, vault_path, "SMTP_HOST"),
                 "smtp_port": int(client.get_secret(vault_path, "SMTP_PORT") or 25),
-                "smtp_username": _get_secret_as_str(client, vault_path, "SMTP_USERNAME"),
-                "smtp_password": _get_secret_as_str(client, vault_path, "SMTP_PASSWORD"),
+                "smtp_username": _get_secret_as_str(
+                    client, vault_path, "SMTP_USERNAME"
+                ),
+                "smtp_password": _get_secret_as_str(
+                    client, vault_path, "SMTP_PASSWORD"
+                ),
                 "email_from": _get_secret_as_str(client, vault_path, "EMAIL_FROM"),
             }
             # Remove any keys with missing values so defaults apply
             secret_values = {k: v for k, v in secret_values.items() if v is not None}
-            print("[config.py] Required secrets loaded:")
+            logger.info("Required secrets loaded:")
             for k, v in secret_values.items():
-                print(f"  {k}={'***' if v else None}")
+                logger.debug("  %s=%s", k, "***" if v else None)
                 if v is None:
-                    print(f"[config.py] WARNING: Secret '{k}' is missing (None)")
+                    logger.warning("Secret '%s' is missing (None)", k)
             settings = Settings(**secret_values)
-            required_vars = ["jwt_secret_key", "database_url", "openai_api_key"]
-            missing_vars = [var for var in required_vars if not getattr(settings, var)]
+            missing_vars = [var for var in REQUIRED_VARS if not getattr(settings, var)]
             if missing_vars:
-                print(f"Error: Missing required secrets: {', '.join(missing_vars)}")
+                logger.error("Missing required secrets: %s", ", ".join(missing_vars))
                 sys.exit(1)
             return settings
         except Exception as vault_exc:
             if environment != "production" or ci_mode:
-                print(
-                    f"[config.py] Vault error: {vault_exc}. Falling back to environment variables."
+                logger.warning(
+                    "Vault error: %s. Falling back to environment variables.", vault_exc
                 )
                 return _load_settings_from_env()
             raise
     except Exception as e:
-        print(f"Error validating settings: {e}")
+        logger.error("Error validating settings: %s", e)
         sys.exit(1)
 
 
