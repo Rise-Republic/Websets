@@ -18,7 +18,13 @@ fi
 
 # Install Python dependencies
 echo "Installing Python dependencies..."
-pip3 install -r requirements.txt -r requirements-dev.txt
+if [ ! -d ".venv" ]; then
+    echo "Creating Python virtual environment..."
+    python3 -m venv .venv
+fi
+
+# Use pip from the virtual environment
+./.venv/bin/pip install -r requirements.txt -r requirements-dev.txt
 
 # Install Node dependencies if package.json exists
 if [ -f package.json ]; then
@@ -28,7 +34,7 @@ fi
 
 # Install Playwright browsers
 echo "Installing Playwright browsers..."
-playwright install chromium
+./.venv/bin/playwright install chromium
 
 echo "Setup completed!"
 echo ""
