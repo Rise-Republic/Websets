@@ -1,4 +1,3 @@
-import os
 import smtplib
 from email.mime.text import MIMEText
 
@@ -18,8 +17,3 @@ def send_email(to_address: str, subject: str, body: str) -> None:
         server.send_message(msg)
 
 
-def send_password_reset(email: str, token: str) -> None:
-    """Send password reset email with token link."""
-    reset_url_base = os.getenv("PASSWORD_RESET_URL", "http://localhost")
-    reset_link = f"{reset_url_base}?token={token}"
-    send_email(email, "Password Reset", f"Use this link to reset your password: {reset_link}")

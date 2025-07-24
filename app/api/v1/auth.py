@@ -11,7 +11,6 @@ from loguru import logger
 
 import pyotp
 from prometheus_client import Counter, generate_latest
-from app.utils.mailer import send_password_reset
 
 from app.database import get_db
 from app.models.user import User

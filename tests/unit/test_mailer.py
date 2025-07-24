@@ -1,11 +1,17 @@
-import importlib
+import importlib.util
+import os
 import pytest
 
 
 @pytest.mark.unit
 def test_send_email_sends_message(mocker, mock_settings):
     mock_smtp = mocker.patch("smtplib.SMTP")
-    mailer = importlib.import_module("app.utils.mailer")
+
+    spec = importlib.util.spec_from_file_location(
+        "mailer", os.path.join("app", "utils", "mailer.py")
+    )
+    mailer = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mailer)
     mailer.settings.smtp_host = "smtp.test"
     mailer.settings.smtp_port = 25
     mailer.settings.smtp_username = "user"
