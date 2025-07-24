@@ -8,7 +8,7 @@ jobs:
   rotate-minio-secrets:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Rotate MinIO Secrets and Update Vault
         run: bash scripts/rotate_minio_secrets.sh
         env:
