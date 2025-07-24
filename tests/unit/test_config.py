@@ -51,7 +51,8 @@ class TestConfigLoading(unittest.TestCase):
         os.environ['VAULT_TOKEN'] = 'fake-token'
 
         # Act
-        from app.config import settings
+        from app.config import get_settings
+        settings = get_settings()
 
         # Assert
         self.assertEqual(settings.openai_api_key, 'vault_openai_key')

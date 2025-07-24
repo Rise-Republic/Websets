@@ -22,11 +22,7 @@ def test_disable_vault_in_production_exits(monkeypatch):
     monkeypatch.setenv("CI", "false")
     monkeypatch.delenv("VAULT_ADDR", raising=False)
     monkeypatch.delenv("VAULT_TOKEN", raising=False)
-    monkeypatch.setenv("OPENAI_API_KEY", "key")
-    monkeypatch.setenv("DATABASE_URL", "sqlite://")
-    monkeypatch.setenv("JWT_SECRET_KEY", "x" * 32)
     with pytest.raises(SystemExit):
-        config = load_config()
         config.get_settings()
 
 
@@ -36,9 +32,5 @@ def test_missing_vault_vars_in_production_exits(monkeypatch):
     monkeypatch.delenv("VAULT_ADDR", raising=False)
     monkeypatch.delenv("VAULT_TOKEN", raising=False)
     monkeypatch.delenv("DISABLE_VAULT", raising=False)
-    monkeypatch.setenv("OPENAI_API_KEY", "key")
-    monkeypatch.setenv("DATABASE_URL", "sqlite://")
-    monkeypatch.setenv("JWT_SECRET_KEY", "x" * 32)
     with pytest.raises(SystemExit):
-        config = load_config()
         config.get_settings()
