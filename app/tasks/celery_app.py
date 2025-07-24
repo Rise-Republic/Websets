@@ -9,7 +9,7 @@ celery_app = Celery(
     include=[
         "app.tasks.mining_tasks",
         "app.tasks.secret_rotation",
-    ]
+    ],
 )
 
 # Configure Celery
@@ -28,12 +28,16 @@ celery_app.conf.update(
 
 # Optional: Configure periodic tasks
 celery_app.conf.beat_schedule = {
-    'cleanup-old-jobs': {
-        'task': 'app.tasks.mining_tasks.cleanup_old_jobs',
-        'schedule': 3600.0,  # Run every hour
+    "cleanup-old-jobs": {
+        "task": "app.tasks.mining_tasks.cleanup_old_jobs",
+        "schedule": 3600.0,  # Run every hour
     },
-    'rotate-minio-creds': {
-        'task': 'app.tasks.secret_rotation.rotate_minio_credentials',
-        'schedule': 24 * 3600,  # Daily
+    "rotate-minio-creds": {
+        "task": "app.tasks.secret_rotation.rotate_minio_credentials",
+        "schedule": 24 * 3600,  # Daily
+    },
+    "rotate-minio-root-creds": {
+        "task": "app.tasks.secret_rotation.rotate_minio_root_credentials",
+        "schedule": 7 * 24 * 3600,  # Weekly
     },
 }
