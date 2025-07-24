@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
 from pydantic import BaseModel, ConfigDict
 
 from app.models import JobStatus, User
@@ -47,6 +47,7 @@ class JobListResponse(BaseModel):
 async def create_job(
     job_data: JobCreate,
     background_tasks: BackgroundTasks,
+    request: Request,
     current_user: User = Depends(get_current_active_user),
     job_repo: JobRepository = Depends(get_job_repository),
 ):
