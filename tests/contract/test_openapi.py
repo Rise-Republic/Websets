@@ -1,5 +1,6 @@
 import os
 import sys
+from unittest import mock
 import pytest
 from schemathesis import openapi
 
@@ -9,7 +10,9 @@ ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
-from app.main import app
+with mock.patch("app.middleware.rate_limiting.limiter.limit", lambda *a, **k: (lambda f: f)), \
+     mock.patch("app.middleware.rate_limiting.user_limiter.limit", lambda *a, **k: (lambda f: f)):
+    from app.main import app
 
 # Schemathesis 4.x exposes helpers under the ``openapi`` module
 schema = openapi.from_asgi('/openapi.json', app)

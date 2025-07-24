@@ -1,6 +1,33 @@
 import pytest
 from unittest.mock import AsyncMock
+import sys
+import types
 
+
+@pytest.fixture(autouse=True, scope="session")
+def mock_external_deps():
+    """Provide dummy modules for optional dependencies."""
+    celery_mod = types.SimpleNamespace(
+        CeleryInstrumentor=lambda: types.SimpleNamespace(
+            instrument=lambda self=None: None
+        )
+    )
+    crawler_mod = types.SimpleNamespace(
+        BrowserCrawler=type(
+            "BrowserCrawler",
+            (),
+            {
+                "__aenter__": lambda self: self,
+                "__aexit__": lambda self, exc_type, exc, tb: None,
+                "crawl_multiple_urls": AsyncMock(return_value=[]),
+            },
+        )
+    )
+    sys.modules.setdefault("opentelemetry.instrumentation.celery", celery_mod)
+    sys.modules.setdefault("app.crawler", crawler_mod)
+    yield
+    sys.modules.pop("opentelemetry.instrumentation.celery", None)
+    sys.modules.pop("app.crawler", None)
 
 
 @pytest.fixture
@@ -56,7 +83,9 @@ def test_execute_discovery_phase(db_session, sample_job, mocker):
     result = execute_discovery_phase(sample_job, plan, db_session)
 
     assert result == mock_urls
-    db_urls = db_session.query(DiscoveredURL).filter(DiscoveredURL.job_id == sample_job.id).all()
+    db_urls = (
+        db_session.query(DiscoveredURL)
+        .filter(DiscoveredURL.job_id == sample_job.id)
+        .all()
+    )
     assert len(db_urls) == len(mock_urls)
-
-

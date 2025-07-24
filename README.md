@@ -34,6 +34,8 @@ cd webset-miner
 make setup
 ```
 
+`make setup` installs Python and Node dev dependencies, sets up Playwright, and creates a `.env` file from `.env.example` if it doesn't exist.
+
 2. **Configure environment:**
 ```bash
 # Copy the sample env file and adjust non-secret settings
@@ -54,8 +56,10 @@ vault kv get -field=MINIO_ROOT_USER secret/websets | \
   docker secret create minio_root_user -
 vault kv get -field=MINIO_ROOT_PASSWORD secret/websets | \
   docker secret create minio_root_password -
-vault kv get -field=MINIO_KMS_KEY secret/websets | \
+vault kv get -field=MINIO_KMS_SECRET_KEY secret/websets | \
   docker secret create minio_kms_key -
+vault kv get -field=MINIO_SSE_MASTER_KEY secret/websets | \
+  docker secret create minio_sse_master_key -
 vault kv get -field=POSTGRES_ENCRYPTION_KEY secret/websets | \
   docker secret create postgres_encryption_key -
 ```
@@ -194,12 +198,17 @@ curl -X POST "http://localhost:8000/datasets/DATASET_ID/search" \
 
 ### Environment Variables
 
-Secrets are stored in Vault using `vault_secrets_template.json` and injected at runtime:
+Secrets are stored in Vault using `vault_secrets_template.json` and injected at
+runtime. For local development you can set `DISABLE_VAULT_FOR_LOCAL_DEV=true`
+(for example in your `.env` file) so the app reads secrets from that file
+instead of Vault. In production this variable should be omitted so the
+application loads secrets directly from Vault and fails fast if any are
+missing:
 
 ```env
 OPENAI_API_KEY=<openai-key>
 ANTHROPIC_API_KEY=<anthropic-key>
-DATABASE_URL=postgresql://postgres:<db-password>@db:5432/webset_miner
+DATABASE_URL=postgresql://postgres:<db-password>@db:5432/webset_miner?sslmode=require
 JWT_SECRET_KEY=<jwt-secret>
 AUTH0_DOMAIN=dev-your-domain.us.auth0.com
 AUTH0_CLIENT_ID=<client-id>
@@ -208,6 +217,8 @@ AUTH0_AUDIENCE=https://api.websets.local
 AUTH0_ISSUER=https://dev-your-domain.us.auth0.com/
 MINIO_ROOT_USER=<minio-user>
 MINIO_ROOT_PASSWORD=<minio-password>
+MINIO_KMS_SECRET_KEY=<kms-key-ref>
+MINIO_SSE_MASTER_KEY=<sse-key-ref>
 SMTP_HOST=<smtp-host>
 SMTP_PORT=<smtp-port>
 SMTP_USERNAME=<smtp-user>
@@ -252,13 +263,16 @@ For production deployments, adjust these settings:
 ### Running Tests
 ```bash
 # Install dev dependencies
-pip install -r requirements-dev.txt
+pip install -r requirements.txt -r requirements-dev.txt
 
 # Unit tests only
 pytest -m unit
 
 # Integration tests only
 pytest -m integration
+
+# End-to-end tests
+pytest -m e2e
 
 # All tests
 pytest
@@ -337,6 +351,13 @@ safety check -r requirements.txt -r requirements-dev.txt
 
 # Trivy filesystem scan (requires Docker)
 docker run --rm -v $(pwd):/repo aquasec/trivy fs --severity CRITICAL /repo
+```
+
+Monitor outdated dependencies periodically:
+
+```bash
+pip list --outdated
+npm outdated
 ```
 
 ### Adding New Agents

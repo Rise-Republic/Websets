@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+from typing import Callable
 import os
 import sys
 
@@ -27,6 +28,21 @@ def event_loop():
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
+
+
+@pytest.fixture(autouse=True)
+def disable_rate_limiting(monkeypatch):
+    """Disable rate limiting decorators during tests."""
+    from app.middleware import rate_limiting
+
+    def _noop(*args, **kwargs) -> Callable:
+        def wrapper(func: Callable) -> Callable:
+            return func
+
+        return wrapper
+
+    monkeypatch.setattr(rate_limiting.limiter, "limit", _noop)
+    monkeypatch.setattr(rate_limiting.user_limiter, "limit", _noop)
 
 
 @pytest.fixture(autouse=True)
@@ -98,7 +114,6 @@ def client(db_session):
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
-
 
 @pytest.fixture
 def mock_openai(mocker):

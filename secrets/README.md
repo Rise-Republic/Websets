@@ -10,8 +10,10 @@ vault kv get -field=MINIO_ROOT_USER secret/websets | \
   docker secret create minio_root_user -
 vault kv get -field=MINIO_ROOT_PASSWORD secret/websets | \
   docker secret create minio_root_password -
-vault kv get -field=MINIO_KMS_KEY secret/websets | \
+vault kv get -field=MINIO_KMS_SECRET_KEY secret/websets | \
   docker secret create minio_kms_key -
+vault kv get -field=MINIO_SSE_MASTER_KEY secret/websets | \
+  docker secret create minio_sse_master_key -
 vault kv get -field=POSTGRES_ENCRYPTION_KEY secret/websets | \
   docker secret create postgres_encryption_key -
 ```

@@ -159,6 +159,11 @@ def validate_settings() -> Settings:
         ci_mode = os.getenv("CI", "false").lower() == "true"
 
         if disable_vault:
+            if environment == "production":
+                print(
+                    "Error: DISABLE_VAULT_FOR_LOCAL_DEV set in production environment"
+                )
+                sys.exit(1)
             print("[config.py] Vault integration bypassed for local development.")
             return _load_settings_from_env()
 

@@ -17,6 +17,7 @@ class TestAuthEndpoints:
         assert data["is_active"] is True
         assert "id" in data
         assert "created_at" in data
+        assert "verification_token" in data
 
     def test_register_user_duplicate_email(self, client, sample_user_data):
         """Test registration with duplicate email fails."""
@@ -56,7 +57,9 @@ class TestAuthEndpoints:
     def test_login_success(self, client, sample_user_data):
         """Test successful login."""
         # Register user first
-        client.post("/auth/register", json=sample_user_data)
+        reg = client.post("/auth/register", json=sample_user_data)
+        token = reg.json()["verification_token"]
+        client.post("/auth/verify", json={"token": token})
 
         # Login
         login_data = {
@@ -95,7 +98,9 @@ class TestAuthEndpoints:
     def test_get_current_user_success(self, client, sample_user_data):
         """Test getting current user info with valid token."""
         # Register and login
-        client.post("/auth/register", json=sample_user_data)
+        reg = client.post("/auth/register", json=sample_user_data)
+        token = reg.json()["verification_token"]
+        client.post("/auth/verify", json={"token": token})
 
         login_data = {
             "username": sample_user_data["email"],
@@ -129,7 +134,9 @@ class TestAuthEndpoints:
     def test_mfa_setup_and_verify_success(self, client, sample_user_data):
         """Enable MFA and verify with correct TOTP code."""
         # Register and login
-        client.post("/auth/register", json=sample_user_data)
+        reg = client.post("/auth/register", json=sample_user_data)
+        token = reg.json()["verification_token"]
+        client.post("/auth/verify", json={"token": token})
         login_data = {
             "username": sample_user_data["email"],
             "password": sample_user_data["password"],
@@ -157,7 +164,9 @@ class TestAuthEndpoints:
 
     def test_mfa_verify_invalid_code(self, client, sample_user_data):
         """MFA verification fails with wrong code."""
-        client.post("/auth/register", json=sample_user_data)
+        reg = client.post("/auth/register", json=sample_user_data)
+        token = reg.json()["verification_token"]
+        client.post("/auth/verify", json={"token": token})
         login_data = {
             "username": sample_user_data["email"],
             "password": sample_user_data["password"],
@@ -165,8 +174,7 @@ class TestAuthEndpoints:
         login_resp = client.post("/auth/login", data=login_data)
         token = login_resp.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
-        setup_resp = client.post("/auth/mfa/setup", headers=headers)
-        secret = setup_resp.json()["secret"]
+        client.post("/auth/mfa/setup", headers=headers)
 
         client.post("/auth/login", data=login_data)
         wrong_code = "000000"

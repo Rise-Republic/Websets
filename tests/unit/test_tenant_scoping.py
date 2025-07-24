@@ -1,26 +1,29 @@
 import uuid
 import pytest
 import asyncio
+from unittest import mock
 
-from app.models import User, Job
-from app.auth.jwt_handler import get_password_hash
-from app.api.v1.jobs import list_jobs
 
 
 @pytest.mark.unit
 def test_job_list_scoped_by_tenant(db_session):
-    tenant1 = uuid.uuid4()
-    tenant2 = uuid.uuid4()
-    user1 = User(
-        email="u1@example.com",
-        hashed_password=get_password_hash("pw"),
-        tenant_id=tenant1,
-    )
-    user2 = User(
-        email="u2@example.com",
-        hashed_password=get_password_hash("pw"),
-        tenant_id=tenant2,
-    )
+    with mock.patch("app.middleware.rate_limiting.user_limiter.limit", lambda *a, **k: (lambda f: f)):
+        from app.models import User, Job
+        from app.auth.jwt_handler import get_password_hash
+        from app.api.v1.jobs import list_jobs
+
+        tenant1 = uuid.uuid4()
+        tenant2 = uuid.uuid4()
+        user1 = User(
+            email="u1@example.com",
+            hashed_password=get_password_hash("pw"),
+            tenant_id=tenant1,
+        )
+        user2 = User(
+            email="u2@example.com",
+            hashed_password=get_password_hash("pw"),
+            tenant_id=tenant2,
+        )
     db_session.add_all([user1, user2])
     db_session.commit()
 

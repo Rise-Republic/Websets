@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Float
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Float, LargeBinary
 from app.models.types import GUID as UUID, JsonEncodedDict
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -59,6 +59,9 @@ class DataRecord(Base):
     # Extracted data
     data = Column(JsonEncodedDict, nullable=False)
 
+    # Optional encrypted binary payload
+    encrypted_blob = Column(LargeBinary, nullable=True)
+    
     # Vector embedding for similarity search
     embedding_id = Column(String, nullable=True)  # Reference to vector store
 
