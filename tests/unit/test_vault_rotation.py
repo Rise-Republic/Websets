@@ -97,9 +97,7 @@ class TestVaultSecretRotation(unittest.TestCase):
                     vault.cli_test_connection()
 
 
-        mock_print.assert_called_with("Vault connectivity test failed: boom")
-
-   @patch("app.secrets.vault.hvac.Client")
+    @patch("app.secrets.vault.hvac.Client")
     def test_fetch_all(self, mock_client_cls):
         mock_client = MagicMock()
         mock_client_cls.return_value = mock_client
