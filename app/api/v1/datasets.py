@@ -15,6 +15,7 @@ from app.utils import (
     get_cached_dataset_records,
     set_cached_dataset_records,
     invalidate_dataset_records,
+    sanitize_prompt,
 )
 
 router = APIRouter(prefix="/datasets", tags=["v1-datasets"])
@@ -255,6 +256,11 @@ async def search_dataset(
         )
 
     try:
+        sanitized_query = sanitize_prompt(search_request.query)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    try:
         # Initialize components
         embedding_gen = EmbeddingGenerator()
         vector_store = VectorStore()
@@ -267,7 +273,7 @@ async def search_dataset(
             )
 
         # Generate query embedding
-        query_embedding = embedding_gen.generate_embedding(search_request.query)
+        query_embedding = embedding_gen.generate_embedding(sanitized_query)
 
         # Search for similar vectors
         search_results = vector_store.search(

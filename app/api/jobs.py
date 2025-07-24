@@ -1,13 +1,13 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
-from datetime import datetime
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from app.database import get_db
-from app.models import Job, JobStatus, User
+from app.models import JobStatus, User
 from app.auth.dependencies import get_current_active_user
 from app.tasks.mining_tasks import start_mining_job
+from app.utils import sanitize_prompt
 from app.middleware import rbac_required, user_limiter, RateLimits
 from app.repositories.job_repository import JobRepository
 
@@ -57,6 +57,10 @@ async def create_job(
     job_repo: JobRepository = Depends(get_job_repository),
 ):
     """Create a new mining job."""
+    try:
+        sanitize_prompt(job_data.prompt)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     # Create job record
     job = job_repo.create_job(

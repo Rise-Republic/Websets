@@ -9,6 +9,7 @@ from app.database import get_db
 from app.models import User
 from app.auth.dependencies import get_current_active_user
 from app.storage import VectorStore, EmbeddingGenerator
+from app.utils import sanitize_prompt
 from app.middleware import rbac_required, user_limiter, RateLimits
 from app.repositories.dataset_repository import DatasetRepository
 
@@ -219,7 +220,12 @@ async def search_dataset(
             )
 
         # Generate query embedding
-        query_embedding = embedding_gen.generate_embedding(search_request.query)
+        try:
+            sanitized_query = sanitize_prompt(search_request.query)
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+        query_embedding = embedding_gen.generate_embedding(sanitized_query)
 
         # Search for similar vectors
         search_results = vector_store.search(
