@@ -3,7 +3,8 @@ from typing import Any, Dict, Optional
 from openai import OpenAI
 from anthropic import Anthropic
 import json
-import re
+
+from app.utils import sanitize_prompt
 from loguru import logger
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -78,23 +79,9 @@ class BaseAgent(ABC):
             logger.error(f"Response content: {response}")
             raise ValueError(f"Invalid JSON response from LLM: {e}")
 
-    _CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
-
-    def _escape_prompt(self, prompt: str) -> str:
-        """Escape characters that could affect prompt formatting."""
-        return prompt.replace("{", "\\{").replace("}", "\\}").replace("`", "\\`")
-
-    def _validate_prompt(self, prompt: str) -> None:
-        """Validate prompt length and disallow control characters."""
-        if len(prompt) > 4000:
-            raise ValueError("Prompt too long")
-        if self._CONTROL_CHARS_RE.search(prompt):
-            raise ValueError("Prompt contains control characters")
-
     def _sanitize_prompt(self, prompt: str) -> str:
         """Validate and escape user-provided prompt."""
-        self._validate_prompt(prompt)
-        return self._escape_prompt(prompt)
+        return sanitize_prompt(prompt)
 
     @abstractmethod
     async def execute(self, *args, **kwargs) -> Any:
