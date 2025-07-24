@@ -14,6 +14,7 @@ from app.api.v1 import v1_router
 from app.api.versioning import versioning_router
 from app.middleware import (
     limiter,
+    user_limiter,
     rate_limit_handler,
     AuditMiddleware,
     RBACMiddleware,
@@ -35,6 +36,7 @@ configure_tracing(app)
 
 # Add rate limiting
 app.state.limiter = limiter
+app.state.user_limiter = user_limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 app.add_middleware(HTTPSRedirectMiddleware)
 
