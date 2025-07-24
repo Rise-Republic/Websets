@@ -230,15 +230,12 @@ services:
     environment:
       MINIO_SERVER_URL: https://minio:9000
       MINIO_BROWSER_REDIRECT_URL: https://localhost:9001
-      MINIO_ROOT_USER_FILE: /run/secrets/minio_root_user
-      MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio_root_password
+      MINIO_ROOT_USER: bmsullivan560
+      MINIO_ROOT_PASSWORD: miniopassword
     command: server /data --console-address ":9001"
     volumes:
       - ./data/minio:/data
       - ./certs:/certs:ro
-    secrets:
-      - minio_root_user
-      - minio_root_password
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -259,8 +256,3 @@ volumes:
   qdrant_data:
   weaviate_data:
 
-secrets:
-  minio_root_user:
-    external: true
-  minio_root_password:
-    external: true
