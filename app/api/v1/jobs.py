@@ -87,6 +87,7 @@ async def create_job(
 @user_limiter.limit(RateLimits.USER_JOBS)
 @tenant_limiter.limit(RateLimits.TENANT_JOBS)
 async def list_jobs(
+    request: Request,
     page: int = 1,
     size: int = 20,
     status: Optional[str] = None,
@@ -140,6 +141,7 @@ async def list_jobs(
 @tenant_limiter.limit(RateLimits.TENANT_JOBS)
 async def get_job(
     job_id: str,
+    request: Request,
     current_user: User = Depends(get_current_active_user),
     job_repo: JobRepository = Depends(get_job_repository),
 ):
@@ -173,6 +175,7 @@ async def get_job(
 @tenant_limiter.limit(RateLimits.TENANT_JOBS)
 async def cancel_job(
     job_id: str,
+    request: Request,
     current_user: User = Depends(get_current_active_user),
     job_repo: JobRepository = Depends(get_job_repository),
 ):
