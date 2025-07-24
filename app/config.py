@@ -2,9 +2,8 @@ import os
 import sys
 from typing import Optional
 
-from dotenv import load_dotenv
 from loguru import logger
-from pydantic import ValidationError, field_validator
+from pydantic import ValidationError, field_validator, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.secrets.vault import VaultClient
@@ -28,14 +27,14 @@ SECRET_KEY_MAP = {
 
 class AuthSettings(BaseSettings):
     """Authentication related settings."""
-    jwt_secret_key: str
-    jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
-    auth0_domain: Optional[str] = None
-    auth0_client_id: Optional[str] = None
-    auth0_client_secret: Optional[str] = None
-    auth0_audience: Optional[str] = None
-    auth0_issuer: Optional[str] = None
+    jwt_secret_key: str = Field(validation_alias="JWT_SECRET_KEY")
+    jwt_algorithm: str = Field("HS256", validation_alias="JWT_ALGORITHM")
+    access_token_expire_minutes: int = Field(30, validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+    auth0_domain: Optional[str] = Field(None, validation_alias="AUTH0_DOMAIN")
+    auth0_client_id: Optional[str] = Field(None, validation_alias="AUTH0_CLIENT_ID")
+    auth0_client_secret: Optional[str] = Field(None, validation_alias="AUTH0_CLIENT_SECRET")
+    auth0_audience: Optional[str] = Field(None, validation_alias="AUTH0_AUDIENCE")
+    auth0_issuer: Optional[str] = Field(None, validation_alias="AUTH0_ISSUER")
 
     @field_validator("jwt_secret_key")
     @classmethod
@@ -50,17 +49,17 @@ class AuthSettings(BaseSettings):
 
 class VectorStoreSettings(BaseSettings):
     """Settings for vector storage providers."""
-    provider: str = "chromadb"  # chromadb, pinecone, weaviate, qdrant
-    path: str = "./data/vector_store"
+    provider: str = Field("chromadb", validation_alias="VECTOR_STORE_PROVIDER")
+    path: str = Field("./data/vector_store", validation_alias="VECTOR_STORE_PATH")
     # Pinecone
-    pinecone_api_key: Optional[str] = None
-    pinecone_environment: str = "us-east1-gcp"
+    pinecone_api_key: Optional[str] = Field(None, validation_alias="PINECONE_API_KEY")
+    pinecone_environment: str = Field("us-east1-gcp", validation_alias="PINECONE_ENVIRONMENT")
     # Weaviate
-    weaviate_url: str = "http://localhost:8080"
-    weaviate_api_key: Optional[str] = None
+    weaviate_url: str = Field("http://localhost:8080", validation_alias="WEAVIATE_URL")
+    weaviate_api_key: Optional[str] = Field(None, validation_alias="WEAVIATE_API_KEY")
     # Qdrant
-    qdrant_url: Optional[str] = None  # e.g., "http://localhost:6333"
-    qdrant_api_key: Optional[str] = None
+    qdrant_url: Optional[str] = Field(None, validation_alias="QDRANT_URL")  # e.g., "http://localhost:6333"
+    qdrant_api_key: Optional[str] = Field(None, validation_alias="QDRANT_API_KEY")
 
 
 class Settings(BaseSettings):
@@ -107,8 +106,8 @@ class Settings(BaseSettings):
 # --- Settings loading helpers ---
 
 
-def _load_vault_values() -> dict[str, str]:
-    """Fetch secrets from HashiCorp Vault using ``SECRET_KEY_MAP``."""
+def load_vault_env() -> None:
+    """Populate ``os.environ`` with secrets from HashiCorp Vault."""
     vault_addr = os.getenv("VAULT_ADDR")
     vault_token = os.getenv("VAULT_TOKEN")
     if not (vault_addr and vault_token):
@@ -118,13 +117,11 @@ def _load_vault_values() -> dict[str, str]:
     client = VaultClient()
     client.verify_secret_path(path)
 
-    values: dict[str, str] = {}
-    for field, key in SECRET_KEY_MAP.items():
+    for key in SECRET_KEY_MAP.values():
         value = client.get_secret(path, key)
         if value is not None:
             os.environ[key] = value
-            values[field] = value
-    return values
+
 
 
 def _load_file_secrets() -> None:
@@ -137,18 +134,14 @@ def _load_file_secrets() -> None:
 
 def get_settings() -> Settings:
     """Return application settings with optional Vault integration."""
-    load_dotenv(".env")
-
     disable_vault = os.getenv("DISABLE_VAULT", "false").lower() == "true"
     env = os.getenv("ENVIRONMENT", "development").lower()
     ci_mode = os.getenv("CI", "false").lower() == "true"
 
     use_vault = not disable_vault and os.getenv("VAULT_ADDR") and os.getenv("VAULT_TOKEN")
-
-    values: dict[str, str] = {}
     if use_vault:
         try:
-            values.update(_load_vault_values())
+            load_vault_env()
         except Exception as exc:  # pragma: no cover - network failure
             if env != "production":
                 logger.warning("Vault error %s, falling back to environment", exc)
@@ -160,9 +153,8 @@ def get_settings() -> Settings:
             logger.critical("Vault is required in production")
             raise SystemExit(1)
         _load_file_secrets()
-
     try:
-        return Settings(**values)
+        return Settings()
     except ValidationError as exc:
         logger.error("Invalid configuration: %s", exc)
         raise SystemExit(1) from exc
