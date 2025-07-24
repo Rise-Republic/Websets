@@ -201,9 +201,24 @@ For production deployments, adjust these settings:
 # Install dev dependencies
 pip install -r requirements-dev.txt
 
-# Run tests
-pytest tests/
+# Unit tests only
+pytest -m unit
+
+# Integration tests only
+pytest -m integration
+
+# All tests
+pytest
 ```
+
+### Adding Fixtures
+Shared fixtures live in [`tests/conftest.py`](tests/conftest.py). When adding a
+new fixture:
+
+1. Keep the fixture stateless and reset any external resources.
+2. Use `yield` fixtures if cleanup is required after the test.
+3. Patch network calls or environment variables to avoid hitting real services.
+4. Reuse existing fixtures where possible to speed up tests.
 
 ### Linting
 This project uses **pre-commit** with Ruff for formatting and linting.
