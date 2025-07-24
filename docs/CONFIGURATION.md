@@ -87,7 +87,7 @@ MAX_CONCURRENT_CRAWLS=5
 LOG_LEVEL=DEBUG
 ```
 
-Use `python fetch_vault_env.py > .env` to write secrets from Vault into the `.env` file for local usage.
+Running `make dev` seeds Vault and writes a default `DATABASE_URL` into `.env`, so manual execution of `fetch_vault_env.py` is typically unnecessary.
 
 ## mTLS Setup
 

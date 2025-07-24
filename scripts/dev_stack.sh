@@ -1,9 +1,32 @@
 #!/bin/bash
 # Start the full local development stack with one command
-set -e
+set -euo pipefail
 
 # Ensure dependencies are installed
 make setup
+
+# Export variables from .env if present
+if [ -f .env ]; then
+  set -a
+  source .env
+  set +a
+fi
+
+# Configure local database URL if unset
+DB_PASSWORD=$(cat ./secrets/postgres_password)
+DEFAULT_DB_URL="postgresql://postgres:${DB_PASSWORD}@db:5432/webset_miner"
+if [ -z "${DATABASE_URL:-}" ]; then
+  DATABASE_URL="$DEFAULT_DB_URL"
+  echo "DATABASE_URL=$DATABASE_URL" >> .env
+fi
+export DATABASE_URL
+
+# Disable Vault for local development unless explicitly set
+if [ -z "${DISABLE_VAULT:-}" ]; then
+  DISABLE_VAULT=true
+  echo "DISABLE_VAULT=true" >> .env
+fi
+export DISABLE_VAULT
 
 # Generate mTLS certs if missing
 if [ ! -d certs ] || [ -z "$(ls certs/*.crt 2>/dev/null)" ]; then
@@ -14,6 +37,9 @@ fi
 # Build and start all services
 echo "Starting services with Docker Compose..."
 docker compose up -d --build
+
+# Seed Vault with template secrets
+scripts/seed_vault.sh
 
 # Wait for database to be ready
 until docker compose exec -T db pg_isready -U postgres >/dev/null 2>&1; do

@@ -7,6 +7,9 @@ rule_files:
 
 scrape_configs:
   - job_name: 'webset-miner'
+    scheme: https
+    tls_config:
+      ca_file: /certs/ca.crt
     static_configs:
       - targets: ['app:9090']
     metrics_path: '/health/metrics'
@@ -14,35 +17,53 @@ scrape_configs:
     scrape_timeout: 10s
 
   - job_name: 'postgres'
+    scheme: https
+    tls_config:
+      ca_file: /certs/ca.crt
     static_configs:
       - targets: ['db:5432']
     metrics_path: '/metrics'
     scrape_interval: 30s
 
   - job_name: 'redis'
+    scheme: https
+    tls_config:
+      ca_file: /certs/ca.crt
     static_configs:
       - targets: ['redis:6379']
     metrics_path: '/metrics'
     scrape_interval: 30s
 
   - job_name: 'celery-workers'
+    scheme: https
+    tls_config:
+      ca_file: /certs/ca.crt
     static_configs:
       - targets: ['worker:8000']
     metrics_path: '/metrics'
     scrape_interval: 30s
 
   - job_name: 'qdrant'
+    scheme: https
+    tls_config:
+      ca_file: /certs/ca.crt
     static_configs:
       - targets: ['qdrant:6333']
     metrics_path: '/metrics'
     scrape_interval: 30s
 
   - job_name: 'weaviate'
+    scheme: https
+    tls_config:
+      ca_file: /certs/ca.crt
     static_configs:
       - targets: ['weaviate:8080']
     metrics_path: '/v1/metrics'
     scrape_interval: 30s
 
   - job_name: 'prometheus'
+    scheme: https
+    tls_config:
+      ca_file: /certs/ca.crt
     static_configs:
       - targets: ['localhost:9090']

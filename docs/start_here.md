@@ -11,22 +11,17 @@ Follow these steps to set up WebSet Miner quickly.
 
 ## One‑Command Setup
 
-Run the `make setup` command after cloning the repository:
+Run the `make dev` command after cloning the repository:
 
 ```bash
-make setup
+make dev
 ```
 
-This executes `scripts/setup.sh`, which installs Python and Node dependencies, installs Playwright browsers, and creates a `.env` file from `.env.example` if it does not exist.
+This installs all dependencies, generates certificates, seeds Vault, sets up a default `DATABASE_URL` and disables Vault locally, then applies migrations and launches the Docker Compose stack. A `.env` file is created automatically from `.env.example` if needed.
 
 ## Next Steps
 
-1. Fill in your API keys and other values in `.env`. Supply `VAULT_TOKEN` separately via an environment variable or Docker secret since it is not included in `.env.example`.
-2. Start the services:
-   ```bash
-   docker compose up -d
-   ```
-3. Launch a sample job:
+1. Launch a sample job:
    ```bash
    python scripts/run_job.py "AI startups in Silicon Valley"
    ```
