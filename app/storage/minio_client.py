@@ -5,10 +5,11 @@ import os
 import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError
+from app.read_secret import read_secret
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
-MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
-MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+MINIO_ACCESS_KEY = read_secret("MINIO_ACCESS_KEY", "minioadmin")
+MINIO_SECRET_KEY = read_secret("MINIO_SECRET_KEY", "minioadmin")
 MINIO_BUCKET = os.getenv("MINIO_BUCKET", "websets-data")
 MINIO_CA_CERT = os.getenv("MINIO_CA_CERT")
 MINIO_CLIENT_CERT = os.getenv("MINIO_CLIENT_CERT")
