@@ -324,7 +324,7 @@ class SystemHealthMonitor:
             
         except Exception as e:
             logger.error(f"Failed to get system metrics: {e}")
-            return {"error": str(e)}
+            return {"error": "unavailable"}
     
     async def perform_health_check(self) -> SystemHealth:
         """Perform comprehensive health check."""

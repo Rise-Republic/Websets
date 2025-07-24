@@ -161,7 +161,7 @@ class PineconeVectorStore(BaseVectorStore):
             }
         except Exception as e:
             logger.error(f"Failed to get Pinecone statistics: {e}")
-            return {"provider": "pinecone", "error": str(e)}
+            return {"provider": "pinecone", "error": "unavailable"}
 
 
 class QdrantVectorStore(BaseVectorStore):
@@ -298,7 +298,7 @@ class QdrantVectorStore(BaseVectorStore):
             }
         except Exception as e:
             logger.error(f"Failed to get Qdrant statistics: {e}")
-            return {"provider": "qdrant", "error": str(e)}
+            return {"provider": "qdrant", "error": "unavailable"}
 
 
 class WeaviateVectorStore(BaseVectorStore):
@@ -438,7 +438,7 @@ class WeaviateVectorStore(BaseVectorStore):
             }
         except Exception as e:
             logger.error(f"Failed to get Weaviate statistics: {e}")
-            return {"provider": "weaviate", "error": str(e)}
+            return {"provider": "weaviate", "error": "unavailable"}
 
 
 class VectorStoreFactory:

@@ -3,6 +3,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
+from loguru import logger
 
 from app.models import User
 from app.auth.dependencies import get_current_active_user
@@ -289,9 +290,10 @@ async def search_dataset(
         )
 
     except Exception as e:
+        logger.error(f"Search failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Search failed: {str(e)}",
+            detail="Search failed",
         )
 
 

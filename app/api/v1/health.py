@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 import redis
 from datetime import datetime
+from loguru import logger
 
 from app.database import get_db
 from app.config import settings
@@ -39,7 +40,7 @@ async def detailed_health_check():
             "status": component.status.value,
             "response_time_ms": component.response_time_ms,
             "last_check": component.last_check.isoformat(),
-            "error": component.error,
+            "error": bool(component.error),
             "metadata": component.metadata
         }
     
@@ -68,9 +69,10 @@ async def readiness_check(db: Session = Depends(get_db)):
         
     except Exception as e:
         from fastapi import HTTPException, status
+        logger.error(f"Readiness check failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Service not ready: {str(e)}"
+            detail="Service not ready"
         )
 
 
