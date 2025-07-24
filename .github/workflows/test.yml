@@ -46,6 +46,11 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+    - name: Verify Vault connectivity
+      run: python scripts/test_vault.py
+      env:
+        VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+        VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
     
     - name: Run backend tests
       env:
@@ -106,6 +111,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+    - name: Verify Vault connectivity
+      run: python scripts/test_vault.py
+      env:
+        VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+        VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
           pip install bandit safety
 
       - name: Run Bandit
@@ -158,6 +168,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         npm ci
+    - name: Verify Vault connectivity
+      run: python scripts/test_vault.py
+      env:
+        VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+        VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
     
     - name: Build frontend
       run: npm run build

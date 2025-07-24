@@ -9,8 +9,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install hvac
+        run: pip install hvac
       - name: Rotate MinIO Secrets and Update Vault
-        run: bash scripts/rotate_minio_secrets.sh
+        run: python scripts/rotate_minio_secrets.py
         env:
           VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
           VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
