@@ -58,6 +58,12 @@ def mock_env_vars(monkeypatch, mocker):
     )
     monkeypatch.setenv("ENVIRONMENT", "testing")
 
+    monkeypatch.setenv("SMTP_HOST", "smtp.test")
+    monkeypatch.setenv("SMTP_PORT", "25")
+    monkeypatch.setenv("SMTP_USERNAME", "user")
+    monkeypatch.setenv("SMTP_PASSWORD", "pass")
+    monkeypatch.setenv("EMAIL_FROM", "no-reply@test.com")
+
     monkeypatch.setenv("VAULT_ADDR", "http://test-vault")
     monkeypatch.setenv("VAULT_TOKEN", "test-token")
 
@@ -82,9 +88,6 @@ def mock_env_vars(monkeypatch, mocker):
 def db_session():
     """Create a fresh database session for each test."""
     from app.database import Base
-
-    # Ensure models are imported so metadata is populated
-    import app.models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
@@ -111,7 +114,6 @@ def client(db_session):
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
-
 
 @pytest.fixture
 def mock_openai(mocker):

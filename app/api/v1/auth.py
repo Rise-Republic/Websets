@@ -7,6 +7,7 @@ import hashlib
 import os
 import re
 import secrets
+
 import pyotp
 from prometheus_client import Counter, generate_latest
 from app.utils.email import send_password_reset
@@ -18,6 +19,7 @@ from app.auth.dependencies import get_current_active_user
 from app.config import settings
 from app.middleware import limiter, RateLimits
 from app.middleware.audit_middleware import SecurityEventLogger
+from app.utils import send_email
 
 router = APIRouter(prefix="/auth", tags=["v1-authentication"])
 
@@ -349,14 +351,11 @@ async def password_reset_request(
     user.password_reset_expiry = datetime.utcnow() + timedelta(minutes=15)
     db.commit()
     password_reset_requests.inc()
-    try:
-        send_password_reset(user.email, token)
-    except Exception:
-        pass
-    return {"message": "Password reset link sent", "token": token}
+    reset_url = f"{request.base_url}v1/auth/password-reset/confirm?token={token}"
+    send_email(user.email, "Password Reset", f"Reset your password: {reset_url}")
+    return {"message": "Password reset link sent"}
 
-
-@router.post("/password-reset/confirm")
+@router.post("/password-reset/confirm", name="password_reset_confirm")
 @limiter.limit(RateLimits.AUTH_REGISTER)
 async def password_reset_confirm(
     request: Request, data: PasswordResetConfirm, db: Session = Depends(get_db)
