@@ -80,6 +80,7 @@ curl -X POST "http://localhost:8000/jobs/" \
 - [Detailed Architecture](docs/architecture.md)
 - [Threat Model](docs/threat_model.md)
 - [Runbooks](docs/runbooks)
+- [Full Stack with Docker Compose](docs/docker_compose_full_stack.md)
 
 ## Architecture
 
