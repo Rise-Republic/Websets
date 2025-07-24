@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../hooks/useAuth';
-import JobList from '../Jobs/JobList';
-import DatasetList from '../Datasets/DatasetList';
-import DatasetViewer from '../Datasets/DatasetViewer';
+import { useAuth } from '@/hooks/useAuth';
+import JobList from '@/components/Jobs/JobList';
+import DatasetList from '@/components/Datasets/DatasetList';
+import DatasetViewer from '@/components/Datasets/DatasetViewer';
 import apiService, { Job, Dataset } from '@/services/api';
 
 const Dashboard: React.FC = () => {
