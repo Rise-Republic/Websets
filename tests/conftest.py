@@ -106,7 +106,9 @@ def mock_anthropic(mocker):
 @pytest.fixture
 def mock_redis(mocker):
     """Mock Redis client."""
-    return mocker.patch('redis.from_url', return_value=mocker.MagicMock())
+    mocker.patch('redis.from_url', return_value=mocker.MagicMock())
+    mocker.patch('redis.Redis.from_url', return_value=mocker.MagicMock())
+    return mocker.patch('redis.Redis', return_value=mocker.MagicMock())
 
 
 @pytest.fixture

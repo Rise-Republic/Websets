@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from app.database import get_db
 from app.models.user import User
+from app.models.role import Role
 from jose import jwt
 from app.auth.jwt_handler import verify_token
 from app.auth.auth0_utils import verify_auth0_token
@@ -73,8 +74,18 @@ async def get_current_user_optional(request: Request) -> Optional[User]:
         from app.database import SessionLocal
         db = SessionLocal()
         try:
-            user = db.query(User).filter(User.email == email).first()
-            return user if user and user.is_active else None
+            from sqlalchemy.orm import joinedload
+            user = (
+                db.query(User)
+                .options(joinedload(User.roles).joinedload(Role.permissions))
+                .filter(User.email == email)
+                .first()
+            )
+            if user and user.is_active:
+                # Load relationships before closing session
+                user.roles  # access to populate
+                return user
+            return None
         finally:
             db.close()
     except Exception:
