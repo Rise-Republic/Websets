@@ -32,7 +32,6 @@ docker-build:
 
 # Launch full local development stack
 dev:
-	dev:
     bash scripts/setup.sh
     docker compose up -d
     DB_URL=$$DATABASE_URL alembic upgrade head
