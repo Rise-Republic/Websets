@@ -8,6 +8,14 @@ This guide covers best practices for deploying WebSet Miner securely in a produc
 - **Automate certificate management.** Obtain certificates from Let's Encrypt with certbot or your cloud provider and renew them automatically.
 - **Enforce HTTPS.** Redirect all HTTP traffic to HTTPS and use HSTS headers to prevent downgrade attacks.
 - **Expose the FastAPI app on an internal network only.** The container should listen on a private interface while the proxy handles public TLS.
+- **Enable application enforcement.** `HTTPSRedirectMiddleware` and `SecurityMiddleware` are included in `app/main.py` to force HTTPS and add HSTS/X-Frame-Options headers.
+
+## mTLS Between Services
+
+- Generate a shared certificate authority and client certificates using `scripts/generate_mtls_certs.sh`.
+- Mount the certificates into each service container and configure `MINIO_CA_CERT`, `MINIO_CLIENT_CERT`, and `MINIO_CLIENT_KEY` for the app. Set `MINIO_ENDPOINT=https://minio:9000` so the Python client uses TLS.
+If services run on separate nodes, copy the generated certs to each host and mount them so internal traffic is mutually authenticated.
+- The provided Celery task `rotate_minio_credentials` keeps object storage credentials fresh in Vault.
 
 Example Nginx snippet:
 ```nginx
@@ -49,5 +57,7 @@ docker run -d \
   --env-file .env \
   webset-miner:latest
 ```
+
+The `.env` file should contain only non-secret settings. Vault or Docker secrets supply the sensitive credentials.
 
 Following these practices helps ensure the application is delivered over HTTPS and that containers are resilient against common attacks.

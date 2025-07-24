@@ -38,7 +38,10 @@ class TestConfigLoading(unittest.TestCase):
                 'data': {
                     'OPENAI_API_KEY': 'vault_openai_key',
                     'DATABASE_URL': 'vault_db_url',
-                    'JWT_SECRET_KEY': 'a-very-secure-jwt-secret-key-from-vault'
+                    'JWT_SECRET_KEY': 'a-very-secure-jwt-secret-key-from-vault',
+                    'REDIS_URL': 'redis://localhost:6379',
+                    'CELERY_BROKER_URL': 'redis://localhost:6379',
+                    'CELERY_RESULT_BACKEND': 'redis://localhost:6379'
                 }
             }
         }
@@ -57,38 +60,11 @@ class TestConfigLoading(unittest.TestCase):
         mock_hvac_client.assert_called_with(url='http://fake-vault:8200', token='fake-token')
 
     @patch.dict(os.environ, {}, clear=True)
-    def test_fallback_to_env_file(self):
-        """Test that settings fall back to .env when Vault is not configured."""
-        # Arrange
-        # Create a dummy .env file for the test
-        # Create a dummy .env file with all required settings for the test
-        env_content = (
-            "OPENAI_API_KEY=env_openai_key\n"
-            "DATABASE_URL=env_db_url\n"
-            "JWT_SECRET_KEY=a-less-secure-key-from-env-file-for-testing\n"
-            "REDIS_URL=redis://localhost:6379/0\n"
-            "CELERY_BROKER_URL=redis://localhost:6379/0\n"
-            "CELERY_RESULT_BACKEND=redis://localhost:6379/0\n"
-        )
-        with open('.env', 'w') as f:
-            f.write(env_content)
-        
-        # Ensure the .env file is cleaned up after the test
-        def cleanup_env_file():
-            if os.path.exists('.env'):
-                os.remove('.env')
-        self.addCleanup(cleanup_env_file)
-
-        # Act
-        from app.config import settings
-
-        # Assert
-        self.assertEqual(settings.openai_api_key, 'env_openai_key')
-        self.assertEqual(settings.database_url, 'env_db_url')
-        self.assertEqual(settings.jwt_secret_key, 'a-less-secure-key-from-env-file-for-testing')
-
-        # Clean up the dummy .env file
-        os.remove('.env')
+    def test_missing_vault_config_exits(self):
+        """Application should exit if Vault variables are not set."""
+        with self.assertRaises(SystemExit):
+            from app.config import validate_settings
+            validate_settings()
 
     @patch('app.secrets.vault.hvac.Client')
     def test_vault_connection_failure_exits(self, mock_hvac_client):

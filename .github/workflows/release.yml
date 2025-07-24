@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version number (x.y.z)"
+        required: true
+
+jobs:
+  tag-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Create tag
+        run: |
+          version="v${{ github.event.inputs.version }}"
+          git tag -a "$version" -m "Release $version"
+          git push origin "$version"
+
+      - name: Extract changelog entry
+        id: changelog
+        run: |
+          ver="v${{ github.event.inputs.version }}"
+          awk "/^## \[${ver//./\.}\]/ {flag=1; next} /^## \[/ {if(flag) exit} flag {print}" CHANGELOG.md > body.txt
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          cat body.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: v${{ github.event.inputs.version }}
+          body: ${{ steps.changelog.outputs.body }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

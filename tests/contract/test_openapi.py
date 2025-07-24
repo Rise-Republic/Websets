@@ -1,5 +1,14 @@
+import os
+import sys
 import pytest
 from schemathesis import openapi
+
+# Ensure the project root is on the path so ``app`` can be imported when this
+# test is executed in isolation.
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
 from app.main import app
 
 # Schemathesis 4.x exposes helpers under the ``openapi`` module

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import apiService, { Job } from '../../services/api';
+import apiService, { Job } from '@/services/api';
 
 interface JobListProps {
   onJobSelect?: (job: Job) => void;
+  refreshTrigger?: number;
 }
 
-const JobList: React.FC<JobListProps> = ({ onJobSelect }) => {
+const JobList: React.FC<JobListProps> = ({ onJobSelect, refreshTrigger = 0 }) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +15,7 @@ const JobList: React.FC<JobListProps> = ({ onJobSelect }) => {
 
   useEffect(() => {
     loadJobs();
-  }, []);
+  }, [refreshTrigger]);
 
   const loadJobs = async () => {
     try {

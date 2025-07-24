@@ -6,9 +6,11 @@ from pathlib import Path
 import aiofiles
 import hashlib
 from datetime import datetime
+import time
 
 from app.config import settings
 from app.storage.object_storage import get_object_storage
+from app.monitoring import get_metrics_collector
 
 
 class BrowserCrawler:
@@ -18,6 +20,7 @@ class BrowserCrawler:
         self.browser: Optional[Browser] = None
         self.context: Optional[BrowserContext] = None
         self._playwright = None
+        self.metrics = get_metrics_collector()
         
     async def __aenter__(self):
         """Async context manager entry."""
@@ -87,6 +90,7 @@ class BrowserCrawler:
             raise RuntimeError("Browser not initialized. Use async context manager.")
         
         page = None
+        start_time = time.time()
         try:
             page = await self.context.new_page()
             
@@ -113,10 +117,14 @@ class BrowserCrawler:
             result['status_code'] = response.status
             result['success'] = 200 <= response.status < 400
             
+            duration = time.time() - start_time
+            self.metrics.record_url_crawled("success", duration)
             logger.info(f"Successfully crawled {url} (status: {response.status})")
             return result
             
         except Exception as e:
+            duration = time.time() - start_time
+            self.metrics.record_url_crawled("failed", duration)
             logger.error(f"Error crawling {url}: {e}")
             return {
                 'url': url,

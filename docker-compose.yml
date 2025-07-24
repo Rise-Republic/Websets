@@ -9,16 +9,19 @@ services:
       - REDIS_URL=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379
       - CELERY_RESULT_BACKEND=redis://redis:6379
+      - MINIO_ENDPOINT=https://minio:9000
+      - MINIO_CA_CERT=/certs/ca.crt
+      - MINIO_CLIENT_CERT=/certs/app.crt
+      - MINIO_CLIENT_KEY=/certs/app.key
     volumes:
       - ./app:/app/app
       - ./data:/app/data
+      - ./certs:/certs:ro
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
-    env_file:
-      - .env
     restart: unless-stopped
     deploy:
       resources:
@@ -40,16 +43,19 @@ services:
       - REDIS_URL=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379
       - CELERY_RESULT_BACKEND=redis://redis:6379
+      - MINIO_ENDPOINT=https://minio:9000
+      - MINIO_CA_CERT=/certs/ca.crt
+      - MINIO_CLIENT_CERT=/certs/app.crt
+      - MINIO_CLIENT_KEY=/certs/app.key
     volumes:
       - ./app:/app/app
       - ./data:/app/data
+      - ./certs:/certs:ro
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
-    env_file:
-      - .env
     restart: unless-stopped
     deploy:
       resources:
@@ -71,14 +77,17 @@ services:
       - REDIS_URL=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379
       - CELERY_RESULT_BACKEND=redis://redis:6379
+      - MINIO_ENDPOINT=https://minio:9000
+      - MINIO_CA_CERT=/certs/ca.crt
+      - MINIO_CLIENT_CERT=/certs/app.crt
+      - MINIO_CLIENT_KEY=/certs/app.key
     volumes:
       - ./app:/app/app
       - ./data:/app/data
+      - ./certs:/certs:ro
     depends_on:
       - db
       - redis
-    env_file:
-      - .env
     healthcheck:
       test: ["CMD-SHELL", "true"]
       interval: 30s
@@ -252,6 +261,6 @@ volumes:
 
 secrets:
   minio_root_user:
-    file: ./secrets/minio_root_user.txt
+    external: true
   minio_root_password:
-    file: ./secrets/minio_root_password.txt
+    external: true

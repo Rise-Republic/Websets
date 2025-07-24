@@ -10,6 +10,7 @@ An autonomous LLM-powered system for discovering, extracting, and structuring pu
 - **Zero-Shot Extraction**: Schema inference and data extraction without manual configuration
 - **Dual Storage**: PostgreSQL for relational data + ChromaDB, Pinecone, Qdrant, or Weaviate for vector search
 - **Secure API**: JWT authentication with role-based access control
+- **Audit Logging**: All requests recorded in an immutable audit trail
 - **Background Processing**: Celery + Redis for scalable job execution
 - **Production Ready**: Docker containerization and monitoring capabilities
 
@@ -35,10 +36,25 @@ make setup
 
 2. **Configure environment:**
 ```bash
-# Copy the sample env file and add your API keys
+# Copy the sample env file and adjust non-secret settings
 cp .env.example .env
 ```
-If using Vault, seed your secrets using `vault_secrets_template.json`.
+Seed Vault with secrets from `vault_secrets_template.json`:
+
+```bash
+# Set your Vault address and token
+export VAULT_ADDR=http://localhost:8200
+export VAULT_TOKEN=<your-root-token>
+
+# Load all secrets defined in the template
+vault kv put secret/websets @vault_secrets_template.json
+
+# Create Docker secrets for MinIO from Vault values
+vault kv get -field=MINIO_ROOT_USER secret/websets | \
+  docker secret create minio_root_user -
+vault kv get -field=MINIO_ROOT_PASSWORD secret/websets | \
+  docker secret create minio_root_password -
+```
 
 You can also open the repository in a [Dev Container](.devcontainer/devcontainer.json) which will
 run `make setup` automatically after creation.
@@ -59,6 +75,11 @@ curl -X POST "http://localhost:8000/jobs/" \
   -H "Content-Type: application/json" \
   -d '{"prompt": "AI startups in Europe hiring ML engineers"}'
 ```
+## Documentation
+
+- [Detailed Architecture](docs/architecture.md)
+- [Threat Model](docs/threat_model.md)
+- [Runbooks](docs/runbooks)
 
 ## Architecture
 
@@ -116,21 +137,11 @@ Swagger UI for interactive docs.
 
 ## Usage Examples
 
-### 1. Register and Login
+### 1. Login via Auth0
+Use the hosted login page to obtain an access token. After logging in you can call the API with the returned token:
 ```bash
-# Register
-curl -X POST "http://localhost:8000/auth/register" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "securepassword",
-    "full_name": "John Doe"
-  }'
-
-# Login
-curl -X POST "http://localhost:8000/auth/login" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=user@example.com&password=securepassword"
+ACCESS_TOKEN="<your Auth0 access token>"
+curl -H "Authorization: Bearer $ACCESS_TOKEN" http://localhost:8000/v1/jobs/
 ```
 
 ### 2. Create Mining Jobs
@@ -170,23 +181,30 @@ curl -X POST "http://localhost:8000/datasets/DATASET_ID/search" \
 
 ### Environment Variables
 
-Key configuration options in `.env` (or Vault):
+Secrets are stored in Vault using `vault_secrets_template.json`:
 
 ```env
-# API Keys
 OPENAI_API_KEY=your_openai_api_key_here
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
-
-# Database
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/webset_miner
+JWT_SECRET_KEY=your_super_secret_jwt_key_here
+AUTH0_DOMAIN=dev-your-domain.us.auth0.com
+AUTH0_CLIENT_ID=your-client-id
+AUTH0_CLIENT_SECRET=your-client-secret
+AUTH0_AUDIENCE=https://api.websets.local
+AUTH0_ISSUER=https://dev-your-domain.us.auth0.com/
+MINIO_ROOT_USER=replace-with-minio-root-user
+MINIO_ROOT_PASSWORD=replace-with-minio-root-password
+```
 
-# Crawler Settings
+Non-secret configuration in `.env`:
+
+```env
 MAX_CONCURRENT_CRAWLS=5
 REQUEST_DELAY_MS=1000
 USER_AGENT=WebSetMiner/1.0
-
-# Security
-JWT_SECRET_KEY=your_super_secret_jwt_key_here
+ENVIRONMENT=development
+LOG_LEVEL=INFO
 ```
 
 ### Scaling Configuration
@@ -205,13 +223,42 @@ For production deployments, adjust these settings:
 # Install dev dependencies
 pip install -r requirements-dev.txt
 
-# Run tests
-pytest tests/
+# Unit tests only
+pytest -m unit
+
+# Integration tests only
+pytest -m integration
+
+# All tests
+pytest
 ```
+
+### Adding Fixtures
+Shared fixtures live in [`tests/conftest.py`](tests/conftest.py). When adding a
+new fixture:
+
+1. Keep the fixture stateless and reset any external resources.
+2. Use `yield` fixtures if cleanup is required after the test.
+3. Patch network calls or environment variables to avoid hitting real services.
+4. Reuse existing fixtures where possible to speed up tests.
+
+### Linting
+This project uses **pre-commit** with Ruff for formatting and linting.
+Install the hooks and run them on all files before committing:
+
+```bash
+pip install pre-commit
+pre-commit run --all-files
+```
+
+### Editor Configuration
+The repository defines basic formatting rules in [.editorconfig](.editorconfig). Python files use 4-space indents while the frontend code under `src/` uses 2 spaces. Most editors will pick up these settings automatically and ensure newlines end with `LF`.
 
 ### Running Security Scans
 Security scans run automatically in CI using **Bandit**, **Safety**, and **Trivy**.
-Install security tooling and run the scans locally before pushing changes:
+The workflow executes on every push and on a weekly schedule so vulnerabilities
+are caught even when the code is idle. Install the tools locally before pushing
+changes:
 
 ```bash
 # Install tools
@@ -288,6 +335,23 @@ spec:
               key: database-url
 ```
 
+Full manifests with resource requests, limits, and security context can be found
+in the `k8s/` directory. Use `scripts/blue_green_deploy.sh` to perform
+blue/green rollouts between the `webset-miner-blue` and `webset-miner-green`
+deployments.
+
+## CI/CD Pipeline
+
+Automated builds, tests, and deployments run via **GitHub Actions**.
+
+- The pipeline caches Python and Node dependencies to speed up runs.
+- Tests execute **before** building Docker images.
+- Docker images are then built and pushed to GitHub Container Registry on every push to `main` or a tagged release.
+- Images are scanned with **Trivy** for critical vulnerabilities.
+- If no issues are found, the workflow deploys the updated containers over SSH using `docker-compose`.
+
+For branch cleanup and release tagging, see [RELEASE_PROCESS.md](RELEASE_PROCESS.md).
+
 ## Monitoring
 
 ### Health Checks
@@ -307,9 +371,11 @@ logger.info("Job started", job_id=job.id, user_id=user.id)
 Monitor these key metrics:
 - Job completion rate
 - Crawl success rate
+- Average crawl duration
 - Data extraction quality scores
 - API response times
 - Worker queue length
+- Celery queue length
 
 ## Security
 
@@ -319,7 +385,8 @@ Monitor these key metrics:
 - Implement rate limiting
 - Validate all user inputs
 - Use environment variables for secrets
-- Regular security updates
+- Regular security updates managed automatically via Dependabot
+- Dependency review on pull requests prevents introducing vulnerable packages
 
 ### Rate Limiting
 ```python
@@ -389,6 +456,7 @@ async def create_job(...):
 3. Add tests for new functionality
 4. Ensure all tests pass
 5. Submit a pull request
+6. Pull requests touching `/app` or `/src` will automatically request reviews from the code owners defined in [.github/CODEOWNERS](.github/CODEOWNERS).
 
 ## License
 

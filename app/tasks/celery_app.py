@@ -7,7 +7,8 @@ celery_app = Celery(
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
     include=[
-        "app.tasks.mining_tasks"
+        "app.tasks.mining_tasks",
+        "app.tasks.secret_rotation",
     ]
 )
 
@@ -30,5 +31,9 @@ celery_app.conf.beat_schedule = {
     'cleanup-old-jobs': {
         'task': 'app.tasks.mining_tasks.cleanup_old_jobs',
         'schedule': 3600.0,  # Run every hour
+    },
+    'rotate-minio-creds': {
+        'task': 'app.tasks.secret_rotation.rotate_minio_credentials',
+        'schedule': 24 * 3600,  # Daily
     },
 }

@@ -50,6 +50,12 @@ class MetricsCollector:
             'Number of currently active jobs',
             registry=self.registry
         )
+
+        self.celery_queue_length = Gauge(
+            'websets_celery_queue_length',
+            'Number of tasks waiting in the Celery queue',
+            registry=self.registry
+        )
         
         # Crawler metrics
         self.urls_crawled_total = Counter(
@@ -190,6 +196,7 @@ class MetricsCollector:
             while True:
                 try:
                     self.update_system_metrics()
+                    await self._update_celery_metrics()
                     await asyncio.sleep(30)  # Update every 30 seconds
                 except Exception as e:
                     logger.error(f"Failed to collect system metrics: {e}")
@@ -216,6 +223,17 @@ class MetricsCollector:
             
         except Exception as e:
             logger.error(f"Failed to update system metrics: {e}")
+
+    async def _update_celery_metrics(self):
+        """Fetch and update Celery queue length."""
+        try:
+            import asyncio
+            import redis
+            r = redis.from_url(settings.redis_url)
+            length = await asyncio.to_thread(r.llen, 'celery')
+            self.update_celery_queue_length(length)
+        except Exception as e:
+            logger.error(f"Failed to update Celery metrics: {e}")
     
     def record_http_request(self, method: str, endpoint: str, status_code: int, duration: float):
         """Record HTTP request metrics."""
@@ -294,6 +312,10 @@ class MetricsCollector:
     def update_cache_hit_ratio(self, ratio: float):
         """Update cache hit ratio."""
         self.cache_hit_ratio.set(ratio)
+
+    def update_celery_queue_length(self, length: int):
+        """Update Celery queue length metric."""
+        self.celery_queue_length.set(length)
     
     def update_websocket_connections(self, active_connections: int):
         """Update active WebSocket connections."""

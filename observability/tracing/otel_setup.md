@@ -13,6 +13,7 @@ This guide describes how to implement distributed tracing across all services us
 7. Create Grafana dashboards with trace drill-down.
 8. Link trace views to SLO dashboards for root cause analysis.
 9. Enable the OpenTelemetry Prometheus exporter for unified metrics and traces.
+10. Call `configure_tracing(app)` from `app.telemetry` during FastAPI startup.
 
 ## Automation
 - Use Helm charts for collector deployment.

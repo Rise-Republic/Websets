@@ -11,7 +11,7 @@ class DiscoveredURL(Base):
     __tablename__ = "discovered_urls"
     
     id = Column(UUID, primary_key=True, default=uuid.uuid4)
-    job_id = Column(UUID, ForeignKey("jobs.id"), nullable=False)
+    job_id = Column(UUID, ForeignKey("jobs.id"), nullable=False, index=True)
     
     # URL information
     url = Column(String, nullable=False, index=True)
@@ -26,6 +26,9 @@ class DiscoveredURL(Base):
     is_crawled = Column(Boolean, default=False)
     crawl_attempts = Column(Integer, default=0)
     last_crawl_attempt = Column(DateTime, nullable=True)
+
+    # Retention
+    data_retention_days = Column(Integer, default=365)
     
     # Timestamps
     discovered_at = Column(DateTime, default=datetime.utcnow)
@@ -42,7 +45,7 @@ class CrawlResult(Base):
     __tablename__ = "crawl_results"
     
     id = Column(UUID, primary_key=True, default=uuid.uuid4)
-    discovered_url_id = Column(UUID, ForeignKey("discovered_urls.id"), nullable=False)
+    discovered_url_id = Column(UUID, ForeignKey("discovered_urls.id"), nullable=False, index=True)
     
     # Crawl metadata
     status_code = Column(Integer, nullable=True)
@@ -64,6 +67,9 @@ class CrawlResult(Base):
     
     # Timestamps
     crawled_at = Column(DateTime, default=datetime.utcnow)
+
+    # Retention
+    data_retention_days = Column(Integer, default=365)
     
     # Relationships
     discovered_url = relationship("DiscoveredURL", back_populates="crawl_results")

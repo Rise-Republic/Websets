@@ -2,6 +2,11 @@
 
 Follow these steps to get a local environment running quickly.
 
+> **Important**
+> The repository history was rewritten to remove sensitive data. If you cloned
+> the project before this rewrite, delete your old copy and clone it again.
+> After cloning, run `make setup` to reinstall all dependencies.
+
 ## 1. Clone and Setup
 
 ```bash
@@ -14,7 +19,7 @@ The `setup` target installs Python and Node dependencies, sets up Playwright, an
 
 ## 2. Configure Secrets
 
-Edit `.env` with your API keys or load secrets into Vault using `vault_secrets_template.json`.
+Load all sensitive secrets into Vault using `vault_secrets_template.json`. The `.env` file only contains non-secret settings.
 
 ## 3. Start Services
 
@@ -26,6 +31,18 @@ docker-compose up -d
 
 ```bash
 python scripts/run_job.py "AI startups in Silicon Valley"
+```
+
+## 5. Run Tests
+
+Run backend tests with **pytest** and frontend tests with **Jest**:
+
+```bash
+# Backend
+pytest
+
+# Frontend
+npm test
 ```
 
 ## Troubleshooting

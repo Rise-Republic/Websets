@@ -1,10 +1,10 @@
 # 🚨 Websets Security & Compliance TODO
 
 ## Phase 1: Critical Security (Week 1-2)
-- [ ] Implement RBAC system (roles, permissions, enforcement)
-- [ ] Add comprehensive audit logging (user actions, data access, failed auth)
+- [x] Implement RBAC system (roles, permissions, enforcement)
+- [x] Add comprehensive audit logging (user actions, data access, failed auth)
 - [ ] Encrypt sensitive data at rest (Postgres, S3, etc)
-- [ ] Enforce HTTPS everywhere; add mTLS for internal APIs
+- [x] Enforce HTTPS everywhere; add mTLS for internal APIs
 - [ ] Remove all plaintext secrets from code/configs
 - [ ] Integrate Vault or KMS for runtime secret injection
 - [ ] Rotate all exposed keys (MCP, OpenAI, etc)
@@ -18,9 +18,9 @@
 - [ ] Add region tagging and residency enforcement
 
 ## Phase 3: Advanced Security (Week 5-6)
-- [ ] Implement mTLS for all internal service calls
+- [x] Implement mTLS for all internal service calls
 - [ ] Integrate Vault for secrets management
-- [ ] Add security scanning to CI/CD (SAST/DAST)
+- [x] Add security scanning to CI/CD (SAST/DAST)
 - [ ] Add incident response procedures
 
 ## Observability & Reliability
@@ -28,12 +28,11 @@
 - [ ] Expose Prometheus metrics for all critical flows
 - [ ] Add dashboards for job, API, and infra health
 - [ ] Define and implement alert rules for failures, latency, and resource exhaustion
-- [ ] Document SLOs/SLIs for core APIs
+- [x] Document SLOs/SLIs for core APIs
 
-## CI/CD & Deployment
-- [ ] Add GitHub Actions or GitLab CI for build, test, deploy
-- [ ] Integrate SAST/DAST tools (Bandit, Trivy, Snyk)
-- [ ] Add rollback and blue-green deployment scripts
+- [x] Add GitHub Actions or GitLab CI for build, test, deploy
+- [x] Integrate SAST/DAST tools (Bandit, Trivy, Snyk)
+- [x] Add rollback and blue-green deployment scripts
 - [ ] Use Terraform or similar for all infra
 
 ## Multi-tenancy & Data Isolation

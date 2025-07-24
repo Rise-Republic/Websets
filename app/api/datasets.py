@@ -1,4 +1,5 @@
 from typing import List, Optional, Dict, Any
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -7,6 +8,7 @@ from app.database import get_db
 from app.models import Dataset, DataRecord, Job, User
 from app.auth.dependencies import get_current_active_user
 from app.storage import VectorStore, EmbeddingGenerator
+from app.middleware import rbac_required
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 
@@ -64,6 +66,7 @@ class SearchResponse(BaseModel):
 
 
 @router.get("/", response_model=DatasetListResponse)
+@rbac_required(permissions=["datasets:read"])
 async def list_datasets(
     page: int = 1,
     size: int = 20,
@@ -106,6 +109,7 @@ async def list_datasets(
 
 
 @router.get("/{dataset_id}", response_model=DatasetResponse)
+@rbac_required(permissions=["datasets:read"])
 async def get_dataset(
     dataset_id: str,
     current_user: User = Depends(get_current_active_user),
@@ -138,6 +142,7 @@ async def get_dataset(
 
 
 @router.get("/{dataset_id}/records")
+@rbac_required(permissions=["datasets:read"])
 async def get_dataset_records(
     dataset_id: str,
     page: int = 1,
@@ -189,6 +194,7 @@ async def get_dataset_records(
 
 
 @router.post("/{dataset_id}/search", response_model=SearchResponse)
+@rbac_required(permissions=["datasets:read"])
 async def search_dataset(
     dataset_id: str,
     search_request: SearchRequest,
@@ -232,12 +238,14 @@ async def search_dataset(
         )
         
         # Filter results for this dataset and get record details
+        record_ids = [uuid.UUID(res['record_id']) for res in search_results if res.get('dataset_id') == dataset_id]
+        records = db.query(DataRecord).filter(DataRecord.id.in_(record_ids)).all() if record_ids else []
+        record_map = {str(r.id): r for r in records}
+
         filtered_results = []
         for result in search_results:
             if result.get('dataset_id') == dataset_id:
-                record_id = result.get('record_id')
-                record = db.query(DataRecord).filter(DataRecord.id == record_id).first()
-                
+                record = record_map.get(result.get('record_id'))
                 if record:
                     filtered_results.append(SearchResult(
                         record=DataRecordResponse(
@@ -266,6 +274,7 @@ async def search_dataset(
 
 
 @router.get("/{dataset_id}/export")
+@rbac_required(permissions=["datasets:export"])
 async def export_dataset(
     dataset_id: str,
     format: str = Query("json", regex="^(json|csv)$"),
@@ -364,6 +373,7 @@ async def export_dataset(
 
 
 @router.delete("/{dataset_id}")
+@rbac_required(permissions=["datasets:delete"])
 async def delete_dataset(
     dataset_id: str,
     current_user: User = Depends(get_current_active_user),

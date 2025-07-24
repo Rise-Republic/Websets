@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+    auth0_domain: Optional[str] = None
+    auth0_client_id: Optional[str] = None
+    auth0_client_secret: Optional[str] = None
+    auth0_audience: Optional[str] = None
+    auth0_issuer: Optional[str] = None
     
     @field_validator('jwt_secret_key')
     @classmethod
@@ -69,10 +74,12 @@ class Settings(BaseSettings):
     max_concurrent_crawls: int = 5
     request_delay_ms: int = 1000
     user_agent: str = "WebSetMiner/1.0"
-    
+
     # Environment
     environment: str = "development"
     log_level: str = "INFO"
+    enable_tracing: bool = False
+    otlp_endpoint: str = "http://localhost:4318"
     allowed_origins: list[str] = [
         "http://localhost:3000",
         "http://localhost:5173",
@@ -83,47 +90,57 @@ class Settings(BaseSettings):
     ]
     
     model_config = {
-        "env_file": ".env",
         "extra": "ignore"
     }
 
 
 # --- Vault integration for secrets ---
-def get_secret_from_vault_or_env(key, default=None):
-    vault_path = os.getenv("VAULT_SECRET_PATH", "secret/websets")
-    if os.getenv("VAULT_ADDR") and os.getenv("VAULT_TOKEN"):
-        try:
-            vault = VaultClient()
-            value = vault.get_secret(vault_path, key)
-            if value is not None:
-                return value
-            print(f"[config.py] Secret '{key}' not found at {vault_path}")
-        except Exception as e:
-            print(f"[config.py] Vault error retrieving '{key}': {e}")
-            raise
-    else:
-        print("[config.py] Vault not configured, using env/.env for secrets")
-    return os.getenv(key, default)
+def get_secret_from_vault(client: VaultClient, path: str, key: str) -> str | None:
+    """Fetch a secret key from Vault and raise on failure."""
+    try:
+        value = client.get_secret(path, key)
+        if value is None:
+            raise KeyError(f"Secret '{key}' not found at {path}")
+        return value
+    except Exception as e:
+        print(f"[config.py] Vault error retrieving '{key}': {e}")
+        raise
 
 
 def validate_settings():
-    """Validate critical settings at startup, using Vault if available."""
+    """Validate critical settings at startup and require Vault."""
     try:
+        # Load Vault connection info for local development only. All
+        # secrets must be retrieved from Vault.
         load_dotenv(".env")
-        # Print all VAULT_ env vars for debug
+        vault_addr = os.getenv("VAULT_ADDR")
+        vault_token = os.getenv("VAULT_TOKEN")
+        vault_path = os.getenv("VAULT_SECRET_PATH", "secret/websets")
+        if not vault_addr or not vault_token:
+            print("Error: VAULT_ADDR and VAULT_TOKEN must be set for secrets")
+            sys.exit(1)
+
         print("[config.py] VAULT_ env vars:")
         for k, v in os.environ.items():
             if k.startswith("VAULT_"):
                 print(f"  {k}={v}")
-        # Gather all required secrets
+
+        client = VaultClient()
+        client.verify_secret_path(vault_path)
+
         secret_values = {
-            'openai_api_key': get_secret_from_vault_or_env('OPENAI_API_KEY'),
-            'anthropic_api_key': get_secret_from_vault_or_env('ANTHROPIC_API_KEY'),
-            'database_url': get_secret_from_vault_or_env('DATABASE_URL'),
-            'redis_url': get_secret_from_vault_or_env('REDIS_URL'),
-            'celery_broker_url': get_secret_from_vault_or_env('CELERY_BROKER_URL'),
-            'celery_result_backend': get_secret_from_vault_or_env('CELERY_RESULT_BACKEND'),
-            'jwt_secret_key': get_secret_from_vault_or_env('JWT_SECRET_KEY'),
+            'openai_api_key': get_secret_from_vault(client, vault_path, 'OPENAI_API_KEY'),
+            'anthropic_api_key': client.get_secret(vault_path, 'ANTHROPIC_API_KEY'),
+            'database_url': get_secret_from_vault(client, vault_path, 'DATABASE_URL'),
+            'redis_url': client.get_secret(vault_path, 'REDIS_URL'),
+            'celery_broker_url': client.get_secret(vault_path, 'CELERY_BROKER_URL'),
+            'celery_result_backend': client.get_secret(vault_path, 'CELERY_RESULT_BACKEND'),
+            'jwt_secret_key': get_secret_from_vault(client, vault_path, 'JWT_SECRET_KEY'),
+            'auth0_domain': client.get_secret(vault_path, 'AUTH0_DOMAIN'),
+            'auth0_client_id': client.get_secret(vault_path, 'AUTH0_CLIENT_ID'),
+            'auth0_client_secret': client.get_secret(vault_path, 'AUTH0_CLIENT_SECRET'),
+            'auth0_audience': client.get_secret(vault_path, 'AUTH0_AUDIENCE'),
+            'auth0_issuer': client.get_secret(vault_path, 'AUTH0_ISSUER'),
         }
         print("[config.py] Required secrets loaded:")
         for k, v in secret_values.items():

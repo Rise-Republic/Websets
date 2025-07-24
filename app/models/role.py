@@ -87,7 +87,7 @@ class AuditLog(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     
     # User information
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True, index=True)
     user_email = Column(String, nullable=True)  # For deleted users
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(Text, nullable=True)
@@ -119,6 +119,9 @@ class AuditLog(Base):
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # Retention
+    data_retention_days = Column(Integer, default=730)
     
     # Relationships
     user = relationship("User", back_populates="audit_logs")
@@ -130,11 +133,11 @@ class DataAccessLog(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     
     # User information
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False, index=True)
     
     # Data accessed
-    dataset_id = Column(UUID(as_uuid=True), ForeignKey('datasets.id'), nullable=True)
-    job_id = Column(UUID(as_uuid=True), ForeignKey('jobs.id'), nullable=True)
+    dataset_id = Column(UUID(as_uuid=True), ForeignKey('datasets.id'), nullable=True, index=True)
+    job_id = Column(UUID(as_uuid=True), ForeignKey('jobs.id'), nullable=True, index=True)
     
     # Access details
     access_type = Column(String(20), nullable=False)  # 'read', 'download', 'export', 'delete'
@@ -147,6 +150,9 @@ class DataAccessLog(Base):
     
     # Timestamps
     accessed_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # Retention
+    data_retention_days = Column(Integer, default=730)
     
     # Relationships
     user = relationship("User", back_populates="data_access_logs")

@@ -12,6 +12,7 @@ from app.auth.jwt_handler import create_access_token, get_password_hash, verify_
 from app.auth.dependencies import get_current_active_user
 from app.config import settings
 from app.middleware import limiter, RateLimits
+from app.middleware.audit_middleware import SecurityEventLogger
 
 router = APIRouter(prefix="/auth", tags=["v1-authentication"])
 
@@ -124,12 +125,22 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         login_fail.inc()
+        SecurityEventLogger.log_failed_login(
+            email=form_data.username,
+            ip_address=request.client.host if request.client else "unknown",
+            reason="invalid_credentials",
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     if not user.is_active:
+        SecurityEventLogger.log_failed_login(
+            email=user.email,
+            ip_address=request.client.host if request.client else "unknown",
+            reason="inactive_user",
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Inactive user"
@@ -259,6 +270,12 @@ async def refresh_token(request: Request, data: RefreshTokenRequest, db: Session
     user.refresh_token_expiry = datetime.utcnow() + timedelta(days=7)
     db.commit()
     return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
+
+
+@router.get("/debug")
+async def auth_debug(current_user: User = Depends(get_current_active_user), request: Request = None):
+    perms = getattr(request.state, "token_permissions", []) if request else []
+    return {"user": current_user.email, "permissions": perms}
 
 # Prometheus metrics endpoint
 @router.get("/metrics")

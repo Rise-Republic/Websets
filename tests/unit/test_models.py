@@ -59,3 +59,34 @@ class TestUserModel:
         db_session.add(user2)
         with pytest.raises(Exception):  # Should raise IntegrityError
             db_session.commit()
+
+
+class TestDataRetention:
+    @pytest.fixture(autouse=True)
+    def model_imports(self):
+        from app.models.dataset import Dataset
+        from app.models.job import Job
+        from app.models.user import User
+        from app.auth.jwt_handler import get_password_hash
+        self.Dataset = Dataset
+        self.Job = Job
+        self.User = User
+        self.get_password_hash = get_password_hash
+
+    def test_dataset_retention_default(self, db_session):
+        user = self.User(
+            email="retention@example.com",
+            hashed_password=self.get_password_hash("password")
+        )
+        db_session.add(user)
+        db_session.commit()
+
+        job = self.Job(user_id=user.id, prompt="test")
+        db_session.add(job)
+        db_session.commit()
+
+        dataset = self.Dataset(job_id=job.id, name="ds")
+        db_session.add(dataset)
+        db_session.commit()
+
+        assert dataset.data_retention_days == 365

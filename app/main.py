@@ -1,13 +1,15 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
 from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
+from app.telemetry import configure_tracing
 from app.logging_utils import configure_logging
 from app.database import create_tables
-from app.api import auth_router, jobs_router, datasets_router, health_router
+from app.api import auth_router, jobs_router, datasets_router, health_router, gdpr_router
 from app.api.v1 import v1_router
 from app.api.versioning import versioning_router
 from app.middleware import (
@@ -15,6 +17,7 @@ from app.middleware import (
     rate_limit_handler,
     AuditMiddleware,
     RBACMiddleware,
+    SecurityMiddleware,
 )
 
 # Configure logging with redaction
@@ -28,10 +31,12 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+configure_tracing(app)
 
 # Add rate limiting
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+app.add_middleware(HTTPSRedirectMiddleware)
 
 # Add CORS middleware
 cors_origins = settings.allowed_origins
@@ -43,6 +48,9 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],  # Only needed headers
 )
 
+# Security headers
+app.add_middleware(SecurityMiddleware)
+
 # Security middleware
 app.add_middleware(RBACMiddleware)
 app.add_middleware(AuditMiddleware)
@@ -53,6 +61,7 @@ app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(jobs_router)
 app.include_router(datasets_router)
+app.include_router(gdpr_router)
 
 # V1 API routes
 app.include_router(v1_router)
@@ -65,7 +74,17 @@ app.include_router(versioning_router)
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler for unhandled errors."""
     logger.error(f"Unhandled exception: {exc}")
-    return JSONResponse(status_code=500, content={"detail": str(exc)})
+    origin = request.headers.get("origin")
+    allowed = settings.allowed_origins
+    cors_origin = origin if origin in allowed or "*" in allowed else allowed[0]
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)},
+        headers={
+            "Access-Control-Allow-Origin": cors_origin,
+            "Access-Control-Allow-Credentials": "true",
+        },
+    )
 
 
 @app.on_event("startup")

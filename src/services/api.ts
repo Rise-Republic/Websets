@@ -1,7 +1,7 @@
 // API Service for Websets Backend
-// Allow overriding the backend URL via Vite environment variables
+// Allow overriding the backend URL via Vite or Node environment variables
 const API_BASE =
-  (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.VITE_API_BASE) ||
+  process.env.VITE_API_BASE ||
   'http://localhost:8000';
 const API_VERSION = 'v1'; // Default to v1
 const VERSIONED_API_BASE = `${API_BASE}/${API_VERSION}`;
@@ -60,14 +60,13 @@ export interface ErrorResponse {
 }
 
 class ApiService {
-  private token: string | null = null;
+  private token: string | (() => Promise<string | null>) | null = null;
   private readonly maxRetries = 3;
   private readonly retryDelay = 1000; // 1 second
   private useVersionedEndpoints = true; // Toggle for versioned vs legacy endpoints
 
   constructor() {
-    // Load token from localStorage if available
-    this.token = localStorage.getItem('websets_token');
+    this.token = null;
   }
 
   private getBaseUrl(endpoint: string): string {
@@ -81,6 +80,10 @@ class ApiService {
 
   setLegacyMode(useLegacy: boolean) {
     this.useVersionedEndpoints = !useLegacy;
+  }
+
+  setTokenProvider(fn: () => Promise<string | null>) {
+    this.token = fn;
   }
 
   private async delay(ms: number): Promise<void> {
@@ -98,15 +101,27 @@ class ApiService {
     );
   }
 
-  private getHeaders(includeAuth = true) {
+  private async getHeaders(includeAuth = true) {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-    
+
     if (includeAuth && this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+      let token: string | null = null;
+      if (typeof this.token === 'function') {
+        try {
+          token = await this.token();
+        } catch {
+          token = null;
+        }
+      } else {
+        token = this.token;
+      }
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
     }
-    
+
     return headers;
   }
 
@@ -205,7 +220,7 @@ class ApiService {
   async register(email: string, password: string, fullName: string): Promise<User> {
     const response = await fetch(this.getBaseUrl('/auth/register'), {
       method: 'POST',
-      headers: this.getHeaders(false),
+      headers: await this.getHeaders(false),
       body: JSON.stringify({
         email,
         password,
@@ -246,7 +261,7 @@ class ApiService {
 
   async getCurrentUser(): Promise<User> {
     const response = await fetch(this.getBaseUrl('/auth/me'), {
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
     });
     
     return this.handleResponse(response);
@@ -260,7 +275,7 @@ class ApiService {
   // Jobs
   async getJobs(): Promise<Job[]> {
     const response = await fetch(this.getBaseUrl('/jobs/'), {
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
     });
     
     return this.handleResponse(response);
@@ -268,7 +283,7 @@ class ApiService {
 
   async getJob(jobId: string): Promise<Job> {
     const response = await fetch(this.getBaseUrl('/jobs/' + jobId), {
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
     });
     
     return this.handleResponse(response);
@@ -277,7 +292,7 @@ class ApiService {
   async createJob(prompt: string, options?: { estimated_urls?: number; complexity?: string }): Promise<Job> {
     const response = await fetch(this.getBaseUrl('/jobs/'), {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
       body: JSON.stringify({
         prompt,
         ...options,
@@ -290,7 +305,7 @@ class ApiService {
   async cancelJob(jobId: string): Promise<void> {
     const response = await fetch(this.getBaseUrl('/jobs/' + jobId), {
       method: 'DELETE',
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
     });
     
     if (!response.ok) {
@@ -301,7 +316,7 @@ class ApiService {
   // Datasets
   async getDatasets(): Promise<Dataset[]> {
     const response = await fetch(this.getBaseUrl('/datasets/'), {
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
     });
     
     return this.handleResponse(response);
@@ -309,7 +324,7 @@ class ApiService {
 
   async getDataset(datasetId: string): Promise<Dataset> {
     const response = await fetch(this.getBaseUrl('/datasets/' + datasetId), {
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
     });
     
     return this.handleResponse(response);
@@ -317,7 +332,7 @@ class ApiService {
 
   async getDatasetRecords(datasetId: string, limit = 50, offset = 0): Promise<DatasetRecord[]> {
     const response = await fetch(this.getBaseUrl(`/datasets/${datasetId}/records?limit=${limit}&offset=${offset}`), {
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
     });
     
     return this.handleResponse(response);
@@ -326,7 +341,7 @@ class ApiService {
   async searchDataset(datasetId: string, query: string, limit = 10, threshold = 0.7): Promise<DatasetRecord[]> {
     const response = await fetch(this.getBaseUrl('/datasets/' + datasetId + '/search'), {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
       body: JSON.stringify({
         query,
         limit,
@@ -339,7 +354,7 @@ class ApiService {
 
   async exportDataset(datasetId: string, format: 'json' | 'csv' = 'json'): Promise<Blob> {
     const response = await fetch(this.getBaseUrl(`/datasets/${datasetId}/export?format=${format}`), {
-      headers: this.getHeaders(),
+      headers: await this.getHeaders(),
     });
     
     if (!response.ok) {
@@ -366,7 +381,7 @@ class ApiService {
   }
 
   getToken(): string | null {
-    return this.token;
+    return typeof this.token === 'string' ? this.token : null;
   }
 }
 

@@ -24,3 +24,16 @@ dist-ssr
 *.sw?
 .env
 .venv/
+.mypy_cache/
+.ruff_cache/
+__pycache__/
+
+# Test artifacts
+/test.db
+/test_warnings.txt
+/data/minio/.minio.sys/tmp/
+
+# Local Docker secrets
+secrets/minio_root_user.txt
+secrets/minio_root_password.txt
+artifacts/
