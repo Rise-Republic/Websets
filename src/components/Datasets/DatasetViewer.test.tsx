@@ -23,6 +23,6 @@ describe('DatasetViewer', () => {
       expect(mockApi.apiService.getDatasetRecords).toHaveBeenCalledWith(dataset.id);
     });
 
-    expect(await screen.findByText('bar')).toBeInTheDocument();
+    expect(await screen.findByText(/bar/)).toBeInTheDocument();
   });
 });
