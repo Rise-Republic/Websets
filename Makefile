@@ -33,3 +33,10 @@ dev:
 # Build Docker image for deployment
 docker-build:
 	docker build -t webset-miner .
+
+# Full local development environment
+dev:
+	bash scripts/setup.sh
+	docker compose up -d
+	alembic upgrade head
+	vault kv put secret/websets @vault_secrets_template.json

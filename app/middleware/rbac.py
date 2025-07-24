@@ -6,6 +6,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.auth.dependencies import get_current_user_optional
 from app.middleware.audit_middleware import SecurityEventLogger
+from app.tenancy import set_current_tenant
 
 
 class RBACMiddleware(BaseHTTPMiddleware):
@@ -44,6 +45,7 @@ class RBACMiddleware(BaseHTTPMiddleware):
                 request.state.tenant_id = (
                     str(user.tenant_id) if user.tenant_id else None
                 )
+                set_current_tenant(user.tenant_id)
 
                 if required_roles:
                     user_roles = {r.name for r in getattr(user, "roles", [])}
@@ -96,7 +98,10 @@ class RBACMiddleware(BaseHTTPMiddleware):
                                 "detail": f"Insufficient permission. Required: {required_perms}"
                             },
                         )
-        return await call_next(request)
+        try:
+            return await call_next(request)
+        finally:
+            set_current_tenant(None)
 
 
 def rbac_required(

@@ -100,3 +100,19 @@ terraform apply
 If an apply misbehaves, re-apply the previous commit's configuration or use
 `kubectl rollout undo deployment/webset-miner` to roll back the running
 application without the blue/green procedure.
+
+### Blue/Green Deployment Script
+
+Use `scripts/blue_green_deploy.sh` to shift traffic between the `webset-miner-blue`
+and `webset-miner-green` deployments. The script waits for the new replica set to
+finish rolling out and polls Prometheus for a low HTTP error rate before keeping
+traffic on the new version. If metrics remain unhealthy within the timeout,
+traffic automatically reverts to the previously selected deployment.
+
+```bash
+# Deploy the green version and monitor metrics
+scripts/blue_green_deploy.sh green
+```
+
+Override `PROMETHEUS_URL`, `DEPLOY_TIMEOUT`, or `HEALTH_TIMEOUT` as needed when
+invoking the script.

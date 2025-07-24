@@ -1,5 +1,6 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAuth, useAuthProvider } from './useAuth';
+import { useAuthStore } from '@/store/auth';
 import * as apiService from '@/services/api';
 
 // Mock the API service
@@ -24,6 +25,7 @@ describe('useAuthProvider', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockDefaultApiService.isAuthenticated.mockReturnValue(false);
+    useAuthStore.getState().reset();
   });
 
   test('initializes with correct default state', async () => {
@@ -105,6 +107,22 @@ describe('useAuthProvider', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
+  test('login fails if fetching current user throws', async () => {
+    mockDefaultApiService.login.mockResolvedValue(undefined);
+    mockDefaultApiService.getCurrentUser.mockRejectedValue(new Error('fetch error'));
+
+    const { result } = renderHook(() => useAuthProvider());
+
+    await act(async () => {
+      await expect(result.current.login('test@example.com', 'password')).rejects.toThrow('fetch error');
+    });
+
+    expect(result.current.user).toBe(null);
+    expect(result.current.isAuthenticated).toBe(false);
+    expect(result.current.error).toBe('fetch error');
+    expect(result.current.isLoading).toBe(false);
+  });
+
   test('register success and auto-login', async () => {
     const mockUser = { id: '1', email: 'test@example.com', fullName: 'Test User' };
     mockDefaultApiService.register.mockResolvedValue(mockUser);
@@ -164,6 +182,26 @@ describe('useAuthProvider', () => {
 
     expect(result.current.user).toBe(null);
     expect(result.current.error).toBe(null);
+    expect(mockDefaultApiService.logout).toHaveBeenCalledTimes(1);
+  });
+
+  test('logout after login clears authentication', async () => {
+    const mockUser = { id: '1', email: 'test@example.com', fullName: 'Test User' };
+    mockDefaultApiService.login.mockResolvedValue(undefined);
+    mockDefaultApiService.getCurrentUser.mockResolvedValue(mockUser);
+
+    const { result } = renderHook(() => useAuthProvider());
+
+    await act(async () => {
+      await result.current.login('test@example.com', 'password');
+    });
+
+    act(() => {
+      result.current.logout();
+    });
+
+    expect(result.current.user).toBe(null);
+    expect(result.current.isAuthenticated).toBe(false);
     expect(mockDefaultApiService.logout).toHaveBeenCalledTimes(1);
   });
 
