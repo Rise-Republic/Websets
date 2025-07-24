@@ -12,6 +12,7 @@ This guide describes exposing Prometheus metrics, provisioning Grafana dashboard
 6. Enable multi-tenancy, time comparison, and drill-down.
 7. Integrate trace IDs and SLO metrics into dashboards.
 8. Import `monitoring/grafana/dashboards/websets_overview.json` into Grafana to see Websets metrics.
+9. Configure RBAC via `monitoring/grafana/provisioning/access-control` so only authorized teams can modify dashboards.
 
 ## Automation
 - Terraform/Jsonnet for dashboard provisioning.

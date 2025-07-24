@@ -1,0 +1,12 @@
+apiVersion: 1
+roles:
+  - name: dashboard-viewer
+    version: 1
+    permissions:
+      - action: dashboards:read
+        scope: global
+  - name: dashboard-editor
+    version: 1
+    permissions:
+      - action: dashboards:write
+        scope: global

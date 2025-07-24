@@ -129,7 +129,8 @@ async def detailed_health_check(db: Session = Depends(get_db)):
 @router.get("/metrics")
 async def get_metrics():
     """Prometheus metrics endpoint."""
-    from app.monitoring.metrics import metrics_collector
+    from app.monitoring.metrics import get_metrics_collector
+    metrics_collector = get_metrics_collector()
     return metrics_collector.get_metrics()
 
 

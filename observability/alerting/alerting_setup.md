@@ -9,7 +9,8 @@ This guide covers Prometheus Alertmanager configuration, SLO/infra/security aler
 3. Tag alerts with severity and route to PagerDuty/Slack by service ownership.
 4. Enable deduplication and grouping in Alertmanager.
 5. Version-control alert rules and runbooks. See `monitoring/prometheus/rules/key_metrics.yml` for sample rules.
-6. Import `monitoring/grafana/dashboards/websets_overview.json` into Grafana for quick visibility on request volume and error rate.
+6. Create `monitoring/alertmanager/alertmanager.yml` with routing to Slack/email receivers. The file is mounted by `docker-compose.monitoring.yml`.
+7. Import `monitoring/grafana/dashboards/websets_overview.json` into Grafana for quick visibility on request volume and error rate.
 
 ## Automation
 - Config-as-Code for alert rules (Helm/Terraform).
