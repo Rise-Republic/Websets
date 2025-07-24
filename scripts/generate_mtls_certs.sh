@@ -9,7 +9,7 @@ openssl req -x509 -newkey rsa:4096 -sha256 -days 365 \
   -nodes -keyout "$CERT_DIR/ca.key" -out "$CERT_DIR/ca.crt" \
   -subj "/CN=websets-ca"
 
-SERVICES=(app minio vault redis qdrant weaviate)
+SERVICES=(app minio vault redis qdrant weaviate prometheus)
 
 for svc in "${SERVICES[@]}"; do
   openssl req -newkey rsa:2048 -nodes \
@@ -20,5 +20,8 @@ for svc in "${SERVICES[@]}"; do
     -out "$CERT_DIR/${svc}.crt" -days 365 -sha256
   rm "$CERT_DIR/${svc}.csr"
 done
+
+# Restrict private key permissions
+chmod 600 "$CERT_DIR"/*.key
 
 echo "mTLS certificates generated in $CERT_DIR"

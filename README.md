@@ -27,49 +27,17 @@ For detailed onboarding instructions see [ONBOARDING.md](ONBOARDING.md).
 
 ### Setup
 
-1. **Clone and start the development environment:**
+1. **Clone the repository and start the development environment:**
 ```bash
 git clone <repository>
 cd webset-miner
 make dev
 ```
 
-`make dev` runs `scripts/setup.sh`, applies database migrations, seeds Vault from `vault_secrets_template.json`, and starts the Docker Compose stack. A `.env` file will be created automatically if it doesn't exist.
-Set `SEED_USER_EMAIL` and `SEED_USER_PASSWORD` in your environment before running
-this command to create the initial user.
+`make dev` installs dependencies, generates certificates, seeds Vault, configures a default `DATABASE_URL` and disables Vault for local usage, applies database migrations, and starts the Docker Compose stack. A `.env` file will be created from `.env.example` if it doesn't exist. Provide `SEED_USER_EMAIL` and `SEED_USER_PASSWORD` in your environment to create the initial user.
 
-2. **Configure environment:**
 
-```bash
-# Copy the sample env file and adjust non‑secret settings
-cp .env.example .env
-# VAULT_TOKEN is intentionally omitted; supply it via env var or Docker secret
-```
-
-# Seed Vault with secrets from the template
-export VAULT_ADDR=http://localhost:8200
-export VAULT_TOKEN=<your-root-token>
-vault kv put secret/websets @vault_secrets_template.json
-
-# Create Docker secrets for MinIO from Vault values
-vault kv get -field=MINIO_ROOT_USER     secret/websets | docker secret create minio_root_user     -
-vault kv get -field=MINIO_ROOT_PASSWORD secret/websets | docker secret create minio_root_password -
-vault kv get -field=MINIO_KMS_SECRET_KEY secret/websets | docker secret create minio_kms_key      -
-vault kv get -field=MINIO_SSE_MASTER_KEY secret/websets | docker secret create minio_sse_master_key -
-vault kv get -field=POSTGRES_ENCRYPTION_KEY secret/websets | docker secret create postgres_encryption_key -
-
-You can also open the repository in a [Dev Container](.devcontainer/devcontainer.json) which will
-run `make setup` automatically after creation.
-
-3. **Start services:**
-```bash
-make dev
-```
-This command installs dependencies, generates local certificates, applies database migrations,
-and starts all Docker services. You can still run `docker-compose up -d` manually
-if you prefer.
-
-4. **Run your first mining job:**
+2. **Run your first mining job:**
 
 curl -X POST "http://localhost:8000/jobs/" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -77,7 +45,7 @@ curl -X POST "http://localhost:8000/jobs/" \
   -d '{"prompt": "AI startups in Europe hiring ML engineers"}'
 ```
 
-5. **Explore the API interactively:**
+3. **Explore the API interactively:**
 
 After the services start you can open [http://localhost:8000/docs](http://localhost:8000/docs)
 for a Swagger UI or [http://localhost:8000/redoc](http://localhost:8000/redoc)
@@ -250,8 +218,9 @@ EMAIL_FROM=no-reply@example.com
 ```
 
 Populate these secrets using Vault and create Docker secrets for any services
-that support the `*_FILE` pattern. `fetch_vault_env.py` can be used to generate
-a complete `.env` file from Vault for local development.
+that support the `*_FILE` pattern. Running `make dev` will automatically seed
+Vault and write a suitable `DATABASE_URL` into `.env`, so no manual calls to
+`fetch_vault_env.py` are required.
 
 ### Mail Delivery
 
@@ -677,7 +646,7 @@ vault = VaultClient()
 openai_key = vault.get_secret("secret/data/websets", "openai_api_key")
 ```
 
-To create a local `.env` file with all secrets:
+If you need a full `.env` with secrets, you can generate one manually:
 
 ```bash
 python fetch_vault_env.py > .env

@@ -54,16 +54,15 @@ flowchart TD
 1. Create `.env` from `.env.example` (it omits `VAULT_TOKEN`) and set `DISABLE_VAULT_FOR_LOCAL_DEV=true`. Provide `VAULT_TOKEN` via an environment variable or Docker secret.
 2. Start services:
    ```bash
-   docker-compose up -d
+   make dev
    ```
-3. Run the API with auto reload:
-   ```bash
-   uvicorn app.main:app --reload
-   ```
+   This installs dependencies, generates certificates, seeds Vault and runs
+   `docker compose up` automatically.
+3. The API will be accessible at `http://localhost:8000` once the stack is up.
 
 ### Environment Secrets
 
-Secrets are pulled from Vault by default. During development they can be read from `.env` by setting `DISABLE_VAULT_FOR_LOCAL_DEV=true`. Use `fetch_vault_env.py` to generate a full `.env`.
+Secrets are pulled from Vault by default. `make dev` seeds Vault and populates `.env` with a default `DATABASE_URL`. During development you can bypass Vault entirely by keeping `DISABLE_VAULT_FOR_LOCAL_DEV=true` in `.env`; running `fetch_vault_env.py` manually is optional.
 
 ### mTLS Toggle
 

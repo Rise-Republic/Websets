@@ -127,7 +127,7 @@ services:
       - POSTGRES_INITDB_ARGS=
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - /home/bmsul/Websets/secrets/postgres_password:/run/secrets/postgres_password:ro
+      - ./secrets/postgres_password:/run/secrets/postgres_password:ro
     ports:
       - "5432:5432"
     restart: unless-stopped
@@ -161,10 +161,10 @@ services:
     command: >
       vault server
       -dev
+      -dev-root-token-id=root
+      -dev-listen-address=0.0.0.0:8200
       -dev-tls-cert-file=/certs/vault.crt
       -dev-tls-key-file=/certs/vault.key
-      -dev-tls-ca-cert-file=/certs/ca.crt
-      -dev-tls-skip-verify=true
     restart: unless-stopped
     deploy:
       resources:
@@ -205,11 +205,13 @@ services:
       retries: 5
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.52.0
     ports:
       - "9091:9090"
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/web.yml:/etc/prometheus/web.yml
+      - ./certs:/certs:ro
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -218,6 +220,7 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--storage.tsdb.retention.time=200h'
       - '--web.enable-lifecycle'
+      - '--web.config.file=/etc/prometheus/web.yml'
     depends_on:
       app:
         condition: service_healthy
@@ -228,7 +231,7 @@ services:
           cpus: '0.50'
           memory: 512m
     healthcheck:
-      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:9090/-/healthy"]
+      test: ["CMD", "wget", "--spider", "--quiet", "--ca-certificate=/certs/ca.crt", "https://localhost:9090/-/healthy"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -242,7 +245,7 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
-      - /home/bmsul/Websets/secrets/grafana_admin_password:/run/secrets/grafana_admin_password:ro
+      - ./secrets/grafana_admin_password:/run/secrets/grafana_admin_password:ro
     depends_on:
       prometheus:
         condition: service_healthy
@@ -326,10 +329,10 @@ services:
     volumes:
       - ./data/minio:/data
       - ./certs:/certs:ro
-      - /home/bmsul/Websets/secrets/minio_root_user:/run/secrets/minio_root_user:ro
-      - /home/bmsul/Websets/secrets/minio_root_password:/run/secrets/minio_root_password:ro
-      - /home/bmsul/Websets/secrets/minio_kms_key:/run/secrets/minio_kms_key:ro
-      - /home/bmsul/Websets/secrets/minio_sse_master_key:/run/secrets/minio_sse_master_key:ro
+      - ./secrets/minio_root_user:/run/secrets/minio_root_user:ro
+      - ./secrets/minio_root_password:/run/secrets/minio_root_password:ro
+      - ./secrets/minio_kms_key:/run/secrets/minio_kms_key:ro
+      - ./secrets/minio_sse_master_key:/run/secrets/minio_sse_master_key:ro
     healthcheck:
       test: ["CMD", "curl", "--cacert", "/certs/ca.crt", "-f", "https://localhost:9000/minio/health/live"]
       interval: 30s
