@@ -15,6 +15,14 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from app.database import Base  # adjust import as needed
 target_metadata = Base.metadata
 
+# Get database URL from environment variable
+db_url = os.getenv('DATABASE_URL')
+if db_url is None:
+    raise RuntimeError("DATABASE_URL environment variable not set")
+
+# Set the sqlalchemy.url configuration
+config.set_main_option('sqlalchemy.url', db_url)
+
 def run_migrations_offline():
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
