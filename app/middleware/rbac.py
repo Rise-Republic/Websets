@@ -15,10 +15,10 @@ class RBACMiddleware(BaseHTTPMiddleware):
         endpoint = request.scope.get("endpoint")
         if endpoint is None:
             for route in request.app.routes:
-                if hasattr(route, 'matches'):
+                if hasattr(route, "matches"):
                     match, _ = route.matches(request.scope)
                     if match == Match.FULL:
-                        endpoint = getattr(route, 'endpoint', None)
+                        endpoint = getattr(route, "endpoint", None)
                         break
         if endpoint is not None:
             required_roles = getattr(endpoint, "required_roles", [])
@@ -29,7 +29,10 @@ class RBACMiddleware(BaseHTTPMiddleware):
                     SecurityEventLogger.log_security_event(
                         "RBAC_DENIED",
                         ip_address=request.client.host if request.client else "unknown",
-                        details={"path": str(request.url.path), "reason": "not_authenticated"},
+                        details={
+                            "path": str(request.url.path),
+                            "reason": "not_authenticated",
+                        },
                         severity="warning",
                     )
                     return JSONResponse(
@@ -38,6 +41,9 @@ class RBACMiddleware(BaseHTTPMiddleware):
 
                 request.state.user_id = str(user.id)
                 request.state.user_email = user.email
+                request.state.tenant_id = (
+                    str(user.tenant_id) if user.tenant_id else None
+                )
 
                 if required_roles:
                     user_roles = {r.name for r in getattr(user, "roles", [])}
@@ -46,17 +52,26 @@ class RBACMiddleware(BaseHTTPMiddleware):
                             "RBAC_DENIED",
                             user_id=user.id,
                             email=user.email,
-                            ip_address=request.client.host if request.client else "unknown",
-                            details={"required_roles": required_roles, "path": str(request.url.path)},
+                            ip_address=request.client.host
+                            if request.client
+                            else "unknown",
+                            details={
+                                "required_roles": required_roles,
+                                "path": str(request.url.path),
+                            },
                             severity="warning",
                         )
                         return JSONResponse(
                             status_code=403,
-                            content={"detail": f"Insufficient role. Required: {required_roles}"},
+                            content={
+                                "detail": f"Insufficient role. Required: {required_roles}"
+                            },
                         )
 
                 if required_perms:
-                    user_perms = set(getattr(request.state, 'token_permissions', []) or [])
+                    user_perms = set(
+                        getattr(request.state, "token_permissions", []) or []
+                    )
                     for role in getattr(user, "roles", []):
                         user_perms.update(
                             {p.name for p in getattr(role, "permissions", [])}
@@ -66,13 +81,20 @@ class RBACMiddleware(BaseHTTPMiddleware):
                             "RBAC_DENIED",
                             user_id=user.id,
                             email=user.email,
-                            ip_address=request.client.host if request.client else "unknown",
-                            details={"required_permissions": required_perms, "path": str(request.url.path)},
+                            ip_address=request.client.host
+                            if request.client
+                            else "unknown",
+                            details={
+                                "required_permissions": required_perms,
+                                "path": str(request.url.path),
+                            },
                             severity="warning",
                         )
                         return JSONResponse(
                             status_code=403,
-                            content={"detail": f"Insufficient permission. Required: {required_perms}"},
+                            content={
+                                "detail": f"Insufficient permission. Required: {required_perms}"
+                            },
                         )
         return await call_next(request)
 
