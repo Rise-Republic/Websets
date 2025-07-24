@@ -13,6 +13,14 @@ This guide describes exposing Prometheus metrics, provisioning Grafana dashboard
 7. Integrate trace IDs and SLO metrics into dashboards.
 8. Import `monitoring/grafana/dashboards/websets_overview.json` into Grafana to see Websets metrics.
 9. Configure RBAC via `monitoring/grafana/provisioning/access-control` so only authorized teams can modify dashboards.
+10. Annotate the Kubernetes `Service` with Prometheus scraping configuration:
+   ```yaml
+   metadata:
+     annotations:
+       prometheus.io/scrape: "true"
+       prometheus.io/path: "/health/metrics"
+       prometheus.io/port: "8000"
+   ```
 
 ## Automation
 - Terraform/Jsonnet for dashboard provisioning.
