@@ -4,7 +4,11 @@ import app.websockets.manager  # required for coverage configuration
 
 from app.repositories.job_repository import JobRepository
 from app.repositories.dataset_repository import DatasetRepository
+from app.repositories.user_repository import UserRepository
+from app.repositories.discovery_repository import DiscoveryRepository
+from app.repositories.role_repository import RoleRepository
 from app.models import User, Job, JobStatus, Dataset
+from app.models import DiscoveredURL, Role
 from app.auth.jwt_handler import get_password_hash
 
 
@@ -90,3 +94,51 @@ def test_dataset_repository_basic_operations(db_session):
 
     repo.delete_dataset(dataset)
     assert repo.get_dataset(str(dataset.id), tenant) is None
+
+
+@pytest.mark.unit
+def test_user_repository_crud(db_session):
+    repo = UserRepository(db_session)
+    tenant = uuid.uuid4()
+    user = User(
+        email="user@example.com",
+        hashed_password="pw",
+        tenant_id=tenant,
+    )
+    repo.add(user)
+
+    fetched = repo.get_by_email("user@example.com")
+    assert fetched is not None
+    assert fetched.id == user.id
+
+    fetched = repo.get_by_id(user.id)
+    assert fetched.email == "user@example.com"
+
+    user.full_name = "New"
+    repo.commit()
+    repo.refresh(user)
+    assert repo.get_by_id(user.id).full_name == "New"
+
+    repo.delete(user)
+    assert repo.get_by_id(user.id) is None
+
+
+@pytest.mark.unit
+def test_discovery_and_role_repositories(db_session):
+    # Setup user/job for discovery URL
+    user = User(email="d@example.com", hashed_password="pw", tenant_id=uuid.uuid4())
+    db_session.add(user)
+    db_session.commit()
+    job = Job(user_id=user.id, tenant_id=user.tenant_id, prompt="p")
+    db_session.add(job)
+    db_session.commit()
+
+    disc_repo = DiscoveryRepository(db_session)
+    url_obj = disc_repo.create_discovered_url(job.id, user.tenant_id, "https://example.com")
+    disc_repo.commit()
+    assert db_session.query(DiscoveredURL).filter(DiscoveredURL.id == url_obj.id).first()
+
+    role_repo = RoleRepository(db_session)
+    role = Role(name="tester")
+    role_repo.add(role)
+    assert role_repo.get_by_name("tester").id == role.id

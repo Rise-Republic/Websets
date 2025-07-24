@@ -6,12 +6,18 @@ from pydantic import BaseModel, EmailStr, field_validator
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.repositories import UserRepository
 from app.models.user import User
 from app.auth.dependencies import get_current_active_user
 from app.auth.jwt_handler import verify_password, get_password_hash
 
 
 router = APIRouter(prefix="/users", tags=["v1-users"])
+
+
+def get_user_repository(db: Session = Depends(get_db)) -> UserRepository:
+    """Dependency injector for ``UserRepository``."""
+    return UserRepository(db)
 
 
 class UserProfileResponse(BaseModel):
@@ -72,14 +78,13 @@ async def get_profile(current_user: User = Depends(get_current_active_user)):
 async def update_profile(
     data: UserProfileUpdate,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    user_repo: UserRepository = Depends(get_user_repository),
 ):
     if data.full_name is not None:
         current_user.full_name = data.full_name
     current_user.updated_at = datetime.utcnow()
-    db.add(current_user)
-    db.commit()
-    db.refresh(current_user)
+    user_repo.commit()
+    user_repo.refresh(current_user)
     return UserProfileResponse(
         id=str(current_user.id),
         email=current_user.email,
@@ -94,14 +99,13 @@ async def update_profile(
 async def change_password(
     data: PasswordChangeRequest,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    user_repo: UserRepository = Depends(get_user_repository),
 ):
     if not verify_password(data.current_password, current_user.hashed_password):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect password")
     current_user.hashed_password = get_password_hash(data.new_password)
     current_user.last_password_change = datetime.utcnow()
-    db.add(current_user)
-    db.commit()
+    user_repo.commit()
     return {"message": "Password updated"}
 
 
@@ -109,30 +113,28 @@ async def change_password(
 async def change_email(
     data: EmailChangeRequest,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    user_repo: UserRepository = Depends(get_user_repository),
 ):
     if not verify_password(data.password, current_user.hashed_password):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect password")
-    existing = db.query(User).filter(User.email == data.new_email).first()
+    existing = user_repo.get_by_email(data.new_email)
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
     current_user.email = data.new_email
     current_user.is_verified = False
     current_user.updated_at = datetime.utcnow()
-    db.add(current_user)
-    db.commit()
-    db.refresh(current_user)
+    user_repo.commit()
+    user_repo.refresh(current_user)
     return {"message": "Email updated"}
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
 async def deactivate_account(
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    user_repo: UserRepository = Depends(get_user_repository),
 ):
     current_user.is_active = False
     current_user.updated_at = datetime.utcnow()
-    db.add(current_user)
-    db.commit()
+    user_repo.commit()
     return None
 

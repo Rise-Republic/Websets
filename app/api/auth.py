@@ -8,12 +8,18 @@ import re
 from app.database import get_db
 from app.models.user import User
 from app.auth.jwt_handler import create_access_token, get_password_hash, verify_password
+from app.repositories import UserRepository
 from app.auth.dependencies import get_current_active_user
 from app.config import settings
 from app.middleware import limiter, RateLimits
 from app.middleware.audit_middleware import SecurityEventLogger
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
+
+
+def get_user_repository(db: Session = Depends(get_db)) -> UserRepository:
+    """Dependency injector for ``UserRepository``."""
+    return UserRepository(db)
 
 
 class UserCreate(BaseModel):
@@ -60,12 +66,14 @@ class RegistrationResponse(UserResponse):
 @router.post("/register", response_model=RegistrationResponse)
 @limiter.limit(RateLimits.AUTH_REGISTER)
 async def register(
-    request: Request, user_data: UserCreate, db: Session = Depends(get_db)
+    request: Request,
+    user_data: UserCreate,
+    user_repo: UserRepository = Depends(get_user_repository),
 ):
     """Register a new user."""
 
     # Check if user already exists
-    existing_user = db.query(User).filter(User.email == user_data.email).first()
+    existing_user = user_repo.get_by_email(user_data.email)
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
@@ -87,9 +95,7 @@ async def register(
         verification_token_expiry=datetime.utcnow() + timedelta(hours=24),
     )
 
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    user_repo.add(user)
 
     return RegistrationResponse(
         id=str(user.id),
@@ -106,12 +112,12 @@ async def register(
 async def login(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db),
+    user_repo: UserRepository = Depends(get_user_repository),
 ):
     """Login and get access token."""
 
     # Authenticate user
-    user = db.query(User).filter(User.email == form_data.username).first()
+    user = user_repo.get_by_email(form_data.username)
     if not user or not verify_password(form_data.password, user.hashed_password):
         SecurityEventLogger.log_failed_login(
             email=form_data.username,
@@ -155,7 +161,7 @@ async def login(
     from datetime import datetime
 
     user.last_login = datetime.utcnow()
-    db.commit()
+    user_repo.commit()
 
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -182,17 +188,15 @@ class VerificationRequest(BaseModel):
 @router.post("/verify")
 @limiter.limit(RateLimits.AUTH_REGISTER)
 async def verify_user(
-    request: Request, data: VerificationRequest, db: Session = Depends(get_db)
+    request: Request,
+    data: VerificationRequest,
+    user_repo: UserRepository = Depends(get_user_repository),
 ):
     import hashlib
     from datetime import datetime
 
-    user = (
-        db.query(User)
-        .filter(
-            User.verification_token == hashlib.sha256(data.token.encode()).hexdigest()
-        )
-        .first()
+    user = user_repo.get_by_verification_token(
+        hashlib.sha256(data.token.encode()).hexdigest()
     )
     if not user or user.verification_token_expiry < datetime.utcnow():
         raise HTTPException(
@@ -201,5 +205,5 @@ async def verify_user(
     user.is_verified = True
     user.verification_token = None
     user.verification_token_expiry = None
-    db.commit()
+    user_repo.commit()
     return {"message": "Email verified"}
