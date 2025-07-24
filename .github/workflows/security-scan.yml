@@ -1,0 +1,32 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install tools
+        run: |
+          pip install bandit safety
+      - name: Bandit
+        run: bandit -r app -x tests
+      - name: Safety
+        run: safety check -r requirements.txt
+      - name: Trivy filesystem
+        uses: aquasecurity/trivy-action@0.32.0
+        with:
+          scan-type: fs
+          severity: CRITICAL
+          exit-code: '1'
+  codeql:
+    uses: ./.github/workflows/codeql.yml
+    secrets: inherit

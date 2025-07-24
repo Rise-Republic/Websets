@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from datetime import timedelta
+from datetime import timedelta, datetime
 from pydantic import BaseModel, EmailStr, field_validator
 import re
 
@@ -26,6 +26,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     full_name: str = None
+    consent: bool = False
 
     @field_validator("password")
     @classmethod
@@ -91,6 +92,8 @@ async def register(
         hashed_password=hashed_password,
         full_name=user_data.full_name,
         is_active=True,
+        consent_given=user_data.consent,
+        consent_given_at=datetime.utcnow() if user_data.consent else None,
         verification_token=hashlib.sha256(token.encode()).hexdigest(),
         verification_token_expiry=datetime.utcnow() + timedelta(hours=24),
     )

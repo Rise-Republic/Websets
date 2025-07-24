@@ -43,6 +43,7 @@ def disable_rate_limiting(monkeypatch):
 
     monkeypatch.setattr(rate_limiting.limiter, "limit", _noop)
     monkeypatch.setattr(rate_limiting.user_limiter, "limit", _noop)
+    monkeypatch.setattr(rate_limiting.tenant_limiter, "limit", _noop)
 
 
 @pytest.fixture(autouse=True)
@@ -115,6 +116,7 @@ def client(db_session):
         yield test_client
     app.dependency_overrides.clear()
 
+
 @pytest.fixture
 def mock_openai(mocker):
     """Mock OpenAI API calls."""
@@ -142,6 +144,7 @@ def sample_user_data():
         "email": "test@example.com",
         "password": "TestPassword123!",
         "full_name": "Test User",
+        "consent": True,
     }
 
 
