@@ -75,6 +75,11 @@ curl -X POST "http://localhost:8000/jobs/" \
   -H "Content-Type: application/json" \
   -d '{"prompt": "AI startups in Europe hiring ML engineers"}'
 ```
+## Documentation
+
+- [Detailed Architecture](docs/architecture.md)
+- [Threat Model](docs/threat_model.md)
+- [Runbooks](docs/runbooks)
 
 ## Architecture
 
