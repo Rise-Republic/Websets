@@ -140,6 +140,41 @@ def mock_redis(mocker):
 
 
 @pytest.fixture
+def create_user(client, db_session):
+    """Register, verify and login a user returning auth details."""
+    from app.models.user import User
+    import uuid
+
+    def _create_user(email: str, password: str = "Passw0rd!", full_name: str | None = None):
+        data = {
+            "email": email,
+            "password": password,
+            "full_name": full_name or email,
+        }
+        reg = client.post("/auth/register", json=data)
+        token = reg.json()["verification_token"]
+        client.post("/auth/verify", json={"token": token})
+
+        user = db_session.query(User).filter(User.email == email).first()
+        user.tenant_id = uuid.uuid4()
+        db_session.commit()
+
+        login = client.post(
+            "/auth/login",
+            data={"username": email, "password": password},
+        )
+        access = login.json()["access_token"]
+
+        return {
+            "user_id": str(user.id),
+            "tenant_id": str(user.tenant_id),
+            "headers": {"Authorization": f"Bearer {access}"},
+        }
+
+    return _create_user
+
+
+@pytest.fixture
 def sample_user_data():
     """Sample user data for testing."""
     return {
