@@ -39,10 +39,9 @@ if [ -z "${SEED_USER_EMAIL}" ] || [ -z "${SEED_USER_PASSWORD}" ]; then
   exit 1
 fi
 
-seed_cmd="from app.database import SessionLocal; from app.models import User; from app.auth.jwt_handler import get_password_hash; import os; db=SessionLocal();\nemail=os.environ['SEED_USER_EMAIL']; password=os.environ['SEED_USER_PASSWORD'];\nif not db.query(User).first():\n    user=User(email=email, hashed_password=get_password_hash(password));\n    db.add(user); db.commit(); print(f'Created default user {email}');\ndb.close()"
-docker compose exec -T -e SEED_USER_EMAIL -e SEED_USER_PASSWORD app python - <<PY
-$seed_cmd
-PY
+docker compose exec -T \
+  -e SEED_USER_EMAIL -e SEED_USER_PASSWORD \
+  app python scripts/seed_default_user.py
 
 echo "Local development stack is running."
 
