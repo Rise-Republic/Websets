@@ -109,14 +109,15 @@ User Prompt → Planning → URL Discovery → Crawling → Schema Inference →
 ## API Endpoints
 
 ### Authentication
-- `POST /v1/auth/register` - Register new user
-- `GET /v1/auth/verify-email` - Confirm email address *(planned)*
-- `POST /v1/auth/login` - Login and obtain access + refresh tokens
-- `POST /v1/auth/mfa/verify` - Verify MFA challenge when required
-- `POST /v1/auth/refresh` - Refresh expired access token
-- `POST /v1/auth/password-reset/request` - Send password reset link
-- `POST /v1/auth/password-reset/confirm` - Confirm new password
-- `GET /v1/auth/me` - Get current user info
+- `POST /v1/auth/register`  Register new user
+- `GET /v1/auth/verify-email`  Confirm email address *(planned)*
+- `POST /v1/auth/login`  Login and obtain access + refresh tokens (returns 202 with `X-MFA-Required` when MFA is enabled)_
+- `POST /v1/auth/mfa/setup`  Enable TOTP MFA and receive a secret key
+- `POST /v1/auth/mfa/verify`  Verify MFA challenge and obtain tokens
+- `POST /v1/auth/refresh`  Refresh expired access token
+- `POST /v1/auth/password-reset/request`  Send password reset link
+- `POST /v1/auth/password-reset/confirm`  Confirm new password
+- `GET /v1/auth/me`  Get current user info
 
 ### Jobs
 - `POST /jobs/` - Create new mining job
