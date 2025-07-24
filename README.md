@@ -259,7 +259,7 @@ For production deployments, adjust these settings:
 ### Running Tests
 ```bash
 # Install dev dependencies
-pip install -r requirements-dev.txt
+pip install -r requirements.txt -r requirements-dev.txt
 
 # Unit tests only
 pytest -m unit

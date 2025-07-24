@@ -36,7 +36,7 @@ Coverage reports are written to `htmlcov/` when tests are run with `--cov-report
 Install the development requirements and run a minimal test suite:
 
 ```bash
-pip install -r requirements-dev.txt
+pip install -r requirements.txt -r requirements-dev.txt
 pytest --maxfail=1 --disable-warnings -q
 ```
 
