@@ -222,6 +222,10 @@ instead of Vault. In production this variable should be omitted so the
 application loads secrets directly from Vault and fails fast if any are
 missing:
 
+> **Note**
+> The example values below are **placeholders only**. Replace them with your
+> actual secrets and never commit real credentials to version control.
+
 ```env
 OPENAI_API_KEY=<openai-key>
 ANTHROPIC_API_KEY=<anthropic-key>
