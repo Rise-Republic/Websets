@@ -36,12 +36,38 @@ make dev
 
 `make dev` runs `scripts/setup.sh`, applies database migrations, seeds Vault from `vault_secrets_template.json`, and starts the Docker Compose stack. A `.env` file will be created automatically if it doesn't exist.
 
-2. **Run your first mining job:**
-```bash
-# Using the CLI script
-python scripts/run_job.py "AI startups in Europe hiring ML engineers"
+2. **Configure environment:**
 
-# Or using the API (after registering a user)
+```bash
+# Copy the sample env file and adjust non‑secret settings
+cp .env.example .env
+```
+
+# Seed Vault with secrets from the template
+export VAULT_ADDR=http://localhost:8200
+export VAULT_TOKEN=<your-root-token>
+vault kv put secret/websets @vault_secrets_template.json
+
+# Create Docker secrets for MinIO from Vault values
+vault kv get -field=MINIO_ROOT_USER     secret/websets | docker secret create minio_root_user     -
+vault kv get -field=MINIO_ROOT_PASSWORD secret/websets | docker secret create minio_root_password -
+vault kv get -field=MINIO_KMS_SECRET_KEY secret/websets | docker secret create minio_kms_key      -
+vault kv get -field=MINIO_SSE_MASTER_KEY secret/websets | docker secret create minio_sse_master_key -
+vault kv get -field=POSTGRES_ENCRYPTION_KEY secret/websets | docker secret create postgres_encryption_key -
+
+You can also open the repository in a [Dev Container](.devcontainer/devcontainer.json) which will
+run `make setup` automatically after creation.
+
+3. **Start services:**
+```bash
+make dev
+```
+This command installs dependencies, generates local certificates, applies database migrations,
+and starts all Docker services. You can still run `docker-compose up -d` manually
+if you prefer.
+
+4. **Run your first mining job:**
+
 curl -X POST "http://localhost:8000/jobs/" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \

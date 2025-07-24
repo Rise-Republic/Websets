@@ -26,6 +26,10 @@ start:
 stop:
 	docker compose down
 
+# Launch full local development stack
+dev:
+	bash scripts/dev_stack.sh
+
 # Build Docker image for deployment
 docker-build:
 	docker build -t webset-miner .

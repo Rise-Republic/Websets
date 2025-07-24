@@ -30,8 +30,11 @@ required Vault secrets are missing.
 ## 3. Start Services
 
 ```bash
-docker-compose up -d
+make dev
 ```
+This will build and start all services, apply database migrations, and
+seed a default user. You can still run `docker-compose up -d` manually
+if you prefer.
 
 ## 4. Run a Test Job
 
