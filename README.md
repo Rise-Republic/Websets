@@ -496,10 +496,17 @@ vault = VaultClient()
 openai_key = vault.get_secret("secret/data/websets", "openai_api_key")
 ```
 
+To create a local `.env` file with all secrets:
+
+```bash
+python fetch_vault_env.py > .env
+```
+
 ## 🚀 MinIO Security Automation & Compliance
 - All bucket policies and scripts are versioned and reviewed in git.
 - CI/CD pipelines apply, audit, and rotate policies and secrets automatically.
 - Vault integration ensures all credentials are rotated and injected securely.
+- Celery beat runs secret rotation tasks in `app.tasks.secret_rotation`.
 - TLS, access logging, and firewall rules are enforced for MinIO.
 - Audit logs and compliance guides are protected and archived.
 - Minimal manual oversight required; all changes are traceable and self-healing.

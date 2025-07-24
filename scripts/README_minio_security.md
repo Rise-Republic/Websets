@@ -18,5 +18,6 @@ bash scripts/audit_minio_policy.sh
 - Version all policy JSON files in git.
 - Run audit script after every policy change and before compliance reviews.
 - Rotate credentials regularly and store them in Vault or a secrets manager.
+- Celery tasks rotate MinIO credentials automatically.
 - Never hardcode credentials in code or config files.
 - Use the Python MinIO client with encryption headers for all uploads.
