@@ -26,3 +26,8 @@ dist-ssr
 .venv/
 .mypy_cache/
 .ruff_cache/
+
+# Test artifacts
+/test.db
+/test_warnings.txt
+/data/minio/.minio.sys/tmp/
