@@ -8,7 +8,7 @@ from app.database import get_db
 from app.models import Job, JobStatus, User
 from app.auth.dependencies import get_current_active_user
 from app.tasks.mining_tasks import start_mining_job
-from app.middleware import rbac_required
+from app.middleware import rbac_required, user_limiter, RateLimits
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -43,6 +43,7 @@ class JobListResponse(BaseModel):
 
 @router.post("/", response_model=JobResponse)
 @rbac_required(permissions=["jobs:create"])
+@user_limiter.limit(RateLimits.USER_JOBS)
 async def create_job(
     job_data: JobCreate,
     background_tasks: BackgroundTasks,
@@ -83,6 +84,7 @@ async def create_job(
 
 @router.get("/", response_model=JobListResponse)
 @rbac_required(permissions=["jobs:read"])
+@user_limiter.limit(RateLimits.USER_JOBS)
 async def list_jobs(
     page: int = 1,
     size: int = 20,
@@ -136,6 +138,7 @@ async def list_jobs(
 
 @router.get("/{job_id}", response_model=JobResponse)
 @rbac_required(permissions=["jobs:read"])
+@user_limiter.limit(RateLimits.USER_JOBS)
 async def get_job(
     job_id: str,
     current_user: User = Depends(get_current_active_user),
@@ -171,6 +174,7 @@ async def get_job(
 
 @router.delete("/{job_id}")
 @rbac_required(permissions=["jobs:delete"])
+@user_limiter.limit(RateLimits.USER_JOBS)
 async def cancel_job(
     job_id: str,
     current_user: User = Depends(get_current_active_user),
@@ -204,6 +208,7 @@ async def cancel_job(
 
 @router.post("/{job_id}/restart")
 @rbac_required(permissions=["jobs:restart"])
+@user_limiter.limit(RateLimits.USER_JOBS)
 async def restart_job(
     job_id: str,
     background_tasks: BackgroundTasks,

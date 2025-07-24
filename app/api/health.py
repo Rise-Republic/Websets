@@ -13,11 +13,13 @@ from app.storage import get_vector_store
 from app.storage.object_storage import get_object_storage
 from app.monitoring.metrics import MetricsCollector
 from app.tasks.celery_app import celery_app
+from app.middleware import limiter, RateLimits
 
 router = APIRouter(prefix="/health", tags=["health"])
 
 
 @router.get("/")
+@limiter.limit(RateLimits.PUBLIC)
 async def health_check():
     """Basic health check endpoint."""
     return {
@@ -29,6 +31,7 @@ async def health_check():
 
 
 @router.get("/detailed")
+@limiter.limit(RateLimits.PUBLIC)
 async def detailed_health_check(db: Session = Depends(get_db)):
     """Detailed health check including dependencies."""
     
@@ -127,13 +130,16 @@ async def detailed_health_check(db: Session = Depends(get_db)):
 
 
 @router.get("/metrics")
+@limiter.limit(RateLimits.PUBLIC)
 async def get_metrics():
     """Prometheus metrics endpoint."""
-    from app.monitoring.metrics import metrics_collector
+    from app.monitoring.metrics import get_metrics_collector
+    metrics_collector = get_metrics_collector()
     return metrics_collector.get_metrics()
 
 
 @router.get("/system")
+@limiter.limit(RateLimits.PUBLIC)
 async def system_health():
     """System resource monitoring."""
     try:
@@ -187,6 +193,7 @@ async def system_health():
 
 
 @router.get("/ready")
+@limiter.limit(RateLimits.PUBLIC)
 async def readiness_check(db: Session = Depends(get_db)):
     """Kubernetes readiness probe."""
     try:
@@ -222,6 +229,7 @@ async def readiness_check(db: Session = Depends(get_db)):
 
 
 @router.get("/live")
+@limiter.limit(RateLimits.PUBLIC)
 async def liveness_check():
     """Kubernetes liveness probe."""
     return {

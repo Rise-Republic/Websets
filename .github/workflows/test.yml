@@ -279,3 +279,18 @@ jobs:
         ENVIRONMENT: testing
       run: |
         pytest tests/integration/ -v --tb=short
+
+  observability-checks:
+    runs-on: ubuntu-latest
+    needs: [integration-tests]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Validate Prometheus rules
+      run: |
+        docker run --rm -v ${{ github.workspace }}/monitoring/prometheus/rules:/rules prom/prometheus promtool check rules /rules
+
+    - name: Validate Alertmanager config
+      run: |
+        docker run --rm -v ${{ github.workspace }}/monitoring/alertmanager:/am prom/prometheus promtool check config /am/alertmanager.yml

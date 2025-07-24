@@ -21,9 +21,22 @@ limiter = Limiter(
 def get_user_id_from_request(request: Request):
     """Extract user ID from JWT token for user-based rate limiting."""
     try:
-        from app.auth.dependencies import get_current_user_optional
-        user = get_current_user_optional(request)
-        return user.id if user else get_remote_address(request)
+        from app.auth.token_utils import get_email_from_authorization_header
+        from app.database import SessionLocal
+        from app.models.user import User
+
+        email = get_email_from_authorization_header(request.headers)
+        if not email:
+            return get_remote_address(request)
+
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.email == email).first()
+            if user:
+                return str(user.id)
+        finally:
+            db.close()
+        return get_remote_address(request)
     except Exception:
         return get_remote_address(request)
 

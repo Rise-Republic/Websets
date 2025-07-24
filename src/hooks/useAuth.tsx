@@ -73,6 +73,32 @@ export const useAuthProvider = () => {
     }
   };
 
+  const requestPasswordReset = async (email: string) => {
+    setIsLoading(true);
+    try {
+      await apiService.passwordResetRequest(email);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const confirmPasswordReset = async (token: string, newPassword: string) => {
+    setIsLoading(true);
+    try {
+      await apiService.passwordResetConfirm(token, newPassword);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = () => {
     apiService.logout();
     setUser(null);
@@ -80,7 +106,17 @@ export const useAuthProvider = () => {
     setError(null);
   };
 
-  return { user, isLoading, isAuthenticated, login, register, logout, error };
+  return {
+    user,
+    isLoading,
+    isAuthenticated,
+    login,
+    register,
+    logout,
+    requestPasswordReset,
+    confirmPasswordReset,
+    error,
+  };
 };
 
 const AuthProvider = ({ children }: { children: ReactNode }) => {
