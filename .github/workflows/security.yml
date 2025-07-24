@@ -66,17 +66,19 @@ jobs:
       - name: Run npm audit
         run: npm audit --audit-level=high
 
-  plaintext-env-lint:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.event_name == 'schedule'
 
+  validate-vault-secrets:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: Check for plaintext secrets
-        run: python scripts/lint_plaintext_env.py
+      - name: Install hvac
+        run: pip install hvac
+      - name: Validate Vault Secrets
+        env:
+          VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+          VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
+        run: python scripts/validate_vault_secrets.py
