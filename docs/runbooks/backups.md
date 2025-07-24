@@ -19,3 +19,5 @@ Regular database backups ensure Websets can be recovered after a failure. Use th
    docker exec -i websets-db-1 psql -U postgres -d webset_miner < backup.sql
    ```
 3. Restart services and verify application health.
+
+See also [Secret Rotation Guide](../SECRET_ROTATION.md) for rotating credentials before restoring backups.

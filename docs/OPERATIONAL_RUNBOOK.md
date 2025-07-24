@@ -60,6 +60,13 @@ docker exec -i websets-db-1 psql -U postgres -d websets < backup.sql
 
 Redis is mostly ephemeral but can be saved using `redis-cli BGSAVE`. For vector data (Qdrant/Weaviate) back up the `data/` volume or use the database's snapshot feature.
 
+## Secret Rotation
+
+Credentials in Vault should be rotated regularly. Celery beat runs tasks in
+`app.tasks.secret_rotation` to update MinIO credentials, the database password,
+JWT secrets and API keys. See [Secret Rotation Guide](SECRET_ROTATION.md) for
+manual rotation steps and helper scripts.
+
 ## Smoke Tests
 
 Run the smoke test suite after deploying new versions or performing maintenance to ensure that the API and UI still work end‑to‑end.
