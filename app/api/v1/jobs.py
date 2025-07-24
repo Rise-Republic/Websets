@@ -206,6 +206,7 @@ async def cancel_job(
 async def restart_job(
     job_id: str,
     background_tasks: BackgroundTasks,
+    request: Request,
     current_user: User = Depends(get_current_active_user),
     job_repo: JobRepository = Depends(get_job_repository),
 ):

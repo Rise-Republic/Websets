@@ -1,4 +1,11 @@
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, EmailStr, ConfigDict, validator
+
+from app.models import User
+from app.auth.dependencies import get_current_active_user
 from app.api.dependencies import get_user_repository
+from app.repositories.user_repository import UserRepository
 
 
 router = APIRouter(prefix="/users", tags=["v1-users"])

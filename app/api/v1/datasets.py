@@ -1,6 +1,6 @@
 from typing import List, Optional
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from loguru import logger
@@ -17,6 +17,7 @@ from app.utils import (
     sanitize_prompt,
 )
 from app.api.dependencies import get_dataset_repository
+from app.repositories.dataset_repository import DatasetRepository
 
 router = APIRouter(prefix="/datasets", tags=["v1-datasets"])
 
@@ -76,6 +77,7 @@ class SearchResponse(BaseModel):
 @user_limiter.limit(RateLimits.USER_DATASETS)
 @tenant_limiter.limit(RateLimits.TENANT_DATASETS)
 async def list_datasets(
+    request: Request,
     page: int = 1,
     size: int = 20,
     current_user: User = Depends(get_current_active_user),
@@ -117,6 +119,7 @@ async def list_datasets(
 @tenant_limiter.limit(RateLimits.TENANT_DATASETS)
 async def get_dataset(
     dataset_id: str,
+    request: Request,
     current_user: User = Depends(get_current_active_user),
     dataset_repo: DatasetRepository = Depends(get_dataset_repository),
 ):
@@ -148,6 +151,7 @@ async def get_dataset(
 @tenant_limiter.limit(RateLimits.TENANT_DATASETS)
 async def get_dataset_records(
     dataset_id: str,
+    request: Request,
     page: int = 1,
     size: int = 50,
     current_user: User = Depends(get_current_active_user),
@@ -216,6 +220,7 @@ async def get_dataset_records(
 async def search_dataset(
     dataset_id: str,
     search_request: SearchRequest,
+    request: Request,
     current_user: User = Depends(get_current_active_user),
     dataset_repo: DatasetRepository = Depends(get_dataset_repository),
 ):
@@ -303,6 +308,7 @@ async def search_dataset(
 @tenant_limiter.limit(RateLimits.TENANT_DATASETS)
 async def export_dataset(
     dataset_id: str,
+    request: Request,
     format: str = Query("json", pattern="^(json|csv)$"),
     current_user: User = Depends(get_current_active_user),
     dataset_repo: DatasetRepository = Depends(get_dataset_repository),
@@ -416,6 +422,7 @@ async def export_dataset(
 @tenant_limiter.limit(RateLimits.TENANT_DATASETS)
 async def delete_dataset(
     dataset_id: str,
+    request: Request,
     current_user: User = Depends(get_current_active_user),
     dataset_repo: DatasetRepository = Depends(get_dataset_repository),
 ):

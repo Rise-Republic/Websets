@@ -1,13 +1,13 @@
 x-app-env: &app-env
   - DATABASE_URL
-  - VAULT_ADDR=http://vault:8200
+  - VAULT_ADDR=http://localhost:8200
   - VAULT_TOKEN=root
-  - REDIS_URL=rediss://redis:6379
-  - CELERY_BROKER_URL=rediss://redis:6379
-  - CELERY_RESULT_BACKEND=rediss://redis:6379
-  - QDRANT_URL=https://qdrant:6333
-  - WEAVIATE_URL=https://weaviate:8080
-  - MINIO_ENDPOINT=https://minio:9000
+  - REDIS_URL=rediss://localhost:6379
+  - CELERY_BROKER_URL=rediss://localhost:6379
+  - CELERY_RESULT_BACKEND=rediss://localhost:6379
+  - QDRANT_URL=https://localhost:6333
+  - WEAVIATE_URL=https://localhost:8080
+  - MINIO_ENDPOINT=https://localhost:9000
   - MINIO_CA_CERT=/certs/ca.crt
   - MINIO_CLIENT_CERT=/certs/app.crt
   - MINIO_CLIENT_KEY=/certs/app.key
@@ -33,16 +33,17 @@ x-service-common: &service-common
 services:
   app:
     <<: *service-common
-    ports:
-      - "8000:8000"
-      - "9090:9090"  # Metrics port
+    network_mode: host          # 🔑 join host namespace
+    # ‼️ remove ports: section – it's ignored in host mode
     deploy:
       resources:
         limits:
-          cpus: '1.00'
+          cpus: "1.00"
           memory: 1g
     healthcheck:
-      test: ["CMD", "curl", "--cacert", "/certs/ca.crt", "-f", "https://localhost:8000/health/live"]
+      test:
+        ["CMD", "curl", "--cacert", "/certs/ca.crt",
+         "-f", "https://localhost:8000/health/live"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -220,7 +221,6 @@ services:
       MINIO_ROOT_USER_FILE: /run/secrets/minio_root_user
       MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio_root_password
       MINIO_KMS_SECRET_KEY_FILE: /run/secrets/minio_kms_key
-      MINIO_KMS_SECRET_KEY: "minio-key:file:///run/secrets/minio_kms_key"
       MINIO_SSE_MASTER_KEY: "sse-key:file:///run/secrets/minio_sse_master_key"
       MINIO_KMS_AUTO_ENCRYPTION: "on"
     command: server /data --console-address ":9001"
