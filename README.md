@@ -258,6 +258,34 @@ pip install pre-commit
 pre-commit run --all-files
 ```
 
+### Frontend Development
+
+The React UI resides in the `src/` directory and uses Vite. Install dependencies and launch the dev server with:
+
+```bash
+npm install
+npm run dev
+```
+
+Set these environment variables locally:
+
+- `VITE_AUTH0_DOMAIN` – Auth0 domain
+- `VITE_AUTH0_CLIENT_ID` – Auth0 client ID
+- `VITE_AUTH0_AUDIENCE` – API audience (optional)
+- `VITE_API_BASE` – backend URL override (optional)
+
+Build the production bundle:
+
+```bash
+npm run build
+```
+
+Run frontend tests with:
+
+```bash
+npm test
+```
+
 ### Editor Configuration
 The repository defines basic formatting rules in [.editorconfig](.editorconfig). Python files use 4-space indents while the frontend code under `src/` uses 2 spaces. Most editors will pick up these settings automatically and ensure newlines end with `LF`.
 
