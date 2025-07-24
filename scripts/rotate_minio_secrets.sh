@@ -1,15 +1,10 @@
 #!/bin/bash
-# Rotate MinIO credentials and update environment securely
+# Rotate MinIO credentials using the Python helper and export them
 set -e
 
-NEW_ACCESS_KEY=$(openssl rand -hex 16)
-NEW_SECRET_KEY=$(openssl rand -hex 32)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+OUTPUT=$(python3 "$SCRIPT_DIR/rotate_minio_secrets.py")
+# shellcheck disable=SC1090
+eval "$OUTPUT"
 
-# Update MinIO credentials (example for local dev)
-export MINIO_ACCESS_KEY="$NEW_ACCESS_KEY"
-export MINIO_SECRET_KEY="$NEW_SECRET_KEY"
-
-# Optionally update Vault or secrets manager here
-# vault kv put secret/minio access_key="$NEW_ACCESS_KEY" secret_key="$NEW_SECRET_KEY"
-
-echo "MinIO credentials rotated. New keys exported to environment."
+echo "MinIO credentials rotated via Vault."
