@@ -1,0 +1,9 @@
+# Configuration for actions/stale
+daysUntilStale: 30
+daysUntilClose: 7
+exemptLabels:
+  - pinned
+  - security
+staleLabel: wontfix
+closeComment: >
+  This issue has been automatically closed due to inactivity.

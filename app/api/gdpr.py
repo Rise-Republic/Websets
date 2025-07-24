@@ -1,8 +1,10 @@
 """Endpoints for GDPR compliance."""
 
 from typing import List
+from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -10,6 +12,10 @@ from app.models import User, Job, Dataset
 from app.repositories import UserRepository
 from app.auth.dependencies import get_current_active_user
 from app.middleware.audit_middleware import DataAccessAudit
+from app.tasks.gdpr_tasks import (
+    export_user_data_task,
+    delete_user_data_task,
+)
 
 
 router = APIRouter(prefix="/gdpr", tags=["gdpr"])
@@ -20,12 +26,13 @@ def get_user_repository(db: Session = Depends(get_db)) -> UserRepository:
     return UserRepository(db)
 
 
-@router.get("/export")
+@router.get("/export", status_code=status.HTTP_202_ACCEPTED)
 async def export_user_data(
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     user_repo: UserRepository = Depends(get_user_repository),
 ):
-    """Export user data for portability."""
+    """Export user data asynchronously."""
 
     user = user_repo.get_by_id(current_user.id)
     if not user:
@@ -33,49 +40,18 @@ async def export_user_data(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
-    jobs: List[Job] = user_repo.db.query(Job).filter(Job.tenant_id == user.tenant_id).all()
-    datasets: List[Dataset] = (
-        user_repo.db.query(Dataset).filter(Dataset.tenant_id == user.tenant_id).all()
-    )
+    background_tasks.add_task(export_user_data_task.delay, str(user.id))
 
-    DataAccessAudit.log_data_access(
-        user_id=user.id, tenant_id=user.tenant_id, access_type="export"
-    )
-
-    return {
-        "user": {
-            "id": str(user.id),
-            "email": user.email,
-            "full_name": user.full_name,
-            "created_at": user.created_at.isoformat(),
-        },
-        "jobs": [
-            {
-                "id": str(job.id),
-                "prompt": job.prompt,
-                "status": job.status.value,
-                "created_at": job.created_at.isoformat(),
-            }
-            for job in jobs
-        ],
-        "datasets": [
-            {
-                "id": str(ds.id),
-                "job_id": str(ds.job_id),
-                "name": ds.name,
-                "created_at": ds.created_at.isoformat(),
-            }
-            for ds in datasets
-        ],
-    }
+    return {"message": "Export initiated"}
 
 
-@router.delete("/delete", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/delete", status_code=status.HTTP_202_ACCEPTED)
 async def delete_user_data(
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     user_repo: UserRepository = Depends(get_user_repository),
 ):
-    """Delete user account and all related data."""
+    """Queue deletion of user account and related data."""
 
     user = user_repo.get_by_id(current_user.id)
     if not user:
@@ -83,10 +59,23 @@ async def delete_user_data(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
-    DataAccessAudit.log_data_access(
-        user_id=user.id, tenant_id=user.tenant_id, access_type="delete"
-    )
+    background_tasks.add_task(delete_user_data_task.delay, str(user.id))
 
-    user_repo.delete(user)
+    return None
 
+
+class ConsentUpdate(BaseModel):
+    consent: bool
+
+
+@router.post("/consent", status_code=status.HTTP_204_NO_CONTENT)
+async def update_consent(
+    data: ConsentUpdate,
+    current_user: User = Depends(get_current_active_user),
+    user_repo: UserRepository = Depends(get_user_repository),
+):
+    """Record user consent status."""
+    current_user.consent_given = data.consent
+    current_user.consent_given_at = datetime.utcnow() if data.consent else None
+    user_repo.commit()
     return None

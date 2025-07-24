@@ -5,6 +5,7 @@ import os
 import sys
 from dotenv import load_dotenv
 from app.secrets.vault import VaultClient
+from app.read_secret import read_secret
 
 
 class Settings(BaseSettings):
@@ -117,22 +118,22 @@ def _load_settings_from_env() -> Settings:
     """Load settings directly from environment variables or a .env file."""
     load_dotenv(".env")
     secret_values = {
-        "openai_api_key": os.getenv("OPENAI_API_KEY"),
-        "anthropic_api_key": os.getenv("ANTHROPIC_API_KEY"),
-        "database_url": os.getenv("DATABASE_URL"),
+        "openai_api_key": read_secret("OPENAI_API_KEY"),
+        "anthropic_api_key": read_secret("ANTHROPIC_API_KEY"),
+        "database_url": read_secret("DATABASE_URL"),
         "redis_url": os.getenv("REDIS_URL"),
         "celery_broker_url": os.getenv("CELERY_BROKER_URL"),
         "celery_result_backend": os.getenv("CELERY_RESULT_BACKEND"),
-        "jwt_secret_key": os.getenv("JWT_SECRET_KEY"),
+        "jwt_secret_key": read_secret("JWT_SECRET_KEY"),
         "auth0_domain": os.getenv("AUTH0_DOMAIN"),
         "auth0_client_id": os.getenv("AUTH0_CLIENT_ID"),
-        "auth0_client_secret": os.getenv("AUTH0_CLIENT_SECRET"),
+        "auth0_client_secret": read_secret("AUTH0_CLIENT_SECRET"),
         "auth0_audience": os.getenv("AUTH0_AUDIENCE"),
         "auth0_issuer": os.getenv("AUTH0_ISSUER"),
         "smtp_host": os.getenv("SMTP_HOST", "localhost"),
         "smtp_port": int(os.getenv("SMTP_PORT", "25")),
-        "smtp_username": os.getenv("SMTP_USERNAME"),
-        "smtp_password": os.getenv("SMTP_PASSWORD"),
+        "smtp_username": read_secret("SMTP_USERNAME"),
+        "smtp_password": read_secret("SMTP_PASSWORD"),
         "email_from": os.getenv("EMAIL_FROM", "no-reply@example.com"),
     }
     settings = Settings(**secret_values)
@@ -221,6 +222,8 @@ def validate_settings() -> Settings:
                 "smtp_password": client.get_secret(vault_path, "SMTP_PASSWORD"),
                 "email_from": client.get_secret(vault_path, "EMAIL_FROM"),
             }
+            # Remove any keys with missing values so defaults apply
+            secret_values = {k: v for k, v in secret_values.items() if v is not None}
             print("[config.py] Required secrets loaded:")
             for k, v in secret_values.items():
                 print(f"  {k}={'***' if v else None}")

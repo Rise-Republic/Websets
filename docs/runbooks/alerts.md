@@ -15,3 +15,15 @@ This runbook describes standard procedures for handling common alerts.
 2. Identify offending jobs or users consuming excessive resources.
 3. Scale workers or throttle jobs as needed.
 4. Document actions in the incident channel.
+
+## High Request Latency
+
+1. Review recent deployments or spikes in traffic.
+2. Check application logs for slow database queries or timeouts.
+3. Verify infrastructure metrics for CPU or network saturation.
+
+## SLO Error Budget Burn
+
+1. Confirm burn rate in Grafana and Prometheus.
+2. Identify failing components contributing to the burn.
+3. Roll back recent changes or escalate if the trend continues.

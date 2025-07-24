@@ -8,3 +8,8 @@ repos:
     rev: v4.5.0
     hooks:
       - id: end-of-file-fixer
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.1
+    hooks:
+      - id: gitleaks
+        args: ["--no-git", "--config=.gitleaks.toml"]
