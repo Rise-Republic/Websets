@@ -5,6 +5,7 @@ from datetime import timedelta, datetime
 from pydantic import BaseModel, EmailStr, field_validator
 import re, secrets, pyotp, hashlib, os
 from prometheus_client import Counter, generate_latest
+from app.utils.email import send_password_reset
 
 from app.database import get_db
 from app.models.user import User
@@ -293,7 +294,10 @@ async def password_reset_request(
     user.password_reset_expiry = datetime.utcnow() + timedelta(minutes=15)
     db.commit()
     password_reset_requests.inc()
-    # TODO: Send email with token link
+    try:
+        send_password_reset(user.email, token)
+    except Exception:
+        pass
     return {"message": "Password reset link sent", "token": token}
 
 

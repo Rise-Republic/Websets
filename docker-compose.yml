@@ -7,7 +7,6 @@ services:
       - "8000:8000"
       - "9090:9090"  # Metrics port
     environment:
-      - DISABLE_VAULT_FOR_LOCAL_DEV=true
       - DATABASE_URL
       - VAULT_ADDR
       - REDIS_URL=rediss://redis:6379
@@ -47,7 +46,6 @@ services:
     build: .
     command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2
     environment:
-      - DISABLE_VAULT_FOR_LOCAL_DEV=true
       - DATABASE_URL
       - VAULT_ADDR
       - REDIS_URL=rediss://redis:6379
@@ -87,7 +85,6 @@ services:
     build: .
     command: celery -A app.tasks.celery_app beat --loglevel=info
     environment:
-      - DISABLE_VAULT_FOR_LOCAL_DEV=true
       - DATABASE_URL
       - VAULT_ADDR
       - REDIS_URL=rediss://redis:6379

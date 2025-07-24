@@ -23,12 +23,18 @@ async def export_user_data(
 
     user = db.query(User).filter(User.id == current_user.id).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
 
-    jobs: List[Job] = db.query(Job).filter(Job.user_id == user.id).all()
-    datasets: List[Dataset] = db.query(Dataset).join(Job).filter(Job.user_id == user.id).all()
+    jobs: List[Job] = db.query(Job).filter(Job.tenant_id == user.tenant_id).all()
+    datasets: List[Dataset] = (
+        db.query(Dataset).filter(Dataset.tenant_id == user.tenant_id).all()
+    )
 
-    DataAccessAudit.log_data_access(user_id=user.id, access_type="export")
+    DataAccessAudit.log_data_access(
+        user_id=user.id, tenant_id=user.tenant_id, access_type="export"
+    )
 
     return {
         "user": {
@@ -67,12 +73,15 @@ async def delete_user_data(
 
     user = db.query(User).filter(User.id == current_user.id).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
 
-    DataAccessAudit.log_data_access(user_id=user.id, access_type="delete")
+    DataAccessAudit.log_data_access(
+        user_id=user.id, tenant_id=user.tenant_id, access_type="delete"
+    )
 
     db.delete(user)
     db.commit()
 
     return None
-

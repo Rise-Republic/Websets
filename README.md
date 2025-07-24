@@ -196,7 +196,12 @@ curl -X POST "http://localhost:8000/datasets/DATASET_ID/search" \
 
 ### Environment Variables
 
-Secrets are stored in Vault using `vault_secrets_template.json` and injected at runtime:
+Secrets are stored in Vault using `vault_secrets_template.json` and injected at
+runtime. For local development you can set `DISABLE_VAULT_FOR_LOCAL_DEV=true`
+(for example in your `.env` file) so the app reads secrets from that file
+instead of Vault. In production this variable should be omitted so the
+application loads secrets directly from Vault and fails fast if any are
+missing:
 
 ```env
 OPENAI_API_KEY=<openai-key>
@@ -222,6 +227,10 @@ EMAIL_FROM=no-reply@example.com
 Populate these secrets using Vault and create Docker secrets for any services
 that support the `*_FILE` pattern. `fetch_vault_env.py` can be used to generate
 a complete `.env` file from Vault for local development.
+
+When running `docker compose` the `.env` file provides non-secret defaults while
+Vault supplies the sensitive values. If Vault is unreachable or a required
+secret is missing in production, startup will terminate with an error.
 
 In non-development environments the application will exit on startup if any of
 the required secrets are missing.
