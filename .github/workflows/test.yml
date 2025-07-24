@@ -46,6 +46,9 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+
+    - name: Prepare artifacts directory
+      run: mkdir -p artifacts
     
     - name: Run backend tests
       env:
@@ -57,14 +60,24 @@ jobs:
         OPENAI_API_KEY: test-openai-key
         ENVIRONMENT: testing
       run: |
-        python -m pytest tests/ -v --cov=app --cov-report=xml
+        pytest tests/ -v --cov=app \
+          --cov-report=xml:artifacts/coverage.xml \
+          --junitxml=artifacts/junit.xml
     
     - name: Upload backend coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
-        file: ./coverage.xml
+        file: artifacts/coverage.xml
         flags: backend
         name: backend-coverage
+
+    - name: Upload test artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-test-reports
+        path: |
+          artifacts/coverage.xml
+          artifacts/junit.xml
 
   frontend-tests:
     runs-on: ubuntu-latest
@@ -169,4 +182,4 @@ jobs:
         OPENAI_API_KEY: test-openai-key
         ENVIRONMENT: testing
       run: |
-        python -m pytest tests/integration/ -v --tb=short
+        pytest tests/integration/ -v --tb=short
