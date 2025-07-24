@@ -14,3 +14,4 @@ safety==2.3.5
 testcontainers[postgres]==3.7.1
 pre-commit==4.2.0
 
+hvac==2.1.0
