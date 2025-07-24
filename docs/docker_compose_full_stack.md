@@ -22,7 +22,13 @@ applies migrations and seeds an initial user before running
 `SEED_USER_PASSWORD` environment variables to define the credentials used for
 this user.
 
-The compose file launches the API, Celery workers, Redis, PostgreSQL, MinIO (with TLS), Prometheus, Grafana, and optional vector stores. The API will be available at `http://localhost:8000` and MinIO at `https://localhost:9000`.
+The compose file launches the API, Celery workers, Redis, PostgreSQL, MinIO (with TLS), and optional vector stores. Start the monitoring services with:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up
+```
+
+The API will be available at `http://localhost:8000` and MinIO at `https://localhost:9000`.
 
 Use `docker compose logs -f` to watch startup logs. Once all services are healthy you can submit a job via the CLI:
 

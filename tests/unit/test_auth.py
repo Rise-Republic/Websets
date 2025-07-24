@@ -61,7 +61,7 @@ class TestJWTHandler:
 
 class TestPasswordResetEmail:
     @pytest.fixture
-    def auth_client(self, db_session, monkeypatch, mocker, mock_redis):
+    def auth_client(self, db_session, monkeypatch, mocker, mock_redis, mock_settings):
         import importlib.util
         from pathlib import Path
         from fastapi import FastAPI
@@ -77,10 +77,16 @@ class TestPasswordResetEmail:
         auth_path = Path("app/api/v1/auth.py")
         spec = importlib.util.spec_from_file_location("app.api.v1.auth", auth_path)
         auth_module = importlib.util.module_from_spec(spec)
-        import sys
-        sys.modules["app.api.v1.auth"] = auth_module
+
+        import sys, types
+        api_pkg = types.ModuleType("app.api")
+        api_pkg.__path__ = ["app/api"]
+        sys.modules["app.api"] = api_pkg
+        sys.modules["app.api.dependencies"] = importlib.import_module("app.api.dependencies")
+
         spec.loader.exec_module(auth_module)
-        mock_send = mocker.patch.object(auth_module, "send_password_reset")
+        sys.modules["app.api.v1.auth"] = auth_module
+        mock_send = mocker.patch.object(auth_module, "send_email")
         from app.database import Base, engine
         Base.metadata.create_all(bind=engine)
         app = FastAPI()
@@ -95,15 +101,28 @@ class TestPasswordResetEmail:
             yield client, mock_send
 
     @pytest.fixture
-    def registered_user(self, auth_client, sample_user_data):
-        client, _ = auth_client
-        resp = client.post("/auth/register", json=sample_user_data)
-        assert resp.status_code == 200
+    def registered_user(self, auth_client, db_session, sample_user_data):
+        from app.models.user import User
+        from app.auth.jwt_handler import get_password_hash
+        import uuid
+
+        user = User(
+            email=sample_user_data["email"],
+            hashed_password=get_password_hash(sample_user_data["password"]),
+            full_name=sample_user_data["full_name"],
+            tenant_id=uuid.uuid4(),
+            consent_given=True,
+        )
+        db_session.add(user)
+        db_session.commit()
         return sample_user_data
 
     def test_password_reset_sends_email(self, auth_client, registered_user):
         client, mock_send = auth_client
         resp = client.post('/auth/password-reset/request', json={'email': registered_user['email']})
         assert resp.status_code == 200
-        token = resp.json()['token']
-        mock_send.assert_called_once_with(registered_user['email'], token)
+        mock_send.assert_called_once()
+        args = mock_send.call_args.args
+        assert args[0] == registered_user['email']
+        assert args[1] == "Password Reset"
+        assert "token=" in args[2]

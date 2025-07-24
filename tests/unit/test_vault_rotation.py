@@ -67,11 +67,14 @@ class TestVaultSecretRotation(unittest.TestCase):
             },
             clear=False,
         ):
-            with patch("builtins.print") as mock_print:
+            with patch("app.secrets.vault.logger.info") as mock_info:
                 vault.cli_test_connection()
 
-        mock_print.assert_called_with(
-            "Vault OK at http://vault. Secrets at 'secret/app': ['A']"
+        mock_info.assert_called_with(
+            "Vault OK at %s. Secrets at '%s': %s",
+            "http://vault",
+            "secret/app",
+            ["A"],
         )
 
     @patch("app.secrets.vault.hvac.Client")
@@ -89,13 +92,14 @@ class TestVaultSecretRotation(unittest.TestCase):
             },
             clear=False,
         ):
-            with patch("builtins.print") as mock_print:
+            with patch("app.secrets.vault.logger.error") as mock_error:
                 with self.assertRaises(SystemExit):
                     vault.cli_test_connection()
 
+
         mock_print.assert_called_with("Vault connectivity test failed: boom")
 
-    @patch("app.secrets.vault.hvac.Client")
+   @patch("app.secrets.vault.hvac.Client")
     def test_fetch_all(self, mock_client_cls):
         mock_client = MagicMock()
         mock_client_cls.return_value = mock_client

@@ -6,9 +6,11 @@ Examples:
   python scripts/tenant_lifecycle.py configure --tenant-id <uuid> --retention-days 90
   python scripts/tenant_lifecycle.py decommission --tenant-id <uuid>
 """
+
 import argparse
 import sys
 import uuid
+from loguru import logger
 from pathlib import Path
 
 # Ensure app modules are on the path
@@ -43,8 +45,8 @@ def provision(args: argparse.Namespace) -> None:
         db.add(user)
         db.commit()
         db.refresh(user)
-        print(f"Provisioned tenant {tenant_id}")
-        print(f"Created admin user {user.email}")
+        logger.info("Provisioned tenant %s", tenant_id)
+        logger.info("Created admin user %s", user.email)
     finally:
         db.close()
 
@@ -64,7 +66,7 @@ def configure(args: argparse.Namespace) -> None:
             {User.data_retention_days: args.retention_days}
         )
         db.commit()
-        print(f"Updated retention for tenant {tid}")
+        logger.info("Updated retention for tenant %s", tid)
     finally:
         db.close()
 
@@ -82,7 +84,7 @@ def decommission(args: argparse.Namespace) -> None:
         db.query(Job).filter(Job.tenant_id == tid).delete()
         db.query(User).filter(User.tenant_id == tid).delete()
         db.commit()
-        print(f"Decommissioned tenant {tid}")
+        logger.info("Decommissioned tenant %s", tid)
     finally:
         db.close()
 

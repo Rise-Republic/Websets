@@ -17,3 +17,4 @@ class TestFetchVaultEnvScript(unittest.TestCase):
         mock_client.fetch_all.assert_called_with("secret/websets")
         mock_print.assert_any_call("A=1")
         mock_print.assert_any_call("B=2")
+

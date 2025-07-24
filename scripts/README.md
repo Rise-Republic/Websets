@@ -4,7 +4,7 @@ This directory contains various utility scripts used during development and depl
 
 ## Shell scripts
 
- - `setup.sh` - bootstrap the local development environment (installs Python and Node dev dependencies).
+ - `setup.sh` - bootstrap the local development environment (installs Python and Node dev dependencies). Run as your normal user; `sudo` is not required.
 - `test.sh` - run backend and frontend test suites.
 - `blue_green_deploy.sh` - perform a basic blue/green Kubernetes deployment.
 - `kubectl rollout undo deployment/webset-miner` - quick rollback without blue/green.
