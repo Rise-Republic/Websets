@@ -59,7 +59,8 @@ def sample_job(db_session):
 
 
 @pytest.mark.unit
-def test_execute_planning_phase(db_session, sample_job, mocker):
+@pytest.mark.asyncio
+async def test_execute_planning_phase(db_session, sample_job, mocker):
     from app.tasks.mining_tasks import execute_planning_phase
     from app.models import Job
 
@@ -69,7 +70,7 @@ def test_execute_planning_phase(db_session, sample_job, mocker):
         new=AsyncMock(return_value=mock_plan),
     )
 
-    result = execute_planning_phase(sample_job, db_session)
+    result = await execute_planning_phase(sample_job, db_session)
 
     assert result == mock_plan
     refreshed = db_session.get(Job, sample_job.id)
@@ -77,7 +78,8 @@ def test_execute_planning_phase(db_session, sample_job, mocker):
 
 
 @pytest.mark.unit
-def test_execute_discovery_phase(db_session, sample_job, mocker):
+@pytest.mark.asyncio
+async def test_execute_discovery_phase(db_session, sample_job, mocker):
     from app.tasks.mining_tasks import execute_discovery_phase
     from app.models import DiscoveredURL
 
@@ -88,7 +90,7 @@ def test_execute_discovery_phase(db_session, sample_job, mocker):
         new=AsyncMock(return_value=mock_urls),
     )
 
-    result = execute_discovery_phase(sample_job, plan, db_session)
+    result = await execute_discovery_phase(sample_job, plan, db_session)
 
     assert result == mock_urls
     db_urls = (
@@ -138,9 +140,7 @@ async def test_execute_crawling_phase(db_session, sample_job, mocker):
     progress = DummyProgress()
     urls = ["https://example.com"]
 
-    results = await asyncio.to_thread(
-        execute_crawling_phase, sample_job, urls, db_session, progress
-    )
+    results = await execute_crawling_phase(sample_job, urls, db_session, progress)
 
     assert len(results) == 1
     assert results[0]["url"] == urls[0]
@@ -210,9 +210,7 @@ async def test_execute_extraction_phase(db_session, sample_job, mocker):
     sample_job.plan = {}
     db_session.commit()
 
-    extracted = await asyncio.to_thread(
-        execute_extraction_phase, sample_job, crawl_results, db_session, progress
-    )
+    extracted = await execute_extraction_phase(sample_job, crawl_results, db_session, progress)
 
     assert isinstance(extracted, list)
     assert len(progress.increments) == 1
@@ -230,10 +228,10 @@ async def test_start_and_cleanup_tasks(db_session, sample_job, mocker):
 
     metrics = mocker.MagicMock()
     mocker.patch("app.tasks.mining_tasks.get_metrics_collector", return_value=metrics)
-    mocker.patch("app.tasks.mining_tasks.execute_planning_phase", return_value={})
-    mocker.patch("app.tasks.mining_tasks.execute_discovery_phase", return_value=[])
-    mocker.patch("app.tasks.mining_tasks.execute_crawling_phase", return_value=[])
-    mocker.patch("app.tasks.mining_tasks.execute_extraction_phase", return_value=[])
+    mocker.patch("app.tasks.mining_tasks.execute_planning_phase", new=AsyncMock(return_value={}))
+    mocker.patch("app.tasks.mining_tasks.execute_discovery_phase", new=AsyncMock(return_value=[]))
+    mocker.patch("app.tasks.mining_tasks.execute_crawling_phase", new=AsyncMock(return_value=[]))
+    mocker.patch("app.tasks.mining_tasks.execute_extraction_phase", new=AsyncMock(return_value=[]))
     from tests.conftest import TestingSessionLocal
 
     mocker.patch("app.tasks.mining_tasks.SessionLocal", TestingSessionLocal)
@@ -261,10 +259,10 @@ async def test_start_and_cleanup_tasks(db_session, sample_job, mocker):
         def __init__(self, *a, **k):
             pass
 
-        def __enter__(self):
+        async def __aenter__(self):
             return self
 
-        def __exit__(self, exc_type, exc, tb):
+        async def __aexit__(self, exc_type, exc, tb):
             return False
 
         async def update_step(self, *a, **k):
