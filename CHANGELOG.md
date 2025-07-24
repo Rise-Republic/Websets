@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 - Work in progress.
 
+## [0.2.0] - 2025-07-24
+### Added
+- Encryption at rest for PostgreSQL and MinIO
+- Blue/green deployment script and rollback guidance
+- Vault service integration with mTLS across services
+- Production deployment and container hardening docs
+- Authentication endpoints documentation
+- Backup script and disaster recovery runbook
+- CI pipelines for tests, security scans and coverage
+- Unit tests for EmbeddingGenerator and MetricsCollector
+- JSON structured logging support
+- Terraform modules for infrastructure
+
+### Changed
+- Docker Compose updated to version 3.9 with health checks
+- Secrets moved out of configs and validated via Vault
+
 ## [0.1.0] - 2025-07-23
 ### Added
 - Initial release of WebSet Miner with core agents, API endpoints and Docker deployment.
