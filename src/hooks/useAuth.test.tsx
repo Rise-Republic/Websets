@@ -1,5 +1,6 @@
+import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useAuth, useAuthProvider } from './useAuth';
+import { useAuth, useAuthProvider, AuthContext } from './useAuth';
 import * as apiService from '@/services/api';
 
 // Mock the API service
@@ -224,5 +225,22 @@ describe('useAuth', () => {
     }).toThrow('useAuth must be used within AuthProvider');
 
     consoleSpy.mockRestore();
+  });
+
+  test('returns context when used within AuthProvider', () => {
+    const ctxValue = {
+      user: null,
+      isLoading: false,
+      isAuthenticated: true,
+      login: jest.fn(),
+      logout: jest.fn(),
+    } as any;
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <AuthContext.Provider value={ctxValue}>{children}</AuthContext.Provider>
+    );
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    expect(result.current).toBe(ctxValue);
   });
 });
