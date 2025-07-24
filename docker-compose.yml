@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   app:
     build: .
@@ -341,16 +339,16 @@ volumes:
 
 secrets:
   minio_root_user:
-    file: ./secrets/minio_root_user
+    file: /home/bmsul/Websets/secrets/minio_root_user
   minio_root_password:
-    file: ./secrets/minio_root_password
+    file: /home/bmsul/Websets/secrets/minio_root_password
   postgres_password:
-    file: ./secrets/postgres_password
+    file: /home/bmsul/Websets/secrets/postgres_password
   postgres_encryption_key:
-    file: ./secrets/postgres_encryption_key
+    file: /home/bmsul/Websets/secrets/postgres_encryption_key
   grafana_admin_password:
-    file: ./secrets/grafana_admin_password
+    file: /home/bmsul/Websets/secrets/grafana_admin_password
   minio_kms_key:
-    file: ./secrets/minio_kms_key
+    file: /home/bmsul/Websets/secrets/minio_kms_key
   minio_sse_master_key:
-    file: ./secrets/minio_sse_master_key
+    file: /home/bmsul/Websets/secrets/minio_sse_master_key

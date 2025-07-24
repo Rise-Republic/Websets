@@ -40,6 +40,9 @@ secrets/minio_kms_key.txt
 secrets/postgres_encryption_key.txt
 artifacts/
 
+# Docker secrets
+secrets/
+
 # Certificates
 *.key  
 *.crt
