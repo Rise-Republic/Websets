@@ -1,19 +1,19 @@
-from typing import Optional
-from datetime import datetime
-
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
-from sqlalchemy.orm import Session
-
-from app.database import get_db
-from app.repositories import UserRepository
-from app.models.user import User
-from app.auth.dependencies import get_current_active_user
-from app.auth.jwt_handler import verify_password, get_password_hash
 from app.api.dependencies import get_user_repository
 
 
 router = APIRouter(prefix="/users", tags=["v1-users"])
+
+
+class UserProfileResponse(BaseModel):
+    id: str
+    email: EmailStr
+    full_name: Optional[str] = None
+    is_active: bool
+    created_at: str
+    is_verified: bool = False
+
+    class Config:
+        from_attributes = True
 
 
 class UserProfileResponse(BaseModel):
@@ -35,26 +35,18 @@ class PasswordChangeRequest(BaseModel):
     current_password: str
     new_password: str
 
-    @field_validator("new_password")
-    @classmethod
+    @validator("new_password")
     def validate_password(cls, v: str):
-        import re
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        if not re.search(r"[A-Z]", v):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not re.search(r"[a-z]", v):
-            raise ValueError("Password must contain at least one lowercase letter")
-        if not re.search(r"\d", v):
-            raise ValueError("Password must contain at least one digit")
-        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", v):
-            raise ValueError("Password must contain at least one special character")
-        return v
+        return validate_password(v)
 
 
 class EmailChangeRequest(BaseModel):
     password: str
     new_email: EmailStr
+
+    @validator("password")
+    def validate_password_field(cls, v: str):
+        return validate_password(v)
 
 
 @router.get("/me", response_model=UserProfileResponse)
