@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any, BinaryIO, List
+from typing import Optional, Dict, Any, List, Callable
 from pathlib import Path
 from enum import Enum
 import hashlib
@@ -48,6 +48,17 @@ class BaseObjectStorage(ABC):
     async def list_files(self, prefix: str = "") -> List[Dict[str, Any]]:
         """List files with optional prefix."""
         pass
+
+
+class _AsyncMixin:
+    """Utility mixin to run blocking calls in a thread."""
+
+    async def _run_in_thread(self, func: Callable, *args, **kwargs):
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, func, *args, **kwargs)
+
+    def _build_url(self, scheme: str, key: str) -> str:
+        return f"{scheme}://{self.bucket_name}/{key}"
 
 
 class LocalObjectStorage(BaseObjectStorage):
@@ -155,7 +166,7 @@ class LocalObjectStorage(BaseObjectStorage):
             return []
 
 
-class S3ObjectStorage(BaseObjectStorage):
+class S3ObjectStorage(_AsyncMixin, BaseObjectStorage):
     """AWS S3 storage implementation."""
     
     def __init__(self):
@@ -187,19 +198,16 @@ class S3ObjectStorage(BaseObjectStorage):
             extra_args = {}
             if content_type:
                 extra_args['ContentType'] = content_type
-            
-            # Run S3 upload in thread pool to avoid blocking
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(
-                None, 
+
+            await self._run_in_thread(
                 self.client.upload_file,
-                file_path, 
-                self.bucket_name, 
+                file_path,
+                self.bucket_name,
                 key,
-                extra_args
+                extra_args,
             )
-            
-            url = f"s3://{self.bucket_name}/{key}"
+
+            url = self._build_url("s3", key)
             logger.info(f"Uploaded file to S3: {url}")
             return url
             
@@ -213,18 +221,16 @@ class S3ObjectStorage(BaseObjectStorage):
             extra_args = {}
             if content_type:
                 extra_args['ContentType'] = content_type
-            
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(
-                None,
+
+            await self._run_in_thread(
                 self.client.put_object,
                 self.bucket_name,
                 key,
                 data,
-                **extra_args
+                **extra_args,
             )
-            
-            url = f"s3://{self.bucket_name}/{key}"
+
+            url = self._build_url("s3", key)
             logger.info(f"Uploaded bytes to S3: {url}")
             return url
             
@@ -235,13 +241,11 @@ class S3ObjectStorage(BaseObjectStorage):
     async def download_file(self, key: str, local_path: str) -> bool:
         """Download file from S3."""
         try:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(
-                None,
+            await self._run_in_thread(
                 self.client.download_file,
                 self.bucket_name,
                 key,
-                local_path
+                local_path,
             )
             return True
             
@@ -252,12 +256,10 @@ class S3ObjectStorage(BaseObjectStorage):
     async def delete_file(self, key: str) -> bool:
         """Delete file from S3."""
         try:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(
-                None,
+            await self._run_in_thread(
                 self.client.delete_object,
                 self.bucket_name,
-                key
+                key,
             )
             return True
             
@@ -268,13 +270,11 @@ class S3ObjectStorage(BaseObjectStorage):
     async def get_file_url(self, key: str, expires_in: int = 3600) -> str:
         """Get presigned URL for S3 file."""
         try:
-            loop = asyncio.get_event_loop()
-            url = await loop.run_in_executor(
-                None,
+            url = await self._run_in_thread(
                 self.client.generate_presigned_url,
                 'get_object',
                 {'Bucket': self.bucket_name, 'Key': key},
-                expires_in
+                expires_in,
             )
             return url
             
@@ -285,12 +285,10 @@ class S3ObjectStorage(BaseObjectStorage):
     async def list_files(self, prefix: str = "") -> List[Dict[str, Any]]:
         """List files in S3 bucket."""
         try:
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None,
+            response = await self._run_in_thread(
                 self.client.list_objects_v2,
                 self.bucket_name,
-                prefix
+                prefix,
             )
             
             files = []
@@ -309,7 +307,7 @@ class S3ObjectStorage(BaseObjectStorage):
             return []
 
 
-class GCSObjectStorage(BaseObjectStorage):
+class GCSObjectStorage(_AsyncMixin, BaseObjectStorage):
     """Google Cloud Storage implementation."""
     
     def __init__(self):
@@ -345,10 +343,9 @@ class GCSObjectStorage(BaseObjectStorage):
             if content_type:
                 blob.content_type = content_type
             
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, blob.upload_from_filename, file_path)
-            
-            url = f"gs://{self.bucket_name}/{key}"
+            await self._run_in_thread(blob.upload_from_filename, file_path)
+
+            url = self._build_url("gs", key)
             logger.info(f"Uploaded file to GCS: {url}")
             return url
             
@@ -364,10 +361,9 @@ class GCSObjectStorage(BaseObjectStorage):
             if content_type:
                 blob.content_type = content_type
             
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, blob.upload_from_string, data, content_type)
-            
-            url = f"gs://{self.bucket_name}/{key}"
+            await self._run_in_thread(blob.upload_from_string, data, content_type)
+
+            url = self._build_url("gs", key)
             logger.info(f"Uploaded bytes to GCS: {url}")
             return url
             
@@ -380,8 +376,7 @@ class GCSObjectStorage(BaseObjectStorage):
         try:
             blob = self.bucket.blob(key)
             
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, blob.download_to_filename, local_path)
+            await self._run_in_thread(blob.download_to_filename, local_path)
             return True
             
         except Exception as e:
@@ -393,8 +388,7 @@ class GCSObjectStorage(BaseObjectStorage):
         try:
             blob = self.bucket.blob(key)
             
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, blob.delete)
+            await self._run_in_thread(blob.delete)
             return True
             
         except Exception as e:
@@ -405,12 +399,10 @@ class GCSObjectStorage(BaseObjectStorage):
         """Get signed URL for GCS file."""
         try:
             blob = self.bucket.blob(key)
-            
-            loop = asyncio.get_event_loop()
-            url = await loop.run_in_executor(
-                None,
+
+            url = await self._run_in_thread(
                 blob.generate_signed_url,
-                expires_in
+                expires_in,
             )
             return url
             
@@ -421,7 +413,7 @@ class GCSObjectStorage(BaseObjectStorage):
     async def list_files(self, prefix: str = "") -> List[Dict[str, Any]]:
         """List files in GCS bucket."""
         try:
-            blobs = self.bucket.list_blobs(prefix=prefix)
+            blobs = await self._run_in_thread(self.bucket.list_blobs, prefix=prefix)
             
             files = []
             for blob in blobs:
