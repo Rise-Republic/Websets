@@ -11,6 +11,11 @@ from app.auth.dependencies import get_current_active_user
 from app.storage import VectorStore, EmbeddingGenerator
 from app.middleware import rbac_required, user_limiter, RateLimits
 from app.middleware.audit_middleware import DataAccessAudit
+from app.utils import (
+    get_cached_dataset_records,
+    set_cached_dataset_records,
+    invalidate_dataset_records,
+)
 
 router = APIRouter(prefix="/datasets", tags=["v1-datasets"])
 
@@ -159,6 +164,11 @@ async def get_dataset_records(
 ):
     """Get records from a dataset with pagination."""
 
+    # Check cache first
+    cached = await get_cached_dataset_records(dataset_id, page, size)
+    if cached:
+        return cached
+
     # Verify dataset access
     dataset = (
         db.query(Dataset)
@@ -204,13 +214,16 @@ async def get_dataset_records(
             )
         )
 
-    return {
+    response = {
         "records": record_responses,
         "total": total,
         "page": page,
         "size": size,
         "dataset_id": dataset_id,
     }
+
+    await set_cached_dataset_records(dataset_id, page, size, response)
+    return response
 
 
 @router.post("/{dataset_id}/search", response_model=SearchResponse)
@@ -445,5 +458,7 @@ async def delete_dataset(
     # Delete dataset (cascade will handle records)
     db.delete(dataset)
     db.commit()
+
+    await invalidate_dataset_records(dataset_id)
 
     return {"message": "Dataset deleted successfully"}
