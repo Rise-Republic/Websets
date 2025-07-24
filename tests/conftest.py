@@ -159,4 +159,6 @@ def mock_settings(mocker):
     mock.access_token_expire_minutes = 30
     mock.openai_api_key = "test-openai-key"
     mock.anthropic_api_key = "test-anthropic-key-from-fixture"
+    mock.enable_tracing = False
+    mock.otlp_endpoint = "http://localhost"
     return mock

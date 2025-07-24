@@ -5,6 +5,7 @@ from .cache import (
     invalidate_dataset_records,
 )
 from .sanitization import sanitize_prompt
+from .password_validation import validate_password
 
 __all__ = [
     "send_email",
@@ -13,4 +14,5 @@ __all__ = [
     "set_cached_dataset_records",
     "invalidate_dataset_records",
     "sanitize_prompt",
+    "validate_password",
 ]

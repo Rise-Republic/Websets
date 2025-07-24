@@ -91,6 +91,10 @@ class Settings(BaseSettings):
         "http://localhost:5173",
     ]
 
+    # Telemetry
+    enable_tracing: bool = False
+    otlp_endpoint: str = "http://localhost:4318"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=False,
