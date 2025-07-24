@@ -58,6 +58,8 @@ the compose file.
 |`MINIO_CLIENT_CERT`|Client certificate when using mTLS|–|
 |`MINIO_CLIENT_KEY`|Client key when using mTLS|–|
 |`MINIO_CA_CERT`|CA certificate when using mTLS|–|
+|`CERT_DIR`|Directory containing TLS certificates|`certs`|
+|`CERT_EXPIRY_WARN_DAYS`|Days before expiration to warn|`30`|
 |`MINIO_VAULT_PATH`|Vault path for rotating MinIO creds|`secret/websets`|
 |`OBJECT_STORAGE_PROVIDER`|Object store provider|`local`|
 |`AWS_ACCESS_KEY_ID`|AWS access key|–|

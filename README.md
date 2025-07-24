@@ -655,7 +655,8 @@ python fetch_vault_env.py > .env
 - All bucket policies and scripts are versioned and reviewed in git.
 - CI/CD pipelines apply, audit, and rotate policies and secrets automatically.
 - Vault integration ensures all credentials are rotated and injected securely.
-- Celery beat runs secret rotation tasks in `app.tasks.secret_rotation`.
+- Celery beat runs secret rotation tasks in `app.tasks.secret_rotation` and checks certificate expiry via `app.tasks.cert_management`.
 - TLS, access logging, and firewall rules are enforced for MinIO.
 - Audit logs and compliance guides are protected and archived.
+- See `docs/CERTIFICATE_MANAGEMENT.md` for cert rotation guidance.
 - Minimal manual oversight required; all changes are traceable and self-healing.
