@@ -115,6 +115,9 @@ def validate_settings():
 
         if disable_vault:
             print("[config.py] Vault integration bypassed for local development.")
+            # Load values from .env so local developers can store non-secret keys there
+            load_dotenv(".env")
+
             # Load secrets directly from environment variables
             secret_values = {
                 'openai_api_key': os.getenv('OPENAI_API_KEY'),
