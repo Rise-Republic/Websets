@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
 from slowapi.errors import RateLimitExceeded
@@ -16,6 +17,7 @@ from app.middleware import (
     rate_limit_handler,
     AuditMiddleware,
     RBACMiddleware,
+    SecurityMiddleware,
 )
 
 # Configure logging with redaction
@@ -34,6 +36,7 @@ configure_tracing(app)
 # Add rate limiting
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+app.add_middleware(HTTPSRedirectMiddleware)
 
 # Add CORS middleware
 cors_origins = settings.allowed_origins
@@ -44,6 +47,9 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],  # Include OPTIONS for preflight
     allow_headers=["Authorization", "Content-Type"],  # Only needed headers
 )
+
+# Security headers
+app.add_middleware(SecurityMiddleware)
 
 # Security middleware
 app.add_middleware(RBACMiddleware)

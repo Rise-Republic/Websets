@@ -8,6 +8,7 @@ This guide covers best practices for deploying WebSet Miner securely in a produc
 - **Automate certificate management.** Obtain certificates from Let's Encrypt with certbot or your cloud provider and renew them automatically.
 - **Enforce HTTPS.** Redirect all HTTP traffic to HTTPS and use HSTS headers to prevent downgrade attacks.
 - **Expose the FastAPI app on an internal network only.** The container should listen on a private interface while the proxy handles public TLS.
+- **Enable application enforcement.** `HTTPSRedirectMiddleware` and `SecurityMiddleware` are included in `app/main.py` to force HTTPS and add HSTS/X-Frame-Options headers.
 
 ## mTLS Between Services
 
