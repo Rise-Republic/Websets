@@ -57,6 +57,7 @@ def mock_env_vars(monkeypatch, mocker):
         }
     }
     mocker.patch('app.secrets.vault.hvac.Client', return_value=mock_vault)
+    mocker.patch('hvac.Client', return_value=mock_vault)
 
 
 @pytest.fixture
