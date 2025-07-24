@@ -1,5 +1,13 @@
 # Docker Secrets
 
 Store sensitive values like database and MinIO credentials as Docker secrets.
-Create files in this directory and reference them in `docker-compose.yml`.
-These files should never be committed to version control.
+Secrets are typically pulled from Vault and loaded using `docker secret create`.
+The individual secret files shown here are ignored and should not be committed.
+For example:
+
+```bash
+vault kv get -field=MINIO_ROOT_USER secret/websets | \
+  docker secret create minio_root_user -
+vault kv get -field=MINIO_ROOT_PASSWORD secret/websets | \
+  docker secret create minio_root_password -
+```

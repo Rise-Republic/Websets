@@ -31,3 +31,7 @@ dist-ssr
 /test.db
 /test_warnings.txt
 /data/minio/.minio.sys/tmp/
+
+# Local Docker secrets
+secrets/minio_root_user.txt
+secrets/minio_root_password.txt

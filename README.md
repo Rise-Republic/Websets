@@ -39,7 +39,22 @@ make setup
 # Copy the sample env file and adjust non-secret settings
 cp .env.example .env
 ```
-Seed Vault with secrets from `vault_secrets_template.json`.
+Seed Vault with secrets from `vault_secrets_template.json`:
+
+```bash
+# Set your Vault address and token
+export VAULT_ADDR=http://localhost:8200
+export VAULT_TOKEN=<your-root-token>
+
+# Load all secrets defined in the template
+vault kv put secret/websets @vault_secrets_template.json
+
+# Create Docker secrets for MinIO from Vault values
+vault kv get -field=MINIO_ROOT_USER secret/websets | \
+  docker secret create minio_root_user -
+vault kv get -field=MINIO_ROOT_PASSWORD secret/websets | \
+  docker secret create minio_root_password -
+```
 
 You can also open the repository in a [Dev Container](.devcontainer/devcontainer.json) which will
 run `make setup` automatically after creation.
@@ -173,6 +188,8 @@ AUTH0_CLIENT_ID=your-client-id
 AUTH0_CLIENT_SECRET=your-client-secret
 AUTH0_AUDIENCE=https://api.websets.local
 AUTH0_ISSUER=https://dev-your-domain.us.auth0.com/
+MINIO_ROOT_USER=replace-with-minio-root-user
+MINIO_ROOT_PASSWORD=replace-with-minio-root-password
 ```
 
 Non-secret configuration in `.env`:

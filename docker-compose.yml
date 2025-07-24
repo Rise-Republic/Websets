@@ -261,6 +261,6 @@ volumes:
 
 secrets:
   minio_root_user:
-    file: ./secrets/minio_root_user.txt
+    external: true
   minio_root_password:
-    file: ./secrets/minio_root_password.txt
+    external: true
