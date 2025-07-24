@@ -1,17 +1,19 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RegisterForm from './RegisterForm';
-import * as useAuthHook from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 
-jest.mock('@/hooks/useAuth');
-const mockUseAuth = useAuthHook as jest.Mocked<typeof useAuthHook>;
+jest.mock('@/hooks/useAuth', () => ({
+  useAuth: jest.fn(),
+}));
+const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 
 describe('RegisterForm', () => {
   const mockRegister = jest.fn();
 
   beforeEach(() => {
-    mockUseAuth.useAuth.mockReturnValue({
+    mockUseAuth.mockReturnValue({
       register: mockRegister,
     } as any);
   });
@@ -29,7 +31,9 @@ describe('RegisterForm', () => {
     await user.type(screen.getByLabelText(/^password$/i), 'password');
     await user.type(screen.getByLabelText(/confirm password/i), 'password');
 
-    await user.click(screen.getByRole('button', { name: /register/i }));
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: /register/i }));
+    });
 
     expect(mockRegister).toHaveBeenCalledWith('test@example.com', 'password', 'Test User');
   });
