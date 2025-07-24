@@ -17,7 +17,7 @@ the compose file.
 | Variable | Description | Default |
 |----------|-------------|---------|
 |`VAULT_ADDR`|Vault server URL|`http://localhost:8200`|
-|`VAULT_TOKEN`|Vault token|–|
+|`VAULT_TOKEN`|Vault token (provide via env var or Docker secret; not in `.env.example`)|–|
 |`VAULT_SECRET_PATH`|Path within Vault for secrets|`secret/data/websets`|
 |`DISABLE_VAULT_FOR_LOCAL_DEV`|Bypass Vault when true|`false`|
 |`DATA_DIR`|Local data directory|`./data`|

@@ -20,7 +20,7 @@ The `setup` target installs Python and Node **dev** dependencies, sets up Playwr
 ## 2. Configure Secrets
 
 Load all sensitive secrets into Vault using `vault_secrets_template.json`. The
-`.env` file only contains non-secret settings. For convenience you can populate
+`.env` file only contains non-secret settings (the example omits `VAULT_TOKEN`). For convenience you can populate
 the `.env` file with values from Vault by running `python fetch_vault_env.py`.
 Set `DISABLE_VAULT_FOR_LOCAL_DEV=true` in your `.env` when developing locally so
 the application reads secrets from this file. In production omit this variable

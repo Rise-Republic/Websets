@@ -51,7 +51,7 @@ flowchart TD
 
 ## Running Locally
 
-1. Create `.env` from `.env.example` and set `DISABLE_VAULT_FOR_LOCAL_DEV=true`.
+1. Create `.env` from `.env.example` (it omits `VAULT_TOKEN`) and set `DISABLE_VAULT_FOR_LOCAL_DEV=true`. Provide `VAULT_TOKEN` via an environment variable or Docker secret.
 2. Start services:
    ```bash
    docker-compose up -d

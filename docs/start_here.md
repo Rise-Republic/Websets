@@ -21,7 +21,7 @@ This executes `scripts/setup.sh`, which installs Python and Node dependencies, i
 
 ## Next Steps
 
-1. Fill in your API keys and other values in `.env`.
+1. Fill in your API keys and other values in `.env`. Supply `VAULT_TOKEN` separately via an environment variable or Docker secret since it is not included in `.env.example`.
 2. Start the services:
    ```bash
    docker compose up -d
