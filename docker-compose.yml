@@ -161,10 +161,7 @@ services:
     command: >
       vault server
       -dev
-      -dev-tls-cert-file=/certs/vault.crt
-      -dev-tls-key-file=/certs/vault.key
-      -dev-tls-ca-cert-file=/certs/ca.crt
-      -dev-tls-skip-verify=true
+      -dev-listen-address=0.0.0.0:8200
     restart: unless-stopped
     deploy:
       resources:
@@ -205,7 +202,7 @@ services:
       retries: 5
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.40.1
     ports:
       - "9091:9090"
     volumes:
@@ -228,7 +225,7 @@ services:
           cpus: '0.50'
           memory: 512m
     healthcheck:
-      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:9090/-/healthy"]
+      test: ["CMD", "wget", "--spider", "--quiet", "--ca-certificate=/certs/ca.crt", "https://localhost:9090/-/healthy"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -238,11 +235,12 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin_password
+      - GF_SECURITY_ADMIN_PASSWORD__FILE=./secrets/grafana_admin_password
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
       - ./secrets/grafana_admin_password:/run/secrets/grafana_admin_password:ro
+      - ./certs:/certs:ro
     depends_on:
       prometheus:
         condition: service_healthy
@@ -253,7 +251,7 @@ services:
           cpus: '0.25'
           memory: 256m
     healthcheck:
-      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:3000/api/health"]
+      test: ["CMD", "wget", "--spider", "--quiet", "--ca-certificate=/certs/ca.crt", "https://localhost:3000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
