@@ -238,6 +238,19 @@ describe('useAuthProvider', () => {
     expect(result.current.error).toBe(null);
   });
 
+  test('request password reset failure', async () => {
+    mockDefaultApiService.passwordResetRequest.mockRejectedValue(new Error('bad'));
+
+    const { result } = renderHook(() => useAuthProvider());
+
+    await act(async () => {
+      await expect(result.current.requestPasswordReset('test@example.com')).rejects.toThrow('bad');
+    });
+
+    expect(result.current.error).toBe('bad');
+    expect(result.current.isLoading).toBe(false);
+  });
+
   test('confirm password reset', async () => {
     mockDefaultApiService.passwordResetConfirm.mockResolvedValue({ message: 'ok' });
 
@@ -249,6 +262,19 @@ describe('useAuthProvider', () => {
 
     expect(mockDefaultApiService.passwordResetConfirm).toHaveBeenCalledWith('token', 'newpass');
     expect(result.current.error).toBe(null);
+  });
+
+  test('confirm password reset failure', async () => {
+    mockDefaultApiService.passwordResetConfirm.mockRejectedValue(new Error('oops'));
+
+    const { result } = renderHook(() => useAuthProvider());
+
+    await act(async () => {
+      await expect(result.current.confirmPasswordReset('token', 'newpass')).rejects.toThrow('oops');
+    });
+
+    expect(result.current.error).toBe('oops');
+    expect(result.current.isLoading).toBe(false);
   });
 });
 
