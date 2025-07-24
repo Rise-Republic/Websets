@@ -30,6 +30,11 @@ s3 = boto3.client(
     **extra_args
 )
 
+
+def tenant_object_name(tenant_id: str, object_name: str) -> str:
+    """Return a key namespaced by tenant."""
+    return f"{tenant_id}/{object_name}"
+
 def upload_file_encrypted(file_path, object_name=None):
     """Upload file to MinIO with server-side encryption (AES256)."""
     if object_name is None:

@@ -141,3 +141,15 @@ Override the compose file when starting services:
 docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 ```
 
+## Object Storage Path Layout
+
+Uploaded artifacts are stored in MinIO using a tenant-aware prefix. The full key
+is generated as:
+
+```text
+<tenant_id>/<object_name>
+```
+
+Use the `tenant_object_name` helper from `app.storage.minio_client` to build
+these names when calling `upload_file_encrypted` or `download_file`.
+
