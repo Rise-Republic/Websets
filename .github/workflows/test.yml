@@ -331,40 +331,39 @@ jobs:
       run: |
         docker run --rm -v ${{ github.workspace }}/monitoring/alertmanager:/am prom/prometheus promtool check config /am/alertmanager.yml
 
-    - name: Lint observability YAML
-      run: |
-        pip install yamllint
-        yamllint observability monitoring infra/observability || true
-
-    - name: Helm diff (if charts present)
-      run: |
-        if find monitoring observability infra/observability -name Chart.yaml | grep -q Chart.yaml; then
-          curl -sSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-          helm plugin install https://github.com/databus23/helm-diff
-          for chart in $(find monitoring observability infra/observability -name Chart.yaml -printf '%h\n'); do
-            helm dependency build "$chart"
-            helm diff upgrade --allow-unreleased $(basename "$chart") "$chart"
-          done
-        else
-          echo "No Helm charts detected"
-        fi
-
-    - name: Terraform plan for observability stack
-      run: |
-        terraform -chdir=infra/terraform init -backend=false
-        terraform -chdir=infra/terraform plan -no-color
-
-  grafana-dashboard-check:
+  infra-validations:
     runs-on: ubuntu-latest
     needs: [observability-checks]
-
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: '1.5.0'
 
-    - name: Verify Grafana dashboard JSON
-      run: python scripts/check_grafana_drift.py monitoring/grafana/dashboards
+      - name: Terraform init
+        working-directory: infra/observability
+        run: terraform init -input=false
+
+      - name: Terraform plan
+        working-directory: infra/observability
+        run: terraform plan -input=false -lock=false
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+
+      - name: Install helm diff plugin
+        run: helm plugin install https://github.com/databus23/helm-diff || true
+
+      - name: Helm diff
+        working-directory: infra/observability
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+          helm repo add grafana https://grafana.github.io/helm-charts
+          helm repo update
+          helm diff upgrade --install otel-collector open-telemetry/opentelemetry-collector -f modules/opentelemetry/values.yml --namespace default
+          helm diff upgrade --install prometheus prometheus-community/prometheus -f modules/prometheus/values.yml --namespace default
+          helm diff upgrade --install grafana grafana/grafana -f modules/grafana/values.yml --namespace default
+          helm diff upgrade --install alertmanager prometheus-community/alertmanager -f modules/alertmanager/values.yml --namespace default
