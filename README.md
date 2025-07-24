@@ -484,6 +484,12 @@ Automated builds, tests, and deployments run via **GitHub Actions**.
 - Images are scanned with **Trivy** for critical vulnerabilities.
 - If no issues are found, the workflow deploys the updated containers over SSH using `docker-compose`.
 
+Deployments target three environments managed in GitHub:
+
+- **development** – automatic on push for rapid iteration.
+- **staging** – requires approval by code owners.
+- **production** – requires manual promotion from staging.
+
 For branch cleanup and release tagging, see [RELEASE_PROCESS.md](RELEASE_PROCESS.md).
 
 ### Local CI Run

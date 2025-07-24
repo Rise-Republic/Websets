@@ -1,0 +1,32 @@
+name: Monthly Format Check
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install tools
+        run: |
+          pip install black isort
+          npm install -g prettier
+      - name: Format
+        run: |
+          black --check app || touch needs_format
+          isort --check-only app || touch needs_format
+          prettier --check "src/**/*.{ts,tsx,js,jsx}" || touch needs_format
+      - name: Create issue if formatting needed
+        if: files.exists('needs_format')
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: "Automated formatting corrections"
+          content-filepath: README.md
