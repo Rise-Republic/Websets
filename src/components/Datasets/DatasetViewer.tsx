@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import apiService, { Dataset, DatasetRecord } from '../../services/api';
+import apiService, { Dataset, DatasetRecord } from '@/services/api';
 
 interface DatasetViewerProps {
   dataset: Dataset;
