@@ -3,11 +3,14 @@ import pytest
 import asyncio
 from unittest import mock
 
+from app.tenancy import set_current_tenant
 
 
 @pytest.mark.unit
 def test_job_list_scoped_by_tenant(db_session):
-    with mock.patch("app.middleware.rate_limiting.user_limiter.limit", lambda *a, **k: (lambda f: f)):
+    with mock.patch(
+        "app.middleware.rate_limiting.user_limiter.limit", lambda *a, **k: (lambda f: f)
+    ):
         from app.models import User, Job
         from app.auth.jwt_handler import get_password_hash
         from app.api.v1.jobs import list_jobs
@@ -32,6 +35,11 @@ def test_job_list_scoped_by_tenant(db_session):
     db_session.add_all([job1, job2])
     db_session.commit()
 
-    result = asyncio.run(list_jobs(current_user=user1, db=db_session))
+    set_current_tenant(user1.tenant_id)
+    try:
+        result = asyncio.run(list_jobs(current_user=user1, db=db_session))
+    finally:
+        set_current_tenant(None)
+
     assert len(result.jobs) == 1
     assert result.jobs[0].id == str(job1.id)
