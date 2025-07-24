@@ -441,7 +441,8 @@ logger.info("Job started", job_id=job.id, user_id=user.id)
 ```
 
 ### Metrics
-Monitor these key metrics:
+Monitor these key metrics and export Prometheus data using the
+[metrics templates](observability/metrics/metrics_setup.md):
 - Job completion rate
 - Crawl success rate
 - Average crawl duration
@@ -449,6 +450,13 @@ Monitor these key metrics:
 - API response times
 - Worker queue length
 - Celery queue length
+
+### Tracing
+OpenTelemetry tracing is enabled via `configure_tracing` and the Celery
+instrumentor. Traces are exported to the OTLP endpoint configured in
+`app.config`. Import the provided Grafana dashboard JSON from
+`monitoring/grafana/dashboards/websets_overview.json` to visualize metrics and
+traces together.
 
 ## Security
 

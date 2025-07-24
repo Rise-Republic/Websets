@@ -1,5 +1,6 @@
 from celery import Celery
 from app.config import settings
+from opentelemetry.instrumentation.celery import CeleryInstrumentor
 
 # Create Celery app
 celery_app = Celery(
@@ -11,6 +12,9 @@ celery_app = Celery(
         "app.tasks.secret_rotation",
     ],
 )
+
+if settings.enable_tracing:
+    CeleryInstrumentor().instrument()
 
 # Configure Celery
 celery_app.conf.update(
