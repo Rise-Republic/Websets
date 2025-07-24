@@ -11,14 +11,6 @@ from app.config import settings
 from app.telemetry import configure_tracing
 from app.logging_utils import configure_logging
 from app.database import create_tables
-from app.api import (
-    auth_router,
-    jobs_router,
-    datasets_router,
-    health_router,
-    gdpr_router,
-    users_router,
-)
 from app.api.v1 import v1_router
 from app.api.versioning import versioning_router
 from app.middleware import (
@@ -71,15 +63,6 @@ metrics = get_metrics_collector()
 app.add_middleware(MetricsMiddleware, metrics_collector=metrics)
 
 # Include routers
-# Legacy routes (backward compatibility)
-app.include_router(health_router)
-app.include_router(auth_router)
-app.include_router(jobs_router)
-app.include_router(datasets_router)
-app.include_router(users_router)
-app.include_router(gdpr_router)
-
-# V1 API routes
 app.include_router(v1_router)
 
 # API versioning routes

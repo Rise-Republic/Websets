@@ -22,13 +22,9 @@ from app.config import settings
 from app.middleware import limiter, RateLimits
 from app.middleware.audit_middleware import SecurityEventLogger
 from app.utils import send_email
+from app.api.dependencies import get_user_repository
 
 router = APIRouter(prefix="/auth", tags=["v1-authentication"])
-
-
-def get_user_repository(db: Session = Depends(get_db)) -> UserRepository:
-    """Dependency injector for ``UserRepository``."""
-    return UserRepository(db)
 
 # Prometheus metrics
 login_success = Counter("auth_login_success_total", "Successful logins")

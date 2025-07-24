@@ -5,9 +5,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
 
-from app.database import get_db
 from app.models import User, Job, Dataset
 from app.repositories import UserRepository
 from app.auth.dependencies import get_current_active_user
@@ -16,14 +14,10 @@ from app.tasks.gdpr_tasks import (
     export_user_data_task,
     delete_user_data_task,
 )
+from app.api.dependencies import get_user_repository
 
 
 router = APIRouter(prefix="/gdpr", tags=["gdpr"])
-
-
-def get_user_repository(db: Session = Depends(get_db)) -> UserRepository:
-    """Dependency injector for ``UserRepository``."""
-    return UserRepository(db)
 
 
 @router.get("/export", status_code=status.HTTP_202_ACCEPTED)
