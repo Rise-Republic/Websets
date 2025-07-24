@@ -73,3 +73,19 @@ async def test_search_dataset_invalid_query(db_session, monkeypatch):
             str(dataset.id), request, current_user=user, db=db_session
         )
     assert exc.value.status_code == 400
+
+@pytest.mark.unit
+def test_export_dataset_params():
+    import pathlib
+    import warnings
+    from fastapi import Query
+
+    source = pathlib.Path("app/api/v1/datasets.py").read_text()
+    assert 'pattern="^(json|csv)$"' in source
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always", DeprecationWarning)
+        Query("json", pattern="^(json|csv)$")
+
+    assert not any(issubclass(item.category, DeprecationWarning) for item in w)
+
