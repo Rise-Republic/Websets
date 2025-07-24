@@ -5,13 +5,13 @@ Replaces the broken Redis/JWT system with enterprise-grade auth
 import os
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import RedirectResponse
-from workos import WorkOS
+from workos import WorkOSClient
 from typing import Optional
 
 router = APIRouter(prefix="/auth", tags=["workos-auth"])
 
 # Initialize WorkOS client
-workos = WorkOS(
+workos_client = WorkOSClient(
     api_key=os.getenv("WORKOS_API_KEY"),
     client_id=os.getenv("WORKOS_CLIENT_ID")
 )
@@ -24,7 +24,7 @@ async def initiate_login(request: Request):
     """
     try:
         # Generate WorkOS authorization URL
-        authorization_url = workos.user_management.get_authorization_url(
+        authorization_url = workos_client.user_management.get_authorization_url(
             provider="authkit",
             redirect_uri=os.getenv("WORKOS_REDIRECT_URI", "http://127.0.0.1:5173/callback"),
             client_id=os.getenv("WORKOS_CLIENT_ID")
@@ -46,7 +46,7 @@ async def auth_callback(request: Request, code: Optional[str] = None):
     
     try:
         # Exchange code for user profile
-        profile = workos.user_management.authenticate_with_code(
+        profile = workos_client.user_management.authenticate_with_code(
             code=code,
             client_id=os.getenv("WORKOS_CLIENT_ID")
         )

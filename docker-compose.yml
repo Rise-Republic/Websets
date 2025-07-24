@@ -74,6 +74,7 @@ services:
     environment:
       - VAULT_ADDR=http://vault:8200
       - VAULT_TOKEN=root
+      - DATABASE_URL=postgresql://postgres:changeme@db:5432/webset_miner
       - OPENAI_API_KEY=sk-dev-openai-key-for-local-development-only-0123456789
     depends_on:
       vault:
@@ -100,6 +101,7 @@ services:
     environment:
       - VAULT_ADDR=http://vault:8200
       - VAULT_TOKEN=root
+      - DATABASE_URL=postgresql://postgres:changeme@db:5432/webset_miner
       - OPENAI_API_KEY=sk-dev-openai-key-for-local-development-only-0123456789
     depends_on:
       vault:
