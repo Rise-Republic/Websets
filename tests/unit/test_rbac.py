@@ -45,3 +45,19 @@ class TestRBACDependencies:
         with pytest.raises(HTTPException) as exc:
             dep(current_user=user)
         assert exc.value.status_code == 403
+
+    def test_require_roles_handles_missing_attribute(self):
+        class IncompleteUser:
+            pass
+
+        dep = rbac.require_roles("admin")
+        with pytest.raises(HTTPException) as exc:
+            dep(current_user=IncompleteUser())
+        assert exc.value.status_code == 403
+
+    def test_require_roles_handles_none_roles(self):
+        user = DummyUser(None)
+        dep = rbac.require_roles("admin")
+        with pytest.raises(HTTPException) as exc:
+            dep(current_user=user)
+        assert exc.value.status_code == 403
