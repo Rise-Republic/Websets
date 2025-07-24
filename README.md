@@ -1,6 +1,6 @@
 # WebSet Miner
 
-An autonomous LLM-powered system for discovering, extracting, and structuring public web data at scale.
+An autonomous LLM-powered system for discovering, extracting, and structuring public web data at scale. [Start here](docs/start_here.md) to set up your environment.
 
 ## Features
 
