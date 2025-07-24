@@ -5,7 +5,6 @@ from datetime import timedelta, datetime
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 import hashlib
 import os
-import re
 import secrets
 from loguru import logger
 
@@ -20,7 +19,7 @@ from app.auth.dependencies import get_current_active_user
 from app.config import settings
 from app.middleware import limiter, RateLimits
 from app.middleware.audit_middleware import SecurityEventLogger
-from app.utils import send_email
+from app.utils import send_email, validate_password as validate_password_helper
 from app.api.dependencies import get_user_repository
 
 router = APIRouter(prefix="/auth", tags=["v1-authentication"])
@@ -53,17 +52,7 @@ class UserCreate(BaseModel):
     @field_validator("password")
     @classmethod
     def validate_password(cls, v):
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        if not re.search(r"[A-Z]", v):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not re.search(r"[a-z]", v):
-            raise ValueError("Password must contain at least one lowercase letter")
-        if not re.search(r"\d", v):
-            raise ValueError("Password must contain at least one digit")
-        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', v):
-            raise ValueError("Password must contain at least one special character")
-        return v
+        return validate_password_helper(v)
 
 
 class UserResponse(BaseModel):
