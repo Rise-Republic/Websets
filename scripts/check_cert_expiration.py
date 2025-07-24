@@ -3,6 +3,7 @@
 
 import os
 import subprocess
+from loguru import logger
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict
@@ -35,11 +36,15 @@ def check_certificates(
         try:
             expires = _get_expiration(crt)
         except subprocess.CalledProcessError as exc:
-            print(f"Failed to read {crt}: {exc}")
+            logger.error("Failed to read %s: %s", crt, exc)
             continue
         days_left = (expires - now).days
         if days_left <= warn_days:
-            print(f"WARNING: {crt.name} expires in {days_left} days")
+            logger.warning(
+                "Certificate %s expires in %s days",
+                crt.name,
+                days_left,
+            )
             expiring[crt.name] = days_left
     return expiring
 

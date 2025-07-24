@@ -6,7 +6,7 @@ Usage: python scripts/run_job.py "Your mining prompt here"
 
 import sys
 import os
-import asyncio
+from loguru import logger
 import argparse
 from pathlib import Path
 
@@ -30,12 +30,12 @@ def create_test_user_if_not_exists():
                 email="test@websetminer.com",
                 hashed_password=get_password_hash(password),
                 full_name="Test User",
-                is_active=True
+                is_active=True,
             )
             db.add(user)
             db.commit()
             db.refresh(user)
-            print(f"Created test user: {user.email}")
+            logger.info("Created test user: %s", user.email)
         return user
     finally:
         db.close()
@@ -44,11 +44,15 @@ def create_test_user_if_not_exists():
 def main():
     parser = argparse.ArgumentParser(description="Run a WebSet Miner job")
     parser.add_argument("prompt", help="The mining prompt/query")
-    parser.add_argument("--user-email", help="User email (optional)", default="test@websetminer.com")
-    parser.add_argument("--sync", action="store_true", help="Run synchronously (blocking)")
-    
+    parser.add_argument(
+        "--user-email", help="User email (optional)", default="test@websetminer.com"
+    )
+    parser.add_argument(
+        "--sync", action="store_true", help="Run synchronously (blocking)"
+    )
+
     args = parser.parse_args()
-    
+
     # Get or create user
     db = SessionLocal()
     try:
@@ -57,38 +61,34 @@ def main():
             if args.user_email == "test@websetminer.com":
                 user = create_test_user_if_not_exists()
             else:
-                print(f"User {args.user_email} not found")
+                logger.error("User %s not found", args.user_email)
                 return 1
-        
+
         # Create job
-        job = Job(
-            user_id=user.id,
-            prompt=args.prompt,
-            status=JobStatus.PENDING
-        )
+        job = Job(user_id=user.id, prompt=args.prompt, status=JobStatus.PENDING)
         db.add(job)
         db.commit()
         db.refresh(job)
-        
-        print(f"Created job {job.id} for user {user.email}")
-        print(f"Prompt: {job.prompt}")
-        
+
+        logger.info("Created job %s for user %s", job.id, user.email)
+        logger.info("Prompt: %s", job.prompt)
+
         if args.sync:
             # Run synchronously
-            print("Running job synchronously...")
+            logger.info("Running job synchronously...")
             # Note: This calls the actual function, not the Celery task
             result = start_mining_job(str(job.id))
-            print(f"Job completed: {result}")
+            logger.info("Job completed: %s", result)
         else:
             # Queue with Celery
-            print("Queuing job with Celery...")
+            logger.info("Queuing job with Celery...")
             task = start_mining_job.delay(str(job.id))
-            print(f"Task ID: {task.id}")
-            print("Monitor job progress via API or logs")
-        
+            logger.info("Task ID: %s", task.id)
+            logger.info("Monitor job progress via API or logs")
+
     finally:
         db.close()
-    
+
     return 0
 
 

@@ -67,11 +67,14 @@ class TestVaultSecretRotation(unittest.TestCase):
             },
             clear=False,
         ):
-            with patch("builtins.print") as mock_print:
+            with patch("app.secrets.vault.logger.info") as mock_info:
                 vault.cli_test_connection()
 
-        mock_print.assert_called_with(
-            "Vault OK at http://vault. Secrets at 'secret/app': ['A']"
+        mock_info.assert_called_with(
+            "Vault OK at %s. Secrets at '%s': %s",
+            "http://vault",
+            "secret/app",
+            ["A"],
         )
 
     @patch("app.secrets.vault.hvac.Client")
@@ -89,8 +92,8 @@ class TestVaultSecretRotation(unittest.TestCase):
             },
             clear=False,
         ):
-            with patch("builtins.print") as mock_print:
+            with patch("app.secrets.vault.logger.error") as mock_error:
                 with self.assertRaises(SystemExit):
                     vault.cli_test_connection()
 
-        mock_print.assert_called_with("Vault connectivity test failed: boom")
+        mock_error.assert_called_with("Vault connectivity test failed: boom")

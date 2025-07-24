@@ -1,8 +1,10 @@
 """
 MinIO S3 Python client with enforced server-side encryption
 """
+
 import os
 import boto3
+from loguru import logger
 from botocore.client import Config
 from botocore.exceptions import ClientError
 from app.read_secret import read_secret
@@ -28,13 +30,14 @@ s3 = boto3.client(
     aws_secret_access_key=MINIO_SECRET_KEY,
     config=Config(signature_version="s3v4"),
     region_name="us-east-1",
-    **extra_args
+    **extra_args,
 )
 
 
 def tenant_object_name(tenant_id: str, object_name: str) -> str:
     """Return a key namespaced by tenant."""
     return f"{tenant_id}/{object_name}"
+
 
 def upload_file_encrypted(file_path, object_name=None):
     """Upload file to MinIO with server-side encryption (AES256)."""
@@ -46,19 +49,20 @@ def upload_file_encrypted(file_path, object_name=None):
                 f,
                 MINIO_BUCKET,
                 object_name,
-                ExtraArgs={"ServerSideEncryption": "AES256"}
+                ExtraArgs={"ServerSideEncryption": "AES256"},
             )
-        print(f"Uploaded {object_name} with AES256 encryption.")
+        logger.info(f"Uploaded {object_name} with AES256 encryption.")
     except ClientError as e:
-        print(f"Upload failed: {e}")
+        logger.error(f"Upload failed: {e}")
         raise
+
 
 def download_file(file_name, dest_path):
     """Download file from MinIO."""
     try:
         with open(dest_path, "wb") as f:
             s3.download_fileobj(MINIO_BUCKET, file_name, f)
-        print(f"Downloaded {file_name} to {dest_path}.")
+        logger.info(f"Downloaded {file_name} to {dest_path}.")
     except ClientError as e:
-        print(f"Download failed: {e}")
+        logger.error(f"Download failed: {e}")
         raise
