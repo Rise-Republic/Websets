@@ -2,6 +2,10 @@
 # Start the full local development stack with one command
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+cd "$ROOT_DIR"
+
 # Ensure dependencies are installed
 make setup
 
@@ -16,7 +20,7 @@ echo "Starting services with Docker Compose..."
 docker compose up -d --build
 
 # Seed Vault with template secrets
-scripts/seed_vault.sh
+"$SCRIPT_DIR/seed_vault.sh"
 
 # Wait for database to be ready
 until docker compose exec -T db pg_isready -U postgres >/dev/null 2>&1; do
