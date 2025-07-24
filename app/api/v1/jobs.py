@@ -20,14 +20,14 @@ class JobResponse(BaseModel):
     id: str
     prompt: str
     status: str
-    plan: dict = None
+    plan: Optional[dict] = None
     total_urls: int = 0
     crawled_urls: int = 0
     extracted_records: int = 0
     created_at: str
-    started_at: str = None
-    completed_at: str = None
-    error_message: str = None
+    started_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    error_message: Optional[str] = None
 
     class Config:
         from_attributes = True

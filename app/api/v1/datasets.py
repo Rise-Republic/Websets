@@ -9,6 +9,7 @@ from app.models import Dataset, DataRecord, Job, User
 from app.auth.dependencies import get_current_active_user
 from app.storage import VectorStore, EmbeddingGenerator
 from app.middleware import rbac_required
+from app.middleware.audit_middleware import DataAccessAudit
 
 router = APIRouter(prefix="/datasets", tags=["v1-datasets"])
 
@@ -170,6 +171,13 @@ async def get_dataset_records(
     
     offset = (page - 1) * size
     records = query.order_by(DataRecord.created_at.desc()).offset(offset).limit(size).all()
+
+    DataAccessAudit.log_data_access(
+        user_id=current_user.id,
+        dataset_id=dataset.id,
+        access_type="read",
+        records_accessed=len(records),
+    )
     
     # Convert to response format
     record_responses = []
@@ -297,6 +305,13 @@ async def export_dataset(
     
     # Get all records
     records = db.query(DataRecord).filter(DataRecord.dataset_id == dataset_id).all()
+
+    DataAccessAudit.log_data_access(
+        user_id=current_user.id,
+        dataset_id=dataset.id,
+        access_type="export",
+        records_accessed=len(records),
+    )
     
     if format == "json":
         from fastapi.responses import JSONResponse
