@@ -69,8 +69,11 @@ run `make setup` automatically after creation.
 
 3. **Start services:**
 ```bash
-docker-compose up -d
+make dev
 ```
+This command installs dependencies, generates local certificates, applies database migrations,
+and starts all Docker services. You can still run `docker-compose up -d` manually
+if you prefer.
 
 4. **Run your first mining job:**
 ```bash

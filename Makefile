@@ -1,4 +1,4 @@
-.PHONY: setup lint fmt test start stop docker-build
+.PHONY: setup lint fmt test start stop docker-build dev
 
 # Setup development environment
 setup:
@@ -25,6 +25,10 @@ start:
 # Stop local services
 stop:
 	docker compose down
+
+# Launch full local development stack
+dev:
+	bash scripts/dev_stack.sh
 
 # Build Docker image for deployment
 docker-build:
