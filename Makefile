@@ -32,4 +32,4 @@ docker-build:
 
 # Launch full local development stack
 dev:
-        bash scripts/dev_stack.sh
+	bash scripts/dev_stack.sh
