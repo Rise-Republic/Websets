@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 import sys
+from loguru import logger
 from pathlib import Path
 
 # Environment variables that should only be provided via *_FILE
@@ -61,13 +62,13 @@ def main() -> int:
             violations[file_path] = matches
 
     if violations:
-        print("\nPlaintext secrets detected:\n")
+        logger.error("Plaintext secrets detected:")
         for path, matches in violations.items():
             for line_no, var, line in matches:
-                print(f"{path}:{line_no}: {var} -> {line}")
+                logger.error(f"{path}:{line_no}: {var} -> {line}")
         return 1
 
-    print("No plaintext secrets found.")
+    logger.info("No plaintext secrets found.")
     return 0
 
 

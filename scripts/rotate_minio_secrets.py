@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Rotate MinIO credentials stored in Vault."""
+
 import os
 import sys
+from loguru import logger
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -19,10 +21,8 @@ def rotate_minio() -> tuple[str, str]:
 
 
 def main() -> None:
-    access, secret = rotate_minio()
-    print(f"export MINIO_ACCESS_KEY={access}")
-    print(f"export MINIO_SECRET_KEY={secret}")
-    print(f"MinIO credentials rotated in Vault path '{DEFAULT_PATH}'")
+    rotate_minio()
+    logger.info("MinIO credentials rotated in Vault path '%s'", DEFAULT_PATH)
 
 
 if __name__ == "__main__":
