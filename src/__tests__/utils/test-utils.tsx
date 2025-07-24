@@ -46,3 +46,6 @@ export const renderWithProviders = (
 // Re-export everything from React Testing Library
 export * from '@testing-library/react';
 export { renderWithProviders as render };
+
+// Placeholder test so Jest treats this file as a test suite without failing
+test('utils placeholder', () => {});
