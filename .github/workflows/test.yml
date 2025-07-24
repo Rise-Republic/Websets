@@ -70,6 +70,7 @@ jobs:
       run: |
         pytest tests/ -v --cov=app \
           --cov-report=xml:artifacts/coverage.xml \
+          --cov-fail-under=80 \
           --junitxml=artifacts/junit.xml
     
     - name: Upload backend coverage to Codecov
