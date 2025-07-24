@@ -50,3 +50,20 @@ docker exec -i websets-db-1 psql -U postgres -d websets < backup.sql
 
 Redis is mostly ephemeral but can be saved using `redis-cli BGSAVE`. For vector data (Qdrant/Weaviate) back up the `data/` volume or use the database's snapshot feature.
 
+## Smoke Tests
+
+Run the smoke test suite after deploying new versions or performing maintenance to ensure that the API and UI still work end‑to‑end.
+
+```bash
+pytest -m smoke            # backend checks
+npm run e2e -- --grep \@smoke  # frontend checks
+```
+
+Successful runs end with `N passed` and exit code `0`. Any failure should be investigated immediately.
+
+Troubleshooting steps:
+
+1. View the [Websets Overview](http://grafana.example.com/d/websets-overview) dashboard for error spikes or failed health checks.
+2. Open Grafana's **Explore** tab and search Tempo/Jaeger traces using the IDs printed in the test output.
+
+Rerun the tests once issues are resolved to confirm recovery.
