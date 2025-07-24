@@ -13,6 +13,8 @@ const mockDefaultApiService = {
   logout: jest.fn(),
   getCurrentUser: jest.fn(),
   isAuthenticated: jest.fn(),
+  passwordResetRequest: jest.fn(),
+  passwordResetConfirm: jest.fn(),
 };
 
 // Set up the default export mock
@@ -183,6 +185,32 @@ describe('useAuthProvider', () => {
     });
 
     expect(result.current.isAuthenticated).toBe(true);
+  });
+
+  test('request password reset', async () => {
+    mockDefaultApiService.passwordResetRequest.mockResolvedValue({ message: 'ok', token: 't' });
+
+    const { result } = renderHook(() => useAuthProvider());
+
+    await act(async () => {
+      await result.current.requestPasswordReset('test@example.com');
+    });
+
+    expect(mockDefaultApiService.passwordResetRequest).toHaveBeenCalledWith('test@example.com');
+    expect(result.current.error).toBe(null);
+  });
+
+  test('confirm password reset', async () => {
+    mockDefaultApiService.passwordResetConfirm.mockResolvedValue({ message: 'ok' });
+
+    const { result } = renderHook(() => useAuthProvider());
+
+    await act(async () => {
+      await result.current.confirmPasswordReset('token', 'newpass');
+    });
+
+    expect(mockDefaultApiService.passwordResetConfirm).toHaveBeenCalledWith('token', 'newpass');
+    expect(result.current.error).toBe(null);
   });
 });
 
