@@ -1,7 +1,7 @@
 from typing import List, Optional
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
 from app.models import User
@@ -31,8 +31,7 @@ class DatasetResponse(BaseModel):
     created_at: str
     updated_at: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DataRecordResponse(BaseModel):
@@ -44,8 +43,7 @@ class DataRecordResponse(BaseModel):
     extraction_method: Optional[str] = None
     created_at: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DatasetListResponse(BaseModel):
