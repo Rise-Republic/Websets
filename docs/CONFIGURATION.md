@@ -72,6 +72,9 @@ the compose file.
 |`WEAVIATE_API_KEY`|Weaviate API key|–|
 |`QDRANT_URL`|Qdrant URL|–|
 |`QDRANT_API_KEY`|Qdrant API key|–|
+|`SEED_USER_EMAIL`|Email for the initial user when running `make dev`|–|
+|`SEED_USER_PASSWORD`|Password for the initial user when running `make dev`|–|
+|`WEBSETS_TEST_USER_PASSWORD`|Password used by `scripts/run_job.py` for the test user|`testpassword123`|
 
 Example `.env` entries:
 
