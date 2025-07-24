@@ -35,6 +35,8 @@ make dev
 ```
 
 `make dev` runs `scripts/setup.sh`, applies database migrations, seeds Vault from `vault_secrets_template.json`, and starts the Docker Compose stack. A `.env` file will be created automatically if it doesn't exist.
+Set `SEED_USER_EMAIL` and `SEED_USER_PASSWORD` in your environment before running
+this command to create the initial user.
 
 2. **Configure environment:**
 
