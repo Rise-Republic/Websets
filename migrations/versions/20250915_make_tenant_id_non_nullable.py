@@ -3,7 +3,7 @@
 from alembic import op
 import sqlalchemy as sa
 
-revision = "make_tenant_id_non_nullable_20250915"
+revision = "tenant_id_non_null_20250915"
 down_revision = "add_verification_fields_20250906"
 branch_labels = None
 depends_on = None
