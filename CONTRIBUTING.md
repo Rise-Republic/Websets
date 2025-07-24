@@ -23,6 +23,7 @@ All changes should go through a pull request with a passing CI run.
 
 - New code requires tests. Update existing tests when behavior changes.
 - Run `pre-commit run --all-files`, `make fmt`, `make lint`, and `make test` before opening a pull request.
+- Run `mypy --strict` to check types with the configuration in `mypy.ini`.
 - Fix any linter errors and ensure all tests pass locally.
 
 Following these guidelines keeps the history readable and the CI pipeline green. Thank you for contributing!
