@@ -24,7 +24,7 @@ class Job(Base):
 
     id = Column(UUID, primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
-    tenant_id = Column(UUID, nullable=True, index=True)
+    tenant_id = Column(UUID, nullable=False, index=True, default=uuid.uuid4)
 
     # Job configuration
     prompt = Column(Text, nullable=False)

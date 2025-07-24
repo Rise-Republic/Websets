@@ -46,7 +46,7 @@ class User(Base):
     refresh_token_expiry = Column(DateTime, nullable=True)
 
     # Tenant information (for multi-tenancy)
-    tenant_id = Column(UUID, nullable=True)
+    tenant_id = Column(UUID, nullable=False, default=uuid.uuid4)
 
     # GDPR compliance
     consent_given = Column(Boolean, default=False)
