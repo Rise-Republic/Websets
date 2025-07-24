@@ -4,10 +4,12 @@ from .cache import (
     set_cached_dataset_records,
     invalidate_dataset_records,
 )
+from .sanitization import sanitize_prompt
 
 __all__ = [
     "send_email",
     "get_cached_dataset_records",
     "set_cached_dataset_records",
     "invalidate_dataset_records",
+    "sanitize_prompt",
 ]

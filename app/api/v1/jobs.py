@@ -8,6 +8,7 @@ from app.database import get_db
 from app.models import Job, JobStatus, User
 from app.auth.dependencies import get_current_active_user
 from app.tasks.mining_tasks import start_mining_job
+from app.utils import sanitize_prompt
 from app.middleware import rbac_required, user_limiter, RateLimits
 
 router = APIRouter(prefix="/jobs", tags=["v1-jobs"])
@@ -51,6 +52,10 @@ async def create_job(
     db: Session = Depends(get_db),
 ):
     """Create a new mining job."""
+    try:
+        sanitize_prompt(job_data.prompt)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     # Create job record
     job = Job(
