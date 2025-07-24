@@ -23,11 +23,17 @@ done
 
 # Apply database migrations
 echo "Applying database migrations..."
-docker compose exec -T app alembic upgrade head
+# Pass database URL for Alembic via DB_URL
+docker compose exec -T app bash -c 'DB_URL="$DATABASE_URL" alembic upgrade head'
 
 # Seed default user if none exists
-seed_cmd="from app.database import SessionLocal; from app.models import User; from app.auth.jwt_handler import get_password_hash; db=SessionLocal();\nif not db.query(User).first():\n    user=User(email='admin@example.com', hashed_password=get_password_hash('admin'));\n    db.add(user); db.commit(); print('Created default user admin@example.com / admin');\ndb.close()"
-docker compose exec -T app python - <<PY
+if [ -z "${SEED_USER_EMAIL}" ] || [ -z "${SEED_USER_PASSWORD}" ]; then
+  echo "SEED_USER_EMAIL and SEED_USER_PASSWORD must be set to seed the initial user." >&2
+  exit 1
+fi
+
+seed_cmd="from app.database import SessionLocal; from app.models import User; from app.auth.jwt_handler import get_password_hash; import os; db=SessionLocal();\nemail=os.environ['SEED_USER_EMAIL']; password=os.environ['SEED_USER_PASSWORD'];\nif not db.query(User).first():\n    user=User(email=email, hashed_password=get_password_hash(password));\n    db.add(user); db.commit(); print(f'Created default user {email}');\ndb.close()"
+docker compose exec -T -e SEED_USER_EMAIL -e SEED_USER_PASSWORD app python - <<PY
 $seed_cmd
 PY
 

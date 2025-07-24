@@ -15,7 +15,7 @@ This guide lists common issues and recovery steps.
 ## Database Migrations
 
 - **Symptom:** Application fails to start with `relation "jobs" does not exist`.
-- **Fix:** Run `alembic upgrade head` to apply pending migrations. See [MIGRATIONS.md](MIGRATIONS.md) for details.
+- **Fix:** Run `DB_URL=$DATABASE_URL alembic upgrade head` to apply pending migrations. See [MIGRATIONS.md](MIGRATIONS.md) for details.
 
 ## Celery Hangups
 

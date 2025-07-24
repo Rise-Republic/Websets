@@ -33,7 +33,8 @@ required Vault secrets are missing.
 make dev
 ```
 This will build and start all services, apply database migrations, and
-seed a default user. You can still run `docker-compose up -d` manually
+seed an initial user. Provide the credentials via the `SEED_USER_EMAIL`
+and `SEED_USER_PASSWORD` environment variables. You can still run `docker-compose up -d` manually
 if you prefer.
 
 ## 4. Run a Test Job

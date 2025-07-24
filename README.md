@@ -35,6 +35,8 @@ make dev
 ```
 
 `make dev` runs `scripts/setup.sh`, applies database migrations, seeds Vault from `vault_secrets_template.json`, and starts the Docker Compose stack. A `.env` file will be created automatically if it doesn't exist.
+Set `SEED_USER_EMAIL` and `SEED_USER_PASSWORD` in your environment before running
+this command to create the initial user.
 
 2. **Configure environment:**
 
@@ -222,6 +224,10 @@ instead of Vault. In production this variable should be omitted so the
 application loads secrets directly from Vault and fails fast if any are
 missing:
 
+> **Note**
+> The example values below are **placeholders only**. Replace them with your
+> actual secrets and never commit real credentials to version control.
+
 ```env
 OPENAI_API_KEY=<openai-key>
 ANTHROPIC_API_KEY=<anthropic-key>
@@ -395,11 +401,14 @@ npm outdated
 
 ```bash
 # Create migration
-alembic revision --autogenerate -m "Description"
+DB_URL=$DATABASE_URL alembic revision --autogenerate -m "Description"
 
 # Apply migrations
-alembic upgrade head
+DB_URL=$DATABASE_URL alembic upgrade head
 ```
+
+`DB_URL` should point to the same connection string as `DATABASE_URL`. Alembic
+reads this variable to determine the database to migrate.
 
 ## Production Deployment
 

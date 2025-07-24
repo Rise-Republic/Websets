@@ -29,8 +29,10 @@ With the certificates in place, start all services:
 make dev
 ```
 This wrapper command generates certificates if needed, builds the containers,
-applies migrations and seeds a default user before running
-`docker compose up -d` under the hood.
+applies migrations and seeds an initial user before running
+`docker compose up -d` under the hood. Set the `SEED_USER_EMAIL` and
+`SEED_USER_PASSWORD` environment variables to define the credentials used for
+this user.
 
 The compose file launches the API, Celery workers, Redis, PostgreSQL, MinIO (with TLS), Prometheus, Grafana, and optional vector stores. The API will be available at `http://localhost:8000` and MinIO at `https://localhost:9000`.
 
