@@ -90,7 +90,6 @@ class Settings(BaseSettings):
     ]
     
     model_config = {
-        "env_file": ".env",
         "extra": "ignore"
     }
 
@@ -111,6 +110,8 @@ def get_secret_from_vault(client: VaultClient, path: str, key: str) -> str | Non
 def validate_settings():
     """Validate critical settings at startup and require Vault."""
     try:
+        # Load Vault connection info for local development only. All
+        # secrets must be retrieved from Vault.
         load_dotenv(".env")
         vault_addr = os.getenv("VAULT_ADDR")
         vault_token = os.getenv("VAULT_TOKEN")

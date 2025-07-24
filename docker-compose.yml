@@ -22,8 +22,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    env_file:
-      - .env
     restart: unless-stopped
     deploy:
       resources:
@@ -58,8 +56,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    env_file:
-      - .env
     restart: unless-stopped
     deploy:
       resources:
@@ -92,8 +88,6 @@ services:
     depends_on:
       - db
       - redis
-    env_file:
-      - .env
     healthcheck:
       test: ["CMD-SHELL", "true"]
       interval: 30s
