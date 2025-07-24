@@ -232,6 +232,12 @@ pytest -m integration
 
 # All tests
 pytest
+
+# Quick test run with minimal output
+pytest --maxfail=1 --disable-warnings -q
+
+# Generate a coverage report
+pytest --cov=app --cov-report=term-missing
 ```
 
 ### Adding Fixtures
