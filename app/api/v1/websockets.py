@@ -26,10 +26,11 @@ async def websocket_job_updates(
             email = verify_token(token)
             if email:
                 from app.database import SessionLocal
-                from app.models.user import User
+                from app.repositories import UserRepository
                 db = SessionLocal()
                 try:
-                    user = db.query(User).filter(User.email == email).first()
+                    repo = UserRepository(db)
+                    user = repo.get_by_email(email)
                     if user:
                         user_id = str(user.id)
                 finally:
@@ -84,10 +85,11 @@ async def websocket_user_updates(
             email = verify_token(token)
             if email:
                 from app.database import SessionLocal
-                from app.models.user import User
+                from app.repositories import UserRepository
                 db = SessionLocal()
                 try:
-                    user = db.query(User).filter(User.email == email).first()
+                    repo = UserRepository(db)
+                    user = repo.get_by_email(email)
                     if user:
                         user_id = str(user.id)
                 finally:
@@ -148,10 +150,11 @@ async def websocket_system_updates(
             email = verify_token(token)
             if email:
                 from app.database import SessionLocal
-                from app.models.user import User
+                from app.repositories import UserRepository
                 db = SessionLocal()
                 try:
-                    user = db.query(User).filter(User.email == email).first()
+                    repo = UserRepository(db)
+                    user = repo.get_by_email(email)
                     if user:
                         user_id = str(user.id)
                 finally:
@@ -198,10 +201,11 @@ async def websocket_general(
             email = verify_token(token)
             if email:
                 from app.database import SessionLocal
-                from app.models.user import User
+                from app.repositories import UserRepository
                 db = SessionLocal()
                 try:
-                    user = db.query(User).filter(User.email == email).first()
+                    repo = UserRepository(db)
+                    user = repo.get_by_email(email)
                     if user:
                         user_id = str(user.id)
                 finally:

@@ -15,6 +15,7 @@ from app.utils.email import send_password_reset
 from app.database import get_db
 from app.models.user import User
 from app.auth.jwt_handler import create_access_token, get_password_hash, verify_password
+from app.repositories import UserRepository
 from app.auth.dependencies import get_current_active_user
 from app.config import settings
 from app.middleware import limiter, RateLimits
@@ -22,6 +23,11 @@ from app.middleware.audit_middleware import SecurityEventLogger
 from app.utils import send_email
 
 router = APIRouter(prefix="/auth", tags=["v1-authentication"])
+
+
+def get_user_repository(db: Session = Depends(get_db)) -> UserRepository:
+    """Dependency injector for ``UserRepository``."""
+    return UserRepository(db)
 
 # Prometheus metrics
 login_success = Counter("auth_login_success_total", "Successful logins")
@@ -89,11 +95,13 @@ class RegistrationResponse(UserResponse):
 @router.post("/register", response_model=RegistrationResponse)
 @limiter.limit(RateLimits.AUTH_REGISTER)
 async def register(
-    request: Request, user_data: UserCreate, db: Session = Depends(get_db)
+    request: Request,
+    user_data: UserCreate,
+    user_repo: UserRepository = Depends(get_user_repository),
 ):
     """Register a new user."""
     try:
-        existing_user = db.query(User).filter(User.email == user_data.email).first()
+        existing_user = user_repo.get_by_email(user_data.email)
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -121,9 +129,7 @@ async def register(
             verification_token=hashlib.sha256(token.encode()).hexdigest(),
             verification_token_expiry=datetime.utcnow() + timedelta(hours=24),
         )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+        user_repo.add(user)
         return RegistrationResponse(
             id=str(user.id),
             email=user.email,
@@ -151,10 +157,10 @@ async def register(
 async def login(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db),
+    user_repo: UserRepository = Depends(get_user_repository),
 ):
     """Login and get access token."""
-    user = db.query(User).filter(User.email == form_data.username).first()
+    user = user_repo.get_by_email(form_data.username)
     if not user or not verify_password(form_data.password, user.hashed_password):
         login_fail.inc()
         SecurityEventLogger.log_failed_login(
@@ -206,7 +212,7 @@ async def login(
     user.refresh_token = hashlib.sha256(refresh_token.encode()).hexdigest()
     user.refresh_token_expiry = datetime.utcnow() + timedelta(days=7)
     user.last_login = datetime.utcnow()
-    db.commit()
+    user_repo.commit()
     login_success.inc()
     response = {
         "access_token": access_token,
@@ -240,24 +246,22 @@ class VerificationRequest(BaseModel):
 @router.post("/verify")
 @limiter.limit(RateLimits.AUTH_REGISTER)
 async def verify_user(
-    request: Request, data: VerificationRequest, db: Session = Depends(get_db)
+    request: Request,
+    data: VerificationRequest,
+    user_repo: UserRepository = Depends(get_user_repository),
 ):
     import hashlib
     from datetime import datetime
 
-    user = (
-        db.query(User)
-        .filter(
-            User.verification_token == hashlib.sha256(data.token.encode()).hexdigest()
-        )
-        .first()
+    user = user_repo.get_by_verification_token(
+        hashlib.sha256(data.token.encode()).hexdigest()
     )
     if not user or user.verification_token_expiry < datetime.utcnow():
         raise HTTPException(status_code=400, detail="Invalid or expired token")
     user.is_verified = True
     user.verification_token = None
     user.verification_token_expiry = None
-    db.commit()
+    user_repo.commit()
     return {"message": "Email verified"}
 
 
@@ -272,7 +276,7 @@ class MFASetupResponse(BaseModel):
 async def mfa_setup(
     request: Request,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    user_repo: UserRepository = Depends(get_user_repository),
 ):
     if current_user.mfa_enabled:
         raise HTTPException(status_code=400, detail="MFA already enabled")
@@ -280,7 +284,7 @@ async def mfa_setup(
     current_user.mfa_secret = secret
     current_user.mfa_enabled = True
     current_user.mfa_method = "totp"
-    db.commit()
+    user_repo.commit()
     uri = pyotp.TOTP(secret).provisioning_uri(
         name=current_user.email, issuer_name="WebSet Miner"
     )
@@ -296,9 +300,11 @@ class MFAVerifyRequest(BaseModel):
 @router.post("/mfa/verify", response_model=Token)
 @limiter.limit(RateLimits.AUTH_LOGIN)
 async def mfa_verify(
-    request: Request, data: MFAVerifyRequest, db: Session = Depends(get_db)
+    request: Request,
+    data: MFAVerifyRequest,
+    user_repo: UserRepository = Depends(get_user_repository),
 ):
-    user = db.query(User).filter(User.email == data.email).first()
+    user = user_repo.get_by_email(data.email)
     if not user or not user.mfa_enabled:
         mfa_challenge_failures.inc()
         raise HTTPException(status_code=401, detail="MFA not enabled or user not found")
@@ -319,7 +325,7 @@ async def mfa_verify(
     refresh_token = secrets.token_urlsafe(32)
     user.refresh_token = hashlib.sha256(refresh_token.encode()).hexdigest()
     user.refresh_token_expiry = datetime.utcnow() + timedelta(days=7)
-    db.commit()
+    user_repo.commit()
     login_success.inc()
     return {
         "access_token": access_token,
@@ -341,15 +347,17 @@ class PasswordResetConfirm(BaseModel):
 @router.post("/password-reset/request")
 @limiter.limit(RateLimits.AUTH_REGISTER)
 async def password_reset_request(
-    request: Request, data: PasswordResetRequest, db: Session = Depends(get_db)
+    request: Request,
+    data: PasswordResetRequest,
+    user_repo: UserRepository = Depends(get_user_repository),
 ):
-    user = db.query(User).filter(User.email == data.email).first()
+    user = user_repo.get_by_email(data.email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     token = secrets.token_urlsafe(32)
     user.password_reset_token = hashlib.sha256(token.encode()).hexdigest()
     user.password_reset_expiry = datetime.utcnow() + timedelta(minutes=15)
-    db.commit()
+    user_repo.commit()
     password_reset_requests.inc()
     reset_url = f"{request.base_url}v1/auth/password-reset/confirm?token={token}"
     send_email(user.email, "Password Reset", f"Reset your password: {reset_url}")
@@ -358,14 +366,12 @@ async def password_reset_request(
 @router.post("/password-reset/confirm", name="password_reset_confirm")
 @limiter.limit(RateLimits.AUTH_REGISTER)
 async def password_reset_confirm(
-    request: Request, data: PasswordResetConfirm, db: Session = Depends(get_db)
+    request: Request,
+    data: PasswordResetConfirm,
+    user_repo: UserRepository = Depends(get_user_repository),
 ):
-    user = (
-        db.query(User)
-        .filter(
-            User.password_reset_token == hashlib.sha256(data.token.encode()).hexdigest()
-        )
-        .first()
+    user = user_repo.get_by_password_reset_token(
+        hashlib.sha256(data.token.encode()).hexdigest()
     )
     if not user or user.password_reset_expiry < datetime.utcnow():
         raise HTTPException(status_code=400, detail="Invalid or expired token")
@@ -373,7 +379,7 @@ async def password_reset_confirm(
     user.password_reset_token = None
     user.password_reset_expiry = None
     user.refresh_token = None  # Revoke refresh tokens
-    db.commit()
+    user_repo.commit()
     password_reset_success.inc()
     return {"message": "Password reset successful"}
 
@@ -386,10 +392,12 @@ class RefreshTokenRequest(BaseModel):
 @router.post("/refresh", response_model=Token)
 @limiter.limit(RateLimits.AUTH_LOGIN)
 async def refresh_token(
-    request: Request, data: RefreshTokenRequest, db: Session = Depends(get_db)
+    request: Request,
+    data: RefreshTokenRequest,
+    user_repo: UserRepository = Depends(get_user_repository),
 ):
     hashed = hashlib.sha256(data.refresh_token.encode()).hexdigest()
-    user = db.query(User).filter(User.refresh_token == hashed).first()
+    user = user_repo.get_by_refresh_token(hashed)
     if not user or user.refresh_token_expiry < datetime.utcnow():
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
     access_token_expires = timedelta(
@@ -402,7 +410,7 @@ async def refresh_token(
     refresh_token = secrets.token_urlsafe(32)
     user.refresh_token = hashlib.sha256(refresh_token.encode()).hexdigest()
     user.refresh_token_expiry = datetime.utcnow() + timedelta(days=7)
-    db.commit()
+    user_repo.commit()
     return {
         "access_token": access_token,
         "token_type": "bearer",

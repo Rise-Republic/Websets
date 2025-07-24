@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import User, Job, Dataset
+from app.repositories import UserRepository
 from app.auth.dependencies import get_current_active_user
 from app.middleware.audit_middleware import DataAccessAudit
 
@@ -14,22 +15,27 @@ from app.middleware.audit_middleware import DataAccessAudit
 router = APIRouter(prefix="/gdpr", tags=["gdpr"])
 
 
+def get_user_repository(db: Session = Depends(get_db)) -> UserRepository:
+    """Dependency injector for ``UserRepository``."""
+    return UserRepository(db)
+
+
 @router.get("/export")
 async def export_user_data(
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    user_repo: UserRepository = Depends(get_user_repository),
 ):
     """Export user data for portability."""
 
-    user = db.query(User).filter(User.id == current_user.id).first()
+    user = user_repo.get_by_id(current_user.id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
-    jobs: List[Job] = db.query(Job).filter(Job.tenant_id == user.tenant_id).all()
+    jobs: List[Job] = user_repo.db.query(Job).filter(Job.tenant_id == user.tenant_id).all()
     datasets: List[Dataset] = (
-        db.query(Dataset).filter(Dataset.tenant_id == user.tenant_id).all()
+        user_repo.db.query(Dataset).filter(Dataset.tenant_id == user.tenant_id).all()
     )
 
     DataAccessAudit.log_data_access(
@@ -67,11 +73,11 @@ async def export_user_data(
 @router.delete("/delete", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user_data(
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    user_repo: UserRepository = Depends(get_user_repository),
 ):
     """Delete user account and all related data."""
 
-    user = db.query(User).filter(User.id == current_user.id).first()
+    user = user_repo.get_by_id(current_user.id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
@@ -81,7 +87,6 @@ async def delete_user_data(
         user_id=user.id, tenant_id=user.tenant_id, access_type="delete"
     )
 
-    db.delete(user)
-    db.commit()
+    user_repo.delete(user)
 
     return None

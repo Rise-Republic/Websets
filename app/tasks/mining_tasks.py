@@ -11,6 +11,7 @@ from app.monitoring import get_metrics_collector
 from app.database import SessionLocal
 from app.tenancy import set_current_tenant
 from app.models import Job, JobStatus, DiscoveredURL, CrawlResult, Dataset, DataRecord
+from app.repositories import DiscoveryRepository
 from app.agents import PlannerAgent, DiscoveryAgent, SchemaInferenceAgent
 from app.crawler import BrowserCrawler
 from app.tasks.progress_tracker import ProgressContext, JobProgressTracker
@@ -128,18 +129,18 @@ def execute_discovery_phase(
         discovery_agent = DiscoveryAgent()
         discovered_urls = asyncio.run(discovery_agent.execute(plan))
 
+        repo = DiscoveryRepository(db)
         # Store discovered URLs
         for url in discovered_urls:
-            discovered_url = DiscoveredURL(
+            repo.create_discovered_url(
                 job_id=job.id,
                 tenant_id=job.tenant_id,
                 url=url,
                 discovery_method="discovery",
             )
-            db.add(discovered_url)
+        repo.commit()
 
         job.total_urls = len(discovered_urls)
-        db.commit()
 
         if progress:
             asyncio.run(
