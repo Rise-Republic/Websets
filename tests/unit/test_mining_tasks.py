@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock
 import sys
 import types
 import asyncio
+import uuid
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -39,12 +40,18 @@ def sample_job(db_session):
     user = User(
         email="test@example.com",
         hashed_password=get_password_hash("password"),
+        tenant_id=uuid.uuid4(),
     )
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
 
-    job = Job(user_id=user.id, prompt="collect data", status=JobStatus.PENDING)
+    job = Job(
+        user_id=user.id,
+        tenant_id=user.tenant_id,
+        prompt="collect data",
+        status=JobStatus.PENDING,
+    )
     db_session.add(job)
     db_session.commit()
     db_session.refresh(job)
@@ -91,17 +98,19 @@ def test_execute_discovery_phase(db_session, sample_job, mocker):
     )
     assert len(db_urls) == len(mock_urls)
 
+
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_execute_crawling_phase(db_session, sample_job, mocker):
     from app.tasks.mining_tasks import execute_crawling_phase
-    from app.models import CrawlResult
-    
+
     class DummyCrawler:
         async def __aenter__(self):
             return self
+
         async def __aexit__(self, exc_type, exc, tb):
             pass
+
         async def crawl_multiple_urls(self, urls, job_id):
             return [{"url": u, "html_content": "<html>", "title": "t"} for u in urls]
 
@@ -109,12 +118,15 @@ async def test_execute_crawling_phase(db_session, sample_job, mocker):
         def __init__(self):
             self.logs = []
             self.increments = []
+
         async def log(self, message, level="info", details=None):
             self.logs.append(message)
+
         async def increment(self, details=None):
             self.increments.append(details)
 
     mocker.patch("app.tasks.mining_tasks.BrowserCrawler", DummyCrawler)
+
     class DummyCR:
         def __init__(self, **kwargs):
             self.id = kwargs.get("id")
@@ -151,12 +163,15 @@ async def test_execute_extraction_phase(db_session, sample_job, mocker):
     crawl = DummyURL()
     crawl_results = [{"url": crawl.url, "crawl_result_id": str(crawl.id)}]
     mocker.patch("app.tasks.mining_tasks.CrawlResult", DummyURL)
+
     class DummyDataset:
         def __init__(self, **kwargs):
             self.id = uuid.uuid4()
+
     class DummyRecord:
         def __init__(self, **kwargs):
             pass
+
     mocker.patch("app.tasks.mining_tasks.Dataset", DummyDataset)
     mocker.patch("app.tasks.mining_tasks.DataRecord", DummyRecord)
 
@@ -166,7 +181,9 @@ async def test_execute_extraction_phase(db_session, sample_job, mocker):
                 class F:
                     def first(self_inner):
                         return crawl
+
                 return F()
+
         return Q()
 
     mocker.patch.object(db_session, "query", side_effect=fake_query)
@@ -182,8 +199,10 @@ async def test_execute_extraction_phase(db_session, sample_job, mocker):
     class DummyProgress:
         def __init__(self):
             self.increments = []
+
         async def log(self, *a, **k):
             pass
+
         async def increment(self, details=None):
             self.increments.append(details)
 
@@ -216,36 +235,47 @@ async def test_start_and_cleanup_tasks(db_session, sample_job, mocker):
     mocker.patch("app.tasks.mining_tasks.execute_crawling_phase", return_value=[])
     mocker.patch("app.tasks.mining_tasks.execute_extraction_phase", return_value=[])
     from tests.conftest import TestingSessionLocal
+
     mocker.patch("app.tasks.mining_tasks.SessionLocal", TestingSessionLocal)
 
     class DummyTracker:
         def __init__(self, job_id):
             self.job_id = job_id
+
         async def update_status(self, *a, **k):
             sess = TestingSessionLocal()
             job = sess.query(Job).filter(Job.id == self.job_id).first()
             job.started_at = datetime.utcnow()
             sess.commit()
             sess.close()
+
         async def complete_job(self, *a, **k):
             pass
+
         async def report_error(self, *a, **k):
             pass
+
     mocker.patch("app.tasks.mining_tasks.JobProgressTracker", DummyTracker)
 
     class DummyContext:
         def __init__(self, *a, **k):
             pass
+
         def __enter__(self):
             return self
+
         def __exit__(self, exc_type, exc, tb):
             return False
+
         async def update_step(self, *a, **k):
             pass
+
         async def increment(self, *a, **k):
             pass
+
         async def log(self, *a, **k):
             pass
+
     mocker.patch("app.tasks.mining_tasks.ProgressContext", DummyContext)
 
     sample_job.started_at = datetime.utcnow()
@@ -259,12 +289,14 @@ async def test_start_and_cleanup_tasks(db_session, sample_job, mocker):
     # create old completed job
     old_job = Job(
         user_id=sample_job.user_id,
+        tenant_id=sample_job.tenant_id,
         prompt="old",
         status=JobStatus.COMPLETED,
         completed_at=datetime.utcnow() - timedelta(days=31),
     )
     recent_job = Job(
         user_id=sample_job.user_id,
+        tenant_id=sample_job.tenant_id,
         prompt="recent",
         status=JobStatus.COMPLETED,
         completed_at=datetime.utcnow() - timedelta(days=1),
@@ -277,4 +309,3 @@ async def test_start_and_cleanup_tasks(db_session, sample_job, mocker):
 
     assert db_session.get(Job, old_job.id) is None
     assert db_session.get(Job, recent_job.id) is not None
-

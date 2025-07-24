@@ -50,15 +50,19 @@ def _add_tenant_criteria(execute_state) -> None:
 @event.listens_for(Session, "before_flush", propagate=True)
 def _set_tenant_on_new(session: Session, flush_context, instances) -> None:
     tenant_id = _current_tenant.get()
-    if tenant_id is None:
-        return
     for obj in session.new:
         if hasattr(obj, "tenant_id"):
             obj_tenant = getattr(obj, "tenant_id")
-            if obj_tenant is None:
-                setattr(obj, "tenant_id", tenant_id)
-            elif obj_tenant != tenant_id:
-                raise RuntimeError("Cross-tenant insert forbidden")
+            if tenant_id is None:
+                if obj_tenant is None:
+                    raise RuntimeError("Tenant ID required")
+            else:
+                if obj_tenant is None:
+                    setattr(obj, "tenant_id", tenant_id)
+                elif obj_tenant != tenant_id:
+                    raise RuntimeError("Cross-tenant insert forbidden")
     for obj in session.dirty:
-        if hasattr(obj, "tenant_id") and getattr(obj, "tenant_id") != tenant_id:
-            raise RuntimeError("Cross-tenant update forbidden")
+        if hasattr(obj, "tenant_id"):
+            obj_tenant = getattr(obj, "tenant_id")
+            if tenant_id is not None and obj_tenant != tenant_id:
+                raise RuntimeError("Cross-tenant update forbidden")

@@ -1,4 +1,13 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Float, LargeBinary
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    DateTime,
+    Text,
+    ForeignKey,
+    Float,
+    LargeBinary,
+)
 from app.models.types import GUID as UUID, JsonEncodedDict
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -12,7 +21,7 @@ class Dataset(Base):
 
     id = Column(UUID, primary_key=True, default=uuid.uuid4)
     job_id = Column(UUID, ForeignKey("jobs.id"), nullable=False, index=True)
-    tenant_id = Column(UUID, nullable=True, index=True)
+    tenant_id = Column(UUID, nullable=False, index=True, default=uuid.uuid4)
 
     # Metadata
     name = Column(String, nullable=False)
@@ -50,7 +59,7 @@ class DataRecord(Base):
 
     id = Column(UUID, primary_key=True, default=uuid.uuid4)
     dataset_id = Column(UUID, ForeignKey("datasets.id"), nullable=False, index=True)
-    tenant_id = Column(UUID, nullable=True, index=True)
+    tenant_id = Column(UUID, nullable=False, index=True, default=uuid.uuid4)
 
     # Source information
     source_url = Column(String, nullable=False)
@@ -61,7 +70,7 @@ class DataRecord(Base):
 
     # Optional encrypted binary payload
     encrypted_blob = Column(LargeBinary, nullable=True)
-    
+
     # Vector embedding for similarity search
     embedding_id = Column(String, nullable=True)  # Reference to vector store
 

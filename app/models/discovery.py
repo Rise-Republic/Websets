@@ -12,7 +12,7 @@ class DiscoveredURL(Base):
 
     id = Column(UUID, primary_key=True, default=uuid.uuid4)
     job_id = Column(UUID, ForeignKey("jobs.id"), nullable=False, index=True)
-    tenant_id = Column(UUID, nullable=True, index=True)
+    tenant_id = Column(UUID, nullable=False, index=True, default=uuid.uuid4)
 
     # URL information
     url = Column(String, nullable=False, index=True)
@@ -53,7 +53,7 @@ class CrawlResult(Base):
     discovered_url_id = Column(
         UUID, ForeignKey("discovered_urls.id"), nullable=False, index=True
     )
-    tenant_id = Column(UUID, nullable=True, index=True)
+    tenant_id = Column(UUID, nullable=False, index=True, default=uuid.uuid4)
 
     # Crawl metadata
     status_code = Column(Integer, nullable=True)

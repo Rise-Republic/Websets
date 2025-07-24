@@ -1,5 +1,6 @@
 import importlib
 import pytest
+import uuid
 from starlette.requests import Request
 
 
@@ -11,7 +12,9 @@ async def test_password_reset_request_no_token_leaked(
     auth = importlib.import_module("app.api.v1.auth")
     mock_send = mocker.patch.object(auth, "send_email")
     user = auth.User(
-        email="user@example.com", hashed_password=auth.get_password_hash("secret")
+        email="user@example.com",
+        hashed_password=auth.get_password_hash("secret"),
+        tenant_id=uuid.uuid4(),
     )
     db_session.add(user)
     db_session.commit()

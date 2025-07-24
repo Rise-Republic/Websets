@@ -129,7 +129,7 @@ class AuditLog(Base):
     error_message = Column(Text, nullable=True)
 
     # Additional context
-    tenant_id = Column(UUID, nullable=True)
+    tenant_id = Column(UUID, nullable=False, default=uuid.uuid4)
     session_id = Column(String(255), nullable=True)
     trace_id = Column(String(255), nullable=True)  # For distributed tracing
 
@@ -157,7 +157,7 @@ class DataAccessLog(Base):
     # Data accessed
     dataset_id = Column(UUID, ForeignKey("datasets.id"), nullable=True, index=True)
     job_id = Column(UUID, ForeignKey("jobs.id"), nullable=True, index=True)
-    tenant_id = Column(UUID, nullable=True, index=True)
+    tenant_id = Column(UUID, nullable=False, index=True, default=uuid.uuid4)
 
     # Access details
     access_type = Column(
