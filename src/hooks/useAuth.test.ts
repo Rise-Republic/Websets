@@ -1,5 +1,6 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAuth, useAuthProvider } from './useAuth';
+import { useAuthStore } from '@/store/auth';
 import * as apiService from '@/services/api';
 
 // Mock the API service
@@ -24,6 +25,7 @@ describe('useAuthProvider', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockDefaultApiService.isAuthenticated.mockReturnValue(false);
+    useAuthStore.getState().reset();
   });
 
   test('initializes with correct default state', async () => {
