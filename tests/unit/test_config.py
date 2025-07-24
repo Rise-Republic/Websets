@@ -49,6 +49,7 @@ class TestConfigLoading(unittest.TestCase):
 
         os.environ['VAULT_ADDR'] = 'http://fake-vault:8200'
         os.environ['VAULT_TOKEN'] = 'fake-token'
+        os.environ['ENVIRONMENT'] = 'production'
 
         # Act
         from app.config import settings
@@ -59,7 +60,7 @@ class TestConfigLoading(unittest.TestCase):
         self.assertEqual(settings.jwt_secret_key, 'a-very-secure-jwt-secret-key-from-vault')
         mock_hvac_client.assert_called_with(url='http://fake-vault:8200', token='fake-token')
 
-    @patch.dict(os.environ, {}, clear=True)
+    @patch.dict(os.environ, {'ENVIRONMENT': 'production'}, clear=True)
     def test_missing_vault_config_exits(self):
         """Application should exit if Vault variables are not set."""
         with self.assertRaises(SystemExit):
@@ -73,6 +74,7 @@ class TestConfigLoading(unittest.TestCase):
         mock_hvac_client.side_effect = Exception("Vault connection failed")
         os.environ['VAULT_ADDR'] = 'http://fake-vault:8200'
         os.environ['VAULT_TOKEN'] = 'fake-token'
+        os.environ['ENVIRONMENT'] = 'production'
 
         # Act & Assert
         with self.assertRaises(SystemExit) as cm:
@@ -80,6 +82,25 @@ class TestConfigLoading(unittest.TestCase):
             from app.config import validate_settings
             validate_settings()
         self.assertEqual(cm.exception.code, 1)
+
+    @patch.dict(os.environ, {
+        'CI': 'true',
+        'OPENAI_API_KEY': 'env_openai',
+        'DATABASE_URL': 'env_db',
+        'JWT_SECRET_KEY': 'a-very-secure-jwt-secret-key-env',
+        'REDIS_URL': 'redis://localhost:6379',
+        'CELERY_BROKER_URL': 'redis://localhost:6379',
+        'CELERY_RESULT_BACKEND': 'redis://localhost:6379'
+    }, clear=True)
+    def test_fallback_to_env_when_vault_unavailable(self):
+        """When running in CI, missing Vault config should fallback to env vars."""
+        from app.config import validate_settings
+
+        settings = validate_settings()
+
+        self.assertEqual(settings.openai_api_key, 'env_openai')
+        self.assertEqual(settings.database_url, 'env_db')
+        self.assertEqual(settings.jwt_secret_key, 'a-very-secure-jwt-secret-key-env')
 
 if __name__ == '__main__':
     unittest.main()

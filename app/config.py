@@ -107,47 +107,53 @@ def get_secret_from_vault(client: VaultClient, path: str, key: str) -> str | Non
         raise
 
 
+def _load_env_settings() -> Settings:
+    """Load settings directly from environment variables."""
+    secret_values = {
+        'openai_api_key': os.getenv('OPENAI_API_KEY'),
+        'anthropic_api_key': os.getenv('ANTHROPIC_API_KEY'),
+        'database_url': os.getenv('DATABASE_URL'),
+        'redis_url': os.getenv('REDIS_URL'),
+        'celery_broker_url': os.getenv('CELERY_BROKER_URL'),
+        'celery_result_backend': os.getenv('CELERY_RESULT_BACKEND'),
+        'jwt_secret_key': os.getenv('JWT_SECRET_KEY'),
+        'auth0_domain': os.getenv('AUTH0_DOMAIN'),
+        'auth0_client_id': os.getenv('AUTH0_CLIENT_ID'),
+        'auth0_client_secret': os.getenv('AUTH0_CLIENT_SECRET'),
+        'auth0_audience': os.getenv('AUTH0_AUDIENCE'),
+        'auth0_issuer': os.getenv('AUTH0_ISSUER'),
+    }
+    settings = Settings(**secret_values)
+    required_vars = ['jwt_secret_key', 'database_url', 'openai_api_key']
+    missing_vars = [var for var in required_vars if not getattr(settings, var)]
+    if missing_vars:
+        print(f"[config.py] WARNING: Missing required secrets: {', '.join(missing_vars)}")
+    return settings
+
+
 def validate_settings():
     """Validate critical settings at startup and require Vault."""
     try:
         # Check if Vault integration should be disabled for local development
         disable_vault = os.getenv("DISABLE_VAULT_FOR_LOCAL_DEV", "false").lower() == "true"
+        environment = os.getenv("ENVIRONMENT", "development").lower()
+        in_ci = os.getenv("CI", "false").lower() == "true"
 
         if disable_vault:
             print("[config.py] Vault integration bypassed for local development.")
-            # Load secrets directly from environment variables
-            secret_values = {
-                'openai_api_key': os.getenv('OPENAI_API_KEY'),
-                'anthropic_api_key': os.getenv('ANTHROPIC_API_KEY'),
-                'database_url': os.getenv('DATABASE_URL'),
-                'redis_url': os.getenv('REDIS_URL'),
-                'celery_broker_url': os.getenv('CELERY_BROKER_URL'),
-                'celery_result_backend': os.getenv('CELERY_RESULT_BACKEND'),
-                'jwt_secret_key': os.getenv('JWT_SECRET_KEY'),
-                'auth0_domain': os.getenv('AUTH0_DOMAIN'),
-                'auth0_client_id': os.getenv('AUTH0_CLIENT_ID'),
-                'auth0_client_secret': os.getenv('AUTH0_CLIENT_SECRET'),
-                'auth0_audience': os.getenv('AUTH0_AUDIENCE'),
-                'auth0_issuer': os.getenv('AUTH0_ISSUER'),
-            }
-            # Only pass expected fields to Settings
-            settings = Settings(**secret_values)
-            # Check for required variables
-            required_vars = ['jwt_secret_key', 'database_url', 'openai_api_key']
-            missing_vars = [var for var in required_vars if not getattr(settings, var)]
-            if missing_vars:
-                print(f"Error: Missing required secrets: {', '.join(missing_vars)}")
-                sys.exit(1)
-            return settings
-        else:
+            return _load_env_settings()
+
+        # Attempt Vault load only in production when not in CI
+        use_vault = environment == "production" and not in_ci
+
+        if use_vault:
             # Original Vault logic
             load_dotenv(".env")
             vault_addr = os.getenv("VAULT_ADDR")
             vault_token = os.getenv("VAULT_TOKEN")
             vault_path = os.getenv("VAULT_SECRET_PATH", "secret/websets")
             if not vault_addr or not vault_token:
-                print("Error: VAULT_ADDR and VAULT_TOKEN must be set for secrets")
-                sys.exit(1)
+                raise EnvironmentError("VAULT_ADDR and VAULT_TOKEN must be set for secrets")
 
             print("[config.py] VAULT_ env vars:")
             for k, v in os.environ.items():
@@ -178,14 +184,18 @@ def validate_settings():
                     print(f"[config.py] WARNING: Secret '{k}' is missing (None)")
             # Only pass expected fields to Settings
             settings = Settings(**secret_values)
-            # Check for required variables
             required_vars = ['jwt_secret_key', 'database_url', 'openai_api_key']
             missing_vars = [var for var in required_vars if not getattr(settings, var)]
             if missing_vars:
-                print(f"Error: Missing required secrets: {', '.join(missing_vars)}")
-                sys.exit(1)
+                raise ValueError(f"Missing required secrets: {', '.join(missing_vars)}")
             return settings
+        else:
+            print("[config.py] Vault disabled (non-production or CI). Using environment variables.")
+            return _load_env_settings()
     except Exception as e:
+        if environment != "production" or in_ci or disable_vault:
+            print(f"[config.py] Vault error - falling back to env vars: {e}")
+            return _load_env_settings()
         print(f"Error validating settings: {e}")
         sys.exit(1)
 
