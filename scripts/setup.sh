@@ -17,12 +17,22 @@ if [ ! -f .env ]; then
 fi
 
 # Install Python dependencies
-echo "Installing/updating Python dependencies..."
-./.venv/bin/pip3 install -r requirements.txt
-./.venv/bin/pip3 install -r requirements-dev.txt
+echo "Installing Python dependencies..."
+
+# Ensure a clean virtual environment
+sudo rm -rf .venv
+
+if [ ! -d ".venv" ]; then
+    echo "Creating Python virtual environment..."
+    python3 -m venv .venv
+fi
+
+# Use pip from the virtual environment
+./.venv/bin/pip install -r requirements.txt
+./.venv/bin/pip install -r requirements-dev.txt
 
 # Install Node dependencies if package.json exists
-if [ -f package.json ]; then
+if [ -f frontend/package.json ]; then
     echo "Installing Node dependencies..."
     (cd frontend && bash -c "npm ci")
 fi
