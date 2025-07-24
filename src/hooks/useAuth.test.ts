@@ -1,9 +1,9 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAuth, useAuthProvider } from './useAuth';
-import * as apiService from '../services/api';
+import * as apiService from '@/services/api';
 
 // Mock the API service
-jest.mock('../services/api');
+jest.mock('@/services/api');
 const mockApiService = apiService as jest.Mocked<typeof apiService>;
 
 // Mock API service default export

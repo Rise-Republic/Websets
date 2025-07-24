@@ -26,6 +26,7 @@ dist-ssr
 .venv/
 .mypy_cache/
 .ruff_cache/
+__pycache__/
 
 # Test artifacts
 /test.db
@@ -35,3 +36,4 @@ dist-ssr
 # Local Docker secrets
 secrets/minio_root_user.txt
 secrets/minio_root_password.txt
+artifacts/

@@ -1,9 +1,9 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import DatasetList from './DatasetList';
-import * as api from '../../services/api';
+import * as api from '@/services/api';
 
-jest.mock('../../services/api');
+jest.mock('@/services/api');
 const mockApi = api as jest.Mocked<typeof api>;
 
 const datasets = [
