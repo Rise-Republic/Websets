@@ -1,4 +1,4 @@
-from .mailer import send_email
+from .mailer import send_email, send_password_reset
 from .cache import (
     get_cached_dataset_records,
     set_cached_dataset_records,
@@ -8,6 +8,7 @@ from .sanitization import sanitize_prompt
 
 __all__ = [
     "send_email",
+    "send_password_reset",
     "get_cached_dataset_records",
     "set_cached_dataset_records",
     "invalidate_dataset_records",
