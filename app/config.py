@@ -4,6 +4,7 @@ from pydantic import field_validator
 import os
 import sys
 from dotenv import load_dotenv
+from loguru import logger
 from app.secrets.vault import VaultClient
 from app.read_secret import read_secret
 
@@ -110,7 +111,7 @@ def get_secret_from_vault(client: VaultClient, path: str, key: str) -> str | Non
             raise KeyError(f"Secret '{key}' not found at {path}")
         return value
     except Exception as e:
-        print(f"[config.py] Vault error retrieving '{key}': {e}")
+        logger.error(f"[config.py] Vault error retrieving '{key}': {e}")
         raise
 
 
@@ -143,9 +144,9 @@ def _load_settings_from_env() -> Settings:
     if missing_vars:
         msg = f"Missing required secrets: {', '.join(missing_vars)}"
         if environment == "development":
-            print(f"[config.py] WARNING: {msg} (ignored in development)")
+            logger.warning(f"[config.py] WARNING: {msg} (ignored in development)")
         else:
-            print(f"Error: {msg}")
+            logger.error(f"Error: {msg}")
             sys.exit(1)
     return settings
 
@@ -161,11 +162,11 @@ def validate_settings() -> Settings:
 
         if disable_vault:
             if environment == "production":
-                print(
+                logger.error(
                     "Error: DISABLE_VAULT_FOR_LOCAL_DEV set in production environment"
                 )
                 sys.exit(1)
-            print("[config.py] Vault integration bypassed for local development.")
+            logger.info("[config.py] Vault integration bypassed for local development.")
             return _load_settings_from_env()
 
         load_dotenv(".env")
@@ -177,18 +178,18 @@ def validate_settings() -> Settings:
 
         if not vault_configured:
             if environment != "production" or ci_mode:
-                print(
+                logger.warning(
                     "[config.py] Vault not configured; falling back to environment variables."
                 )
                 return _load_settings_from_env()
-            print("Error: VAULT_ADDR and VAULT_TOKEN must be set for secrets")
+            logger.error("Error: VAULT_ADDR and VAULT_TOKEN must be set for secrets")
             sys.exit(1)
 
         try:
-            print("[config.py] VAULT_ env vars:")
+            logger.debug("[config.py] VAULT_ env vars:")
             for k, v in os.environ.items():
                 if k.startswith("VAULT_"):
-                    print(f"  {k}={v}")
+                    logger.debug(f"  {k}={v}")
 
             client = VaultClient()
             client.verify_secret_path(vault_path)
@@ -224,27 +225,27 @@ def validate_settings() -> Settings:
             }
             # Remove any keys with missing values so defaults apply
             secret_values = {k: v for k, v in secret_values.items() if v is not None}
-            print("[config.py] Required secrets loaded:")
+            logger.info("[config.py] Required secrets loaded:")
             for k, v in secret_values.items():
-                print(f"  {k}={'***' if v else None}")
+                logger.info(f"  {k}={'***' if v else None}")
                 if v is None:
-                    print(f"[config.py] WARNING: Secret '{k}' is missing (None)")
+                    logger.warning(f"[config.py] WARNING: Secret '{k}' is missing (None)")
             settings = Settings(**secret_values)
             required_vars = ["jwt_secret_key", "database_url", "openai_api_key"]
             missing_vars = [var for var in required_vars if not getattr(settings, var)]
             if missing_vars:
-                print(f"Error: Missing required secrets: {', '.join(missing_vars)}")
+                logger.error(f"Error: Missing required secrets: {', '.join(missing_vars)}")
                 sys.exit(1)
             return settings
         except Exception as vault_exc:
             if environment != "production" or ci_mode:
-                print(
+                logger.warning(
                     f"[config.py] Vault error: {vault_exc}. Falling back to environment variables."
                 )
                 return _load_settings_from_env()
             raise
     except Exception as e:
-        print(f"Error validating settings: {e}")
+        logger.error(f"Error validating settings: {e}")
         sys.exit(1)
 
 
