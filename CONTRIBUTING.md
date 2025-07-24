@@ -2,6 +2,14 @@
 
 This project welcomes community contributions. Please follow the rules below to help keep the repository consistent and easy to maintain.
 
+## Contribution Workflow
+
+1. Fork the repository and create your feature branch from `develop`.
+2. Name branches using `feature/<short-description>` or `bugfix/<issue-number>`.
+3. Commit logically separated changes with clear messages.
+4. Open a pull request against `develop` and ensure the CI checks pass.
+5. A maintainer will review and merge after approval.
+
 ## Branching Strategy
 
 - **main** – stable production branch.
@@ -25,5 +33,23 @@ All changes should go through a pull request with a passing CI run.
 - Run `pre-commit run --all-files`, `make fmt`, `make lint`, and `make test` before opening a pull request.
 - Run `mypy --strict` to check types with the configuration in `mypy.ini`.
 - Fix any linter errors and ensure all tests pass locally.
+
+### Local CI
+
+Run the same checks as the GitHub Actions workflow:
+
+```bash
+pre-commit run --all-files
+bash scripts/ci-run.sh
+```
+
+## Code Review Checklist
+
+Reviewers verify:
+
+- [ ] Code follows style guidelines and includes type hints
+- [ ] Security-sensitive code has been audited
+- [ ] Performance impact is considered
+- [ ] Tests cover new functionality and pass locally
 
 Following these guidelines keeps the history readable and the CI pipeline green. Thank you for contributing!
