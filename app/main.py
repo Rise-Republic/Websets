@@ -21,7 +21,7 @@ from app.middleware import (
 )
 
 # Configure logging with redaction
-configure_logging(settings.log_level)
+configure_logging(settings.log_level, json=True)
 
 # Create FastAPI app
 app = FastAPI(

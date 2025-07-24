@@ -1,4 +1,5 @@
 from loguru import logger
+import json
 
 from app.logging_utils import configure_logging, redact_message
 
@@ -24,3 +25,18 @@ def test_logging_filter(caplog):
     assert "abc123" not in caplog.text
     assert "email=<redacted>" in caplog.text
     assert "token=<redacted>" in caplog.text
+
+
+def test_json_logging_format():
+    """Logs should be serialized to JSON when enabled."""
+    logs = []
+    configure_logging("INFO", json=True)
+    logger.add(lambda m: logs.append(m), level="INFO", serialize=True)
+    logger.info("user email=test@example.com token=abc123")
+
+    assert logs, "no log captured"
+    log_entry = json.loads(logs[0])
+    text = log_entry.get("text", "")
+    assert "test@example.com" not in text
+    assert "abc123" not in text
+    assert "<redacted>" in text
