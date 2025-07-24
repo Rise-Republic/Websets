@@ -6,24 +6,12 @@ This guide explains how to bring up all services locally using Docker Compose an
 
 - Docker and Docker Compose
 - Python 3.10+
-- Vault with the secrets from `vault_secrets_template.json` loaded (see [README](../README.md) for details)
+- No additional setup is required; `make dev` seeds Vault automatically.
 
-## Generate Certificates
-
-For local development you can use self‑signed certificates for mutual TLS between the application and MinIO. Run the helper script from the project root:
-
-```bash
-scripts/generate_mtls_certs.sh
-```
-
-This creates a `certs/` directory containing `ca.crt` plus client and server
-certificates for each service (`app`, `minio`, `vault`, `redis`, `qdrant`, and
-`weaviate`). These files are mounted into the containers by
-`docker-compose.yml`.
 
 ## Start the Stack
 
-With the certificates in place, start all services:
+Start all services with a single command:
 
 ```bash
 make dev

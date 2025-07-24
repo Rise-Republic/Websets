@@ -15,6 +15,9 @@ fi
 echo "Starting services with Docker Compose..."
 docker compose up -d --build
 
+# Seed Vault with template secrets
+scripts/seed_vault.sh
+
 # Wait for database to be ready
 until docker compose exec -T db pg_isready -U postgres >/dev/null 2>&1; do
   echo "Waiting for database..."

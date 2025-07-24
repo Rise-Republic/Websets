@@ -127,7 +127,7 @@ services:
       - POSTGRES_INITDB_ARGS=
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - /home/bmsul/Websets/secrets/postgres_password:/run/secrets/postgres_password:ro
+      - ./secrets/postgres_password:/run/secrets/postgres_password:ro
     ports:
       - "5432:5432"
     restart: unless-stopped
@@ -242,7 +242,7 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
-      - /home/bmsul/Websets/secrets/grafana_admin_password:/run/secrets/grafana_admin_password:ro
+      - ./secrets/grafana_admin_password:/run/secrets/grafana_admin_password:ro
     depends_on:
       prometheus:
         condition: service_healthy
@@ -326,10 +326,10 @@ services:
     volumes:
       - ./data/minio:/data
       - ./certs:/certs:ro
-      - /home/bmsul/Websets/secrets/minio_root_user:/run/secrets/minio_root_user:ro
-      - /home/bmsul/Websets/secrets/minio_root_password:/run/secrets/minio_root_password:ro
-      - /home/bmsul/Websets/secrets/minio_kms_key:/run/secrets/minio_kms_key:ro
-      - /home/bmsul/Websets/secrets/minio_sse_master_key:/run/secrets/minio_sse_master_key:ro
+      - ./secrets/minio_root_user:/run/secrets/minio_root_user:ro
+      - ./secrets/minio_root_password:/run/secrets/minio_root_password:ro
+      - ./secrets/minio_kms_key:/run/secrets/minio_kms_key:ro
+      - ./secrets/minio_sse_master_key:/run/secrets/minio_sse_master_key:ro
     healthcheck:
       test: ["CMD", "curl", "--cacert", "/certs/ca.crt", "-f", "https://localhost:9000/minio/health/live"]
       interval: 30s
