@@ -1,37 +1,28 @@
 import os
 import sys
-from typing import Optional, Dict, Any
+from typing import Optional
 
 from dotenv import load_dotenv
 from loguru import logger
-from pydantic import field_validator
-from pydantic_settings import BaseSettings
+from pydantic import ValidationError, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Assuming these are your custom vault client and secret reader
-# from app.secrets.vault import VaultClient
-# from app.read_secret import read_secret
-
-# --- Mock objects for demonstration since the original files are not available ---
-class VaultClient:
-    def get_secret(self, path: str, key: str) -> str | None:
-        logger.info(f"Mock Vault: Getting '{key}' from '{path}'")
-        # In a real scenario, this would interact with Vault.
-        # We simulate this by checking environment variables.
-        return os.getenv(key)
-
-    def verify_secret_path(self, path: str):
-        logger.info(f"Mock Vault: Verifying path '{path}'")
-        # In a real scenario, this would check if the path exists.
-        return True
-
-def read_secret(key: str) -> str | None:
-    """A mock for your custom secret reading function."""
-    return os.getenv(key)
-# --- End of Mock objects ---
+from app.secrets.vault import VaultClient
+from app.read_secret import read_secret
 
 
 # Define required variables for easy checking
-REQUIRED_VARS = ("jwt_secret_key", "database_url", "openai_api_key")
+# Mapping of Settings fields to environment variable or Vault keys
+SECRET_KEY_MAP = {
+    "openai_api_key": "OPENAI_API_KEY",
+    "anthropic_api_key": "ANTHROPIC_API_KEY",
+    "database_url": "DATABASE_URL",
+    "redis_url": "REDIS_URL",
+    "celery_broker_url": "CELERY_BROKER_URL",
+    "celery_result_backend": "CELERY_RESULT_BACKEND",
+    "jwt_secret_key": "JWT_SECRET_KEY",
+    "auth0_client_secret": "AUTH0_CLIENT_SECRET",
+}
 
 # --- Structured Settings using Nested Models (Recommendation #4) ---
 
@@ -91,8 +82,8 @@ class Settings(BaseSettings):
     celery_result_backend: str = "redis://localhost:6379/0"
     
     # Nested Settings
-    auth: AuthSettings
-    vector_store: VectorStoreSettings
+    auth: Optional[AuthSettings] = None
+    vector_store: Optional[VectorStoreSettings] = None
     
     # CORS
     allowed_origins: list[str] = [
@@ -100,173 +91,85 @@ class Settings(BaseSettings):
         "http://localhost:5173",
     ]
 
-    class Config:
-        # Pydantic-settings can automatically look for env vars with this prefix.
-        # e.g., APP_DATABASE_URL will map to `database_url`.
-        # We will load manually here to accommodate the custom `read_secret` and Vault logic.
-        extra = "ignore"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    @property
+    def jwt_secret_key(self) -> Optional[str]:
+        if self.auth and self.auth.jwt_secret_key:
+            return self.auth.jwt_secret_key
+        return os.getenv("JWT_SECRET_KEY")
 
 
-# --- Helper Functions (Refactored Logic) ---
-
-def _create_and_validate_settings(config_values: Dict[str, Any]) -> Settings:
-    """
-    Creates a Settings instance from a dictionary and validates required variables.
-    (Recommendation #2: DRY Principle)
-    """
-    # Separate nested settings from top-level ones
-    auth_keys = AuthSettings.model_fields.keys()
-    vector_store_keys = VectorStoreSettings.model_fields.keys()
-
-    auth_values = {k: config_values.pop(k) for k in auth_keys if k in config_values}
-    vector_store_values = {
-        k: config_values.pop(k) for k in vector_store_keys if k in config_values
-    }
-    
-    # Pydantic can now create the nested models automatically
-    if auth_values:
-        config_values["auth"] = auth_values
-    if vector_store_values:
-        config_values["vector_store"] = vector_store_values
-
-    # Create the final settings object
-    settings = Settings(**config_values)
-
-    # Check for missing required variables
-    missing_vars = []
-    if not settings.openai_api_key:
-        missing_vars.append("openai_api_key")
-    if not settings.database_url:
-        missing_vars.append("database_url")
-    if not settings.auth or not settings.auth.jwt_secret_key:
-        missing_vars.append("jwt_secret_key")
-
-    if missing_vars:
-        msg = f"Missing required configuration: {', '.join(missing_vars)}"
-        if settings.environment == "development":
-            logger.warning(f"{msg} (ignored in development mode)")
-        else:
-            logger.error(msg)
-            sys.exit(1)
-            
-    return settings
+# --- Settings loading helpers ---
 
 
-def _load_settings_from_vault() -> Settings:
-    """Load settings from HashiCorp Vault."""
-    logger.info("Attempting to load settings from Vault...")
+def _load_vault_values() -> dict[str, str]:
+    """Fetch secrets from HashiCorp Vault using ``SECRET_KEY_MAP``."""
     vault_addr = os.getenv("VAULT_ADDR")
     vault_token = os.getenv("VAULT_TOKEN")
-    vault_path = os.getenv("VAULT_SECRET_PATH", "secret/websets")
-
     if not (vault_addr and vault_token):
-        raise ConnectionError("VAULT_ADDR and VAULT_TOKEN must be set to use Vault.")
+        raise ConnectionError("VAULT_ADDR and VAULT_TOKEN must be set to use Vault")
 
+    path = os.getenv("VAULT_SECRET_PATH", "secret/websets")
     client = VaultClient()
-    client.verify_secret_path(vault_path) # Throws an error if path is invalid
+    client.verify_secret_path(path)
 
-    # Define which keys to fetch from Vault
-    # Using a mapping to handle potential differences in key names
-    VAULT_KEY_MAP = {
-        "openai_api_key": "OPENAI_API_KEY",
-        "anthropic_api_key": "ANTHROPIC_API_KEY",
-        "database_url": "DATABASE_URL",
-        "redis_url": "REDIS_URL",
-        "celery_broker_url": "CELERY_BROKER_URL",
-        "celery_result_backend": "CELERY_RESULT_BACKEND",
-        "jwt_secret_key": "JWT_SECRET_KEY",
-        "auth0_client_secret": "AUTH0_CLIENT_SECRET",
-    }
-    
-    config_values = {}
-    for setting_key, vault_key in VAULT_KEY_MAP.items():
-        value = client.get_secret(vault_path, vault_key)
+    values: dict[str, str] = {}
+    for field, key in SECRET_KEY_MAP.items():
+        value = client.get_secret(path, key)
         if value is not None:
-            config_values[setting_key] = value
-
-    # Add values that are typically just env vars
-    config_values.update({
-        "environment": os.getenv("ENVIRONMENT", "development"),
-        "auth0_domain": os.getenv("AUTH0_DOMAIN"),
-        "auth0_client_id": os.getenv("AUTH0_CLIENT_ID"),
-        "auth0_audience": os.getenv("AUTH0_AUDIENCE"),
-        "auth0_issuer": os.getenv("AUTH0_ISSUER"),
-    })
-
-    logger.info("Successfully loaded configuration from Vault.")
-    return _create_and_validate_settings(config_values)
+            os.environ[key] = value
+            values[field] = value
+    return values
 
 
-def _load_settings_from_env() -> Settings:
-    """
-    Load settings from environment variables and .env file.
-    (Recommendation #3: Simplified loading)
-    """
-    logger.info("Loading settings from environment variables and/or .env file.")
-    load_dotenv(".env")
-
-    # The custom `read_secret` function is used for sensitive values,
-    # falling back to standard `os.getenv` for others.
-    config_values = {
-        # API Keys & DB
-        "openai_api_key": read_secret("OPENAI_API_KEY"),
-        "anthropic_api_key": read_secret("ANTHROPIC_API_KEY"),
-        "database_url": read_secret("DATABASE_URL"),
-        # Auth
-        "jwt_secret_key": read_secret("JWT_SECRET_KEY"),
-        "auth0_client_secret": read_secret("AUTH0_CLIENT_SECRET"),
-        # Other env vars
-        "environment": os.getenv("ENVIRONMENT", "development"),
-        "redis_url": os.getenv("REDIS_URL"),
-        "celery_broker_url": os.getenv("CELERY_BROKER_URL"),
-        "celery_result_backend": os.getenv("CELERY_RESULT_BACKEND"),
-        "auth0_domain": os.getenv("AUTH0_DOMAIN"),
-        "auth0_client_id": os.getenv("AUTH0_CLIENT_ID"),
-        "auth0_audience": os.getenv("AUTH0_AUDIENCE"),
-        "auth0_issuer": os.getenv("AUTH0_ISSUER"),
-    }
-    
-    # Filter out None values so Pydantic can apply its defaults
-    filtered_config = {k: v for k, v in config_values.items() if v is not None}
-    
-    return _create_and_validate_settings(filtered_config)
+def _load_file_secrets() -> None:
+    """Populate ``os.environ`` from files under /run/secrets if present."""
+    for key in SECRET_KEY_MAP.values():
+        value = read_secret(key)
+        if value is not None:
+            os.environ.setdefault(key, value)
 
 
 def get_settings() -> Settings:
-    """
-    Main function to get settings.
-    It determines whether to use Vault or fallback to environment variables.
-    (Recommendation #1: Simplified Control Flow)
-    """
-    # Check for explicit bypass first
-    if os.getenv("DISABLE_VAULT", "false").lower() == "true":
-        logger.warning("Vault is explicitly disabled via DISABLE_VAULT. Falling back to environment.")
-        return _load_settings_from_env()
+    """Return application settings with optional Vault integration."""
+    load_dotenv(".env")
 
-    # Check if Vault is configured
-    vault_is_configured = "VAULT_ADDR" in os.environ and "VAULT_TOKEN" in os.environ
-    environment = os.getenv("ENVIRONMENT", "development").lower()
+    disable_vault = os.getenv("DISABLE_VAULT", "false").lower() == "true"
+    env = os.getenv("ENVIRONMENT", "development").lower()
+    ci_mode = os.getenv("CI", "false").lower() == "true"
 
-    if vault_is_configured:
+    use_vault = not disable_vault and os.getenv("VAULT_ADDR") and os.getenv("VAULT_TOKEN")
+
+    values: dict[str, str] = {}
+    if use_vault:
         try:
-            return _load_settings_from_vault()
-        except Exception as e:
-            logger.error(f"Failed to load settings from Vault: {e}")
-            if environment != "production":
-                logger.warning("Falling back to environment variables due to Vault error.")
-                return _load_settings_from_env()
+            values.update(_load_vault_values())
+        except Exception as exc:  # pragma: no cover - network failure
+            if env != "production":
+                logger.warning("Vault error %s, falling back to environment", exc)
             else:
-                logger.critical("Could not load settings from Vault in production. Exiting.")
-                sys.exit(1)
-    
-    # If Vault is not configured
-    logger.info("Vault is not configured (VAULT_ADDR or VAULT_TOKEN not set).")
-    if environment != "production":
-        logger.warning("Proceeding with environment variables for configuration.")
-        return _load_settings_from_env()
+                logger.critical("Failed to load settings from Vault: %s", exc)
+                raise SystemExit(1) from exc
     else:
-        logger.error("Vault is not configured in a production environment. Exiting.")
-        sys.exit(1)
+        if env == "production" and not ci_mode:
+            logger.critical("Vault is required in production")
+            raise SystemExit(1)
+        _load_file_secrets()
+
+    try:
+        return Settings(**values)
+    except ValidationError as exc:
+        logger.error("Invalid configuration: %s", exc)
+        raise SystemExit(1) from exc
+
+
+# Backwards compatibility for older code/tests
+validate_settings = get_settings
 
 # --- Main entry point ---
 settings = get_settings()
