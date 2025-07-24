@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from app.agents.base import BaseAgent
 from app.agents import PlannerAgent, DiscoveryAgent
+from app.utils import sanitize_prompt
 
 
 class DummyAgent(BaseAgent):
@@ -11,20 +12,18 @@ class DummyAgent(BaseAgent):
 
 
 def test_escape_and_validate():
-    agent = DummyAgent()
     malicious = "Hello {world}`"
-    escaped = agent._sanitize_prompt(malicious)
+    escaped = sanitize_prompt(malicious)
     assert "\\{" in escaped and "\\}" in escaped and "\\`" in escaped
 
     with pytest.raises(ValueError):
-        agent._sanitize_prompt("bad\x01input")
+        sanitize_prompt("bad\x01input")
 
 
 def test_validate_prompt_too_long():
-    agent = DummyAgent()
     long_prompt = "a" * 4001
     with pytest.raises(ValueError):
-        agent._validate_prompt(long_prompt)
+        sanitize_prompt(long_prompt)
 
 
 @patch("app.agents.planner.PlannerAgent._parse_json_response")

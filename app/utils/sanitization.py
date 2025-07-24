@@ -2,6 +2,8 @@ import re
 
 _CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
 
+__all__ = ["sanitize_prompt"]
+
 def sanitize_prompt(prompt: str) -> str:
     """Validate and escape user-provided prompt or text."""
     if len(prompt) > 4000:
