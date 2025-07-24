@@ -1,3 +1,4 @@
 # Code owners for specific directories
-/app @backend-team
-/src @frontend-team
+/app/ @backend-team
+/src/ @frontend-team
+* @maintainers

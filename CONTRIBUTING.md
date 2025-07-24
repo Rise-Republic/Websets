@@ -6,7 +6,7 @@ This project welcomes community contributions. Please follow the rules below to 
 
 1. Fork the repository and create your feature branch from `develop`.
 2. Name branches using `feature/<short-description>` or `bugfix/<issue-number>`.
-3. Commit logically separated changes with clear messages.
+3. Commit logically separated changes following **Conventional Commits**.
 4. Open a pull request against `develop` and ensure the CI checks pass.
 5. A maintainer will review and merge after approval.
 
@@ -26,6 +26,15 @@ All changes should go through a pull request with a passing CI run.
 - Keep the summary under **50 characters**.
 - Include a body if the change is non‑trivial. Wrap lines at 72 characters.
 - Reference related issues using `#123` where appropriate.
+
+### Workflow Overview
+
+Automated checks run via GitHub Actions:
+
+- **Lint & Format** – runs flake8, black, isort, ESLint and Prettier on every push.
+- **Test Suite** – executes `pytest` with coverage and `npm run test:coverage` on pull requests and `main` pushes.
+- **Security Scans** – Bandit, Safety, CodeQL and Trivy on merges to `main`.
+- **Release** – Docker images are built and published on tags.
 
 ## Testing Rules
 

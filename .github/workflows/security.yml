@@ -67,7 +67,7 @@ jobs:
         run: npm audit --audit-level=high
 
 
-  validate-vault-secrets:
+   validate-vault-secrets:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -10,6 +10,9 @@ from app.tenancy import set_current_tenant
 def test_job_list_scoped_by_tenant(db_session):
     with mock.patch(
         "app.middleware.rate_limiting.user_limiter.limit", lambda *a, **k: (lambda f: f)
+    ), mock.patch(
+        "app.middleware.rate_limiting.tenant_limiter.limit",
+        lambda *a, **k: (lambda f: f),
     ):
         from app.models import User, Job
         from app.auth.jwt_handler import get_password_hash

@@ -42,6 +42,9 @@ jobs:
           pip install -r requirements.txt -r requirements-dev.txt
           npm ci
 
+      - name: Validate Prometheus rules
+        run: |
+          docker run --rm -v ${{ github.workspace }}/monitoring/prometheus/rules:/rules prom/prometheus promtool check rules /rules
+
       - name: Run CI pipeline
         run: bash scripts/ci-run.sh
-

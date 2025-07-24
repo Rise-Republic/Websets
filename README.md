@@ -316,10 +316,11 @@ new fixture:
 
 ### Linting
 This project uses **pre-commit** with Ruff for formatting and linting.
-Install the hooks and run them on all files before committing:
+Install the hooks with `pre-commit install` and run them on all files before committing:
 
 ```bash
 pip install pre-commit
+pre-commit install
 pre-commit run --all-files
 ```
 
@@ -484,6 +485,12 @@ Automated builds, tests, and deployments run via **GitHub Actions**.
 - Images are scanned with **Trivy** for critical vulnerabilities.
 - If no issues are found, the workflow deploys the updated containers over SSH using `docker-compose`.
 
+Deployments target three environments managed in GitHub:
+
+- **development** – automatic on push for rapid iteration.
+- **staging** – requires approval by code owners.
+- **production** – requires manual promotion from staging.
+
 For branch cleanup and release tagging, see [RELEASE_PROCESS.md](RELEASE_PROCESS.md).
 
 ### Local CI Run
@@ -543,6 +550,7 @@ traces together.
 - Always use HTTPS in production
 - Rotate JWT secret keys regularly
 - Implement rate limiting
+- Enforce per-tenant quotas
 - Validate all user inputs
 - Use environment variables for secrets
 - Regular security updates managed automatically via Dependabot
@@ -647,7 +655,9 @@ For support and questions:
 
 Docker deployments can use [Docker secrets](secrets/README.md) to inject
 credentials without storing them in the compose file. Place secret files in
-`./secrets` and reference them in `docker-compose.yml`.
+`./secrets` and reference them in `docker-compose.yml`. The application reads
+values from `/run/secrets/<NAME>` automatically via the `read_secret()` helper
+before falling back to environment variables.
 
 Example:
 ```python

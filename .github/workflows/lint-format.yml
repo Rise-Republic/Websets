@@ -1,0 +1,30 @@
+name: Lint & Format
+
+on:
+  push:
+    branches: ['**']
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install deps
+        run: |
+          pip install flake8 black isort
+          npm install -g eslint prettier
+      - name: Python lint
+        run: |
+          flake8 app
+          black --check app
+          isort --check-only app
+      - name: JS lint
+        run: |
+          eslint src --ext .ts,.tsx,.js
+          prettier --check "src/**/*.{ts,tsx,js,jsx}"

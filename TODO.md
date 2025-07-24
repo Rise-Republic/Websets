@@ -11,9 +11,9 @@
 - [ ] Add rate limiting and DDoS protection
 
 ## Phase 2: Compliance (Week 3-4)
-- [ ] Implement GDPR compliance features (data export, deletion, consent)
-- [ ] Add data retention policies
-- [ ] Add user consent management
+- [x] Implement GDPR compliance features (data export, deletion, consent)
+- [x] Add data retention policies
+- [x] Add user consent management
 - [ ] Add privacy controls (user data visibility, audit)
 - [ ] Add region tagging and residency enforcement
 
@@ -36,9 +36,9 @@
 - [ ] Use Terraform or similar for all infra
 
 ## Multi-tenancy & Data Isolation
-- [ ] Add tenant_id to all data models
-- [ ] Enforce tenant scoping in all queries
-- [ ] Add tenant resource limits
+- [x] Add tenant_id to all data models
+- [x] Enforce tenant scoping in all queries
+- [x] Add tenant resource limits
 
 ## Testing Coverage
 - [ ] Add E2E tests (Cypress, Playwright)

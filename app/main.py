@@ -5,11 +5,20 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 from slowapi.errors import RateLimitExceeded
 
+from app.monitoring.metrics import MetricsMiddleware, get_metrics_collector
+
 from app.config import settings
 from app.telemetry import configure_tracing
 from app.logging_utils import configure_logging
 from app.database import create_tables
-from app.api import auth_router, jobs_router, datasets_router, health_router, gdpr_router, users_router
+from app.api import (
+    auth_router,
+    jobs_router,
+    datasets_router,
+    health_router,
+    gdpr_router,
+    users_router,
+)
 from app.api.v1 import v1_router
 from app.api.versioning import versioning_router
 from app.middleware import (
@@ -56,6 +65,10 @@ app.add_middleware(SecurityMiddleware)
 # Security middleware
 app.add_middleware(RBACMiddleware)
 app.add_middleware(AuditMiddleware)
+
+# Metrics middleware must be added before routers so all routes are instrumented
+metrics = get_metrics_collector()
+app.add_middleware(MetricsMiddleware, metrics_collector=metrics)
 
 # Include routers
 # Legacy routes (backward compatibility)
