@@ -26,14 +26,17 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
+
+# Copy CA bundle before switching to USER appuser
+COPY ./certs/ /certs
+RUN chown -R appuser:appuser /certs
 RUN chown -R appuser:appuser /app
 
 # Create data directory
 RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
 
 # Expose port
-
-EXPOSE 8000
+EXPOSE 8001
 
 USER appuser
 

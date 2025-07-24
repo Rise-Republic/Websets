@@ -88,6 +88,8 @@ class Settings(BaseSettings):
     allowed_origins: list[str] = [
         "http://localhost:3000",
         "http://localhost:5173",
+        "http://localhost:8001",  # App running on port 8001
+        "http://localhost:8000",  # Fallback for port 8000
     ]
 
     # Telemetry

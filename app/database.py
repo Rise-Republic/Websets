@@ -7,7 +7,9 @@ from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from app.config import settings
 
-engine = create_engine(settings.database_url, pool_pre_ping=True)
+# Convert async database URL to sync for SQLAlchemy operations
+sync_database_url = settings.database_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+engine = create_engine(sync_database_url, pool_pre_ping=True)
 SessionLocal = sessionmaker(
     autocommit=False, autoflush=False, bind=engine, class_=Session
 )

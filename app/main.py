@@ -91,9 +91,9 @@ async def startup_event():
     """Application startup event."""
     logger.info("Starting WebSet Miner application")
 
-    # Create database tables
-    create_tables()
-    logger.info("Database tables created/verified")
+    # Skip database table creation during startup to avoid SQLAlchemy/asyncpg conflicts
+    # Tables should be created via Alembic migrations instead
+    logger.info("Database tables managed via Alembic migrations")
 
     # Additional startup tasks can be added here
     logger.info("WebSet Miner startup completed")
