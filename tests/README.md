@@ -27,3 +27,18 @@ pytest -m slow
 
 Coverage reports are written to `htmlcov/` when tests are run with `--cov-report=html` (enabled by default via `pytest.ini`). Open `htmlcov/index.html` after a run to view results.
 
+### Quick Start
+
+Install the development requirements and run a minimal test suite:
+
+```bash
+pip install -r requirements-dev.txt
+pytest --maxfail=1 --disable-warnings -q
+```
+
+Generate a coverage summary:
+
+```bash
+pytest --cov=app --cov-report=term-missing
+```
+
