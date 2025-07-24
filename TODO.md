@@ -36,9 +36,9 @@
 - [ ] Use Terraform or similar for all infra
 
 ## Multi-tenancy & Data Isolation
-- [ ] Add tenant_id to all data models
-- [ ] Enforce tenant scoping in all queries
-- [ ] Add tenant resource limits
+- [x] Add tenant_id to all data models
+- [x] Enforce tenant scoping in all queries
+- [x] Add tenant resource limits
 
 ## Testing Coverage
 - [ ] Add E2E tests (Cypress, Playwright)
