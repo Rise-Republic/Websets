@@ -1,17 +1,19 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PasswordResetConfirmForm from './PasswordResetConfirmForm';
-import * as useAuthHook from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 
-jest.mock('@/hooks/useAuth');
-const mockUseAuth = useAuthHook as jest.Mocked<typeof useAuthHook>;
+jest.mock('@/hooks/useAuth', () => ({
+  useAuth: jest.fn(),
+}));
+const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 
 describe('PasswordResetConfirmForm', () => {
   const mockConfirm = jest.fn();
 
   beforeEach(() => {
-    mockUseAuth.useAuth.mockReturnValue({
+    mockUseAuth.mockReturnValue({
       confirmPasswordReset: mockConfirm,
     } as any);
   });
@@ -27,7 +29,11 @@ describe('PasswordResetConfirmForm', () => {
     await user.type(screen.getByLabelText(/token/i), 'tok');
     await user.type(screen.getByLabelText(/new password/i), 'password');
     await user.type(screen.getByLabelText(/confirm password/i), 'password');
-    await user.click(screen.getByRole('button', { name: /reset password/i }));
+    await act(async () => {
+      await user.click(
+        screen.getByRole('button', { name: /reset password/i })
+      );
+    });
 
     expect(mockConfirm).toHaveBeenCalledWith('tok', 'password');
   });

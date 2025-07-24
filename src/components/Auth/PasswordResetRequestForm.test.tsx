@@ -1,17 +1,19 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PasswordResetRequestForm from './PasswordResetRequestForm';
-import * as useAuthHook from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 
-jest.mock('@/hooks/useAuth');
-const mockUseAuth = useAuthHook as jest.Mocked<typeof useAuthHook>;
+jest.mock('@/hooks/useAuth', () => ({
+  useAuth: jest.fn(),
+}));
+const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 
 describe('PasswordResetRequestForm', () => {
   const mockRequest = jest.fn();
 
   beforeEach(() => {
-    mockUseAuth.useAuth.mockReturnValue({
+    mockUseAuth.mockReturnValue({
       requestPasswordReset: mockRequest,
     } as any);
   });
@@ -25,7 +27,11 @@ describe('PasswordResetRequestForm', () => {
     render(<PasswordResetRequestForm />);
 
     await user.type(screen.getByLabelText(/email/i), 'test@example.com');
-    await user.click(screen.getByRole('button', { name: /send reset link/i }));
+    await act(async () => {
+      await user.click(
+        screen.getByRole('button', { name: /send reset link/i })
+      );
+    });
 
     expect(mockRequest).toHaveBeenCalledWith('test@example.com');
   });
