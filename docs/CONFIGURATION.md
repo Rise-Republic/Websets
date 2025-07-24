@@ -7,6 +7,10 @@ This document lists environment variables and configuration files used by the pr
 3. Secrets loaded from Vault.
 
 All secrets are managed through Vault and loaded at runtime unless `DISABLE_VAULT_FOR_LOCAL_DEV=true` is set.
+When running in Docker, secret files mounted under `/run/secrets/<NAME>` are
+also read automatically before falling back to environment variables. This
+allows sensitive values to be injected via Docker secrets without appearing in
+the compose file.
 
 ## Environment Variables
 

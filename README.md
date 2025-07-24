@@ -647,7 +647,9 @@ For support and questions:
 
 Docker deployments can use [Docker secrets](secrets/README.md) to inject
 credentials without storing them in the compose file. Place secret files in
-`./secrets` and reference them in `docker-compose.yml`.
+`./secrets` and reference them in `docker-compose.yml`. The application reads
+values from `/run/secrets/<NAME>` automatically via the `read_secret()` helper
+before falling back to environment variables.
 
 Example:
 ```python
