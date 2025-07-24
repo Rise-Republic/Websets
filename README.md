@@ -455,6 +455,9 @@ The workflow in `.github/workflows/ci.yml` performs the same steps in CI. Logs f
 
 ## Monitoring
 
+Detailed monitoring steps and rollback procedures are documented in
+[docs/monitoring_and_rollback.md](docs/monitoring_and_rollback.md).
+
 ### Health Checks
 - `/health/` - Basic health check
 - `/health/detailed` - Component status
