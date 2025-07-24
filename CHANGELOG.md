@@ -9,6 +9,15 @@ Breaking changes must be called out under a `Removed` or `Changed` section with 
 ## [Unreleased]
 - Work in progress.
 
+### Added
+- Python-based `generate_mtls_certs.py` with shell wrapper.
+- `VaultClient.fetch_all` helper and accompanying tests.
+- Unit tests for certificate generation script.
+
+### Changed
+- `dev_stack.sh` now calls the Python certificate generator.
+- Documentation updated to reference the new script.
+
 ### Template
 Use the sections below when preparing a release.
 

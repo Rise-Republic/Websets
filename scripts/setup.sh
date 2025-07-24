@@ -2,6 +2,7 @@
 set -e
 
 # WebSet Miner setup script
+# Run as a regular user; sudo is not required.
 
 echo "Setting up WebSet Miner..."
 
@@ -19,11 +20,14 @@ fi
 # Install Python dependencies
 echo "Installing Python dependencies..."
 
-# Create Python virtual environment if missing
-if [ ! -d ".venv" ]; then
-    echo "Creating Python virtual environment..."
-    python3 -m venv .venv
+# Ensure a clean virtual environment without sudo
+if [ -d ".venv" ]; then
+    echo "Removing existing .venv directory..."
+    rm -rf .venv
 fi
+
+echo "Creating Python virtual environment..."
+python3 -m venv .venv
 
 # Use pip from the virtual environment
 ./.venv/bin/pip install -r requirements.txt

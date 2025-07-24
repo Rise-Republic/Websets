@@ -1,8 +1,10 @@
 """
 HashiCorp Vault integration for secure secret management
 """
+
 import os
 import hvac
+from loguru import logger
 
 
 def _require_env(var: str) -> str:
@@ -11,6 +13,7 @@ def _require_env(var: str) -> str:
     if not value:
         raise EnvironmentError(f"{var} environment variable is not set")
     return value
+
 
 class VaultClient:
     """Simple wrapper around hvac.Client with extra helpers."""
@@ -30,6 +33,11 @@ class VaultClient:
         secret = self.client.secrets.kv.v2.read_secret_version(path=path)
         return secret["data"]["data"].get(key)
 
+    def fetch_all(self, path: str) -> dict[str, str]:
+        """Return all secrets stored at the given path."""
+        secret = self.client.secrets.kv.v2.read_secret_version(path=path)
+        return secret["data"]["data"]
+
     def rotate_secret(self, path: str, key: str, length: int = 32) -> str:
         """Generate a new random secret, store it in Vault, and return it."""
         import secrets
@@ -47,9 +55,14 @@ def cli_test_connection() -> None:
     try:
         client = VaultClient()
         keys = client.verify_secret_path(vault_path)
-        print(f"Vault OK at {client.url}. Secrets at '{vault_path}': {keys}")
+        logger.info(
+            "Vault OK at %s. Secrets at '%s': %s",
+            client.url,
+            vault_path,
+            keys,
+        )
     except Exception as exc:
-        print(f"Vault connectivity test failed: {exc}")
+        logger.error(f"Vault connectivity test failed: {exc}")
         raise SystemExit(1)
 
 

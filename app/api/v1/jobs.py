@@ -1,6 +1,6 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.models import JobStatus, User
 from app.auth.dependencies import get_current_active_user
@@ -8,6 +8,7 @@ from app.tasks.mining_tasks import start_mining_job
 from app.utils import sanitize_prompt
 from app.middleware import rbac_required, user_limiter, tenant_limiter, RateLimits
 from app.api.dependencies import get_job_repository
+from app.repositories.job_repository import JobRepository
 
 router = APIRouter(prefix="/jobs", tags=["v1-jobs"])
 
@@ -29,8 +30,7 @@ class JobResponse(BaseModel):
     completed_at: Optional[str] = None
     error_message: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class JobListResponse(BaseModel):

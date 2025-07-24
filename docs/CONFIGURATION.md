@@ -96,7 +96,7 @@ Use `python fetch_vault_env.py > .env` to write secrets from Vault into the `.en
 Generate a certificate authority and client certificates with:
 
 ```bash
-scripts/generate_mtls_certs.sh mydomain.local
+scripts/generate_mtls_certs.py mydomain.local
 ```
 
 Mount the resulting `certs/` directory into each container and set:
@@ -147,7 +147,7 @@ services:
 Override the compose file when starting services:
 
 ```bash
-docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 ```
 
 ## Object Storage Path Layout

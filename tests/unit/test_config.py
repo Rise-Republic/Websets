@@ -51,7 +51,8 @@ class TestConfigLoading(unittest.TestCase):
         os.environ['VAULT_TOKEN'] = 'fake-token'
 
         # Act
-        from app.config import settings
+        from app.config import get_settings
+        settings = get_settings()
 
         # Assert
         self.assertEqual(settings.openai_api_key, 'vault_openai_key')
@@ -70,8 +71,8 @@ class TestConfigLoading(unittest.TestCase):
     }, clear=True)
     def test_missing_vault_config_falls_back_to_env(self):
         """Should load secrets from env when Vault config is missing."""
-        from app.config import validate_settings
-        settings = validate_settings()
+        from app.config import get_settings
+        settings = get_settings()
         self.assertEqual(settings.openai_api_key, 'env_openai_key')
         self.assertEqual(settings.database_url, 'env_db_url')
         self.assertEqual(settings.jwt_secret_key, 'a-very-secure-jwt-secret-key-from-env')
@@ -90,8 +91,8 @@ class TestConfigLoading(unittest.TestCase):
         os.environ['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379'
         os.environ['ENVIRONMENT'] = 'development'
 
-        from app.config import validate_settings
-        settings = validate_settings()
+        from app.config import get_settings
+        settings = get_settings()
         self.assertEqual(settings.openai_api_key, 'env_openai_key')
 
 if __name__ == '__main__':

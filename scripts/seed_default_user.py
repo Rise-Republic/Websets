@@ -3,6 +3,7 @@
 
 import os
 import sys
+from loguru import logger
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
@@ -23,7 +24,7 @@ def main() -> None:
             user = User(email=email, hashed_password=get_password_hash(password))
             db.add(user)
             db.commit()
-            print(f"Created default user {email}")
+            logger.info("Created default user %s", email)
     finally:
         db.close()
 

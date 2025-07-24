@@ -1,4 +1,4 @@
-from .mailer import send_email, send_password_reset
+from .mailer import send_email
 from .cache import (
     get_cached_dataset_records,
     set_cached_dataset_records,
@@ -9,7 +9,6 @@ from .password_validation import validate_password
 
 __all__ = [
     "send_email",
-    "send_password_reset",
     "get_cached_dataset_records",
     "set_cached_dataset_records",
     "invalidate_dataset_records",

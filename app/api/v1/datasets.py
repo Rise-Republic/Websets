@@ -1,7 +1,7 @@
 from typing import List, Optional
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
 from app.models import User
@@ -31,8 +31,7 @@ class DatasetResponse(BaseModel):
     created_at: str
     updated_at: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DataRecordResponse(BaseModel):
@@ -44,8 +43,7 @@ class DataRecordResponse(BaseModel):
     extraction_method: Optional[str] = None
     created_at: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DatasetListResponse(BaseModel):
@@ -303,7 +301,7 @@ async def search_dataset(
 @tenant_limiter.limit(RateLimits.TENANT_DATASETS)
 async def export_dataset(
     dataset_id: str,
-    format: str = Query("json", regex="^(json|csv)$"),
+    format: str = Query("json", pattern="^(json|csv)$"),
     current_user: User = Depends(get_current_active_user),
     dataset_repo: DatasetRepository = Depends(get_dataset_repository),
 ):

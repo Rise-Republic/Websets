@@ -10,7 +10,7 @@ This guide lists common issues and recovery steps.
 ## Certificate Errors
 
 - **Symptom:** `SSL: CERTIFICATE_VERIFY_FAILED` when accessing MinIO or other services.
-- **Fix:** Check that `MINIO_CA_CERT`, `MINIO_CLIENT_CERT`, and `MINIO_CLIENT_KEY` point to valid files. Regenerate certs using `scripts/generate_mtls_certs.sh` if needed.
+ - **Fix:** Check that `MINIO_CA_CERT`, `MINIO_CLIENT_CERT`, and `MINIO_CLIENT_KEY` point to valid files. Regenerate certs using `scripts/generate_mtls_certs.py` if needed.
 
 ## Database Migrations
 

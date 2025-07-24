@@ -1,16 +1,3 @@
-from typing import Optional
-from datetime import datetime
-
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr, validator
-from sqlalchemy.orm import Session
-
-from app.database import get_db
-from app.repositories import UserRepository
-from app.models.user import User
-from app.auth.dependencies import get_current_active_user
-from app.auth.jwt_handler import verify_password, get_password_hash
-from app.utils.password_validation import validate_password
 from app.api.dependencies import get_user_repository
 
 
@@ -27,6 +14,17 @@ class UserProfileResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class UserProfileResponse(BaseModel):
+    id: str
+    email: EmailStr
+    full_name: Optional[str] = None
+    is_active: bool
+    created_at: str
+    is_verified: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserProfileUpdate(BaseModel):

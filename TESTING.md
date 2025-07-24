@@ -16,6 +16,17 @@ Install the Python requirements for development and testing:
 pip install -r requirements.txt -r requirements-dev.txt
 ```
 
+### Local Test Environment
+
+Set these variables to run tests without Vault:
+
+```bash
+export DISABLE_VAULT=true
+export OPENAI_API_KEY=dummy
+export DATABASE_URL=sqlite://
+export JWT_SECRET_KEY=super-secret-key-change-me-1234567890
+```
+
 ### Test Structure
 - `tests/unit/` - Unit tests for business logic
 - `tests/integration/` - Integration tests for API endpoints
