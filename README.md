@@ -83,6 +83,17 @@ curl -X POST "http://localhost:8000/jobs/" \
   -H "Content-Type: application/json" \
   -d '{"prompt": "AI startups in Europe hiring ML engineers"}'
 ```
+
+### Folder Structure
+
+```
+app/            # Backend source code
+src/            # React frontend
+tests/          # Unit and integration tests
+scripts/        # Helper scripts
+docs/           # Project documentation
+docker-compose.yml  # Local services
+```
 ## Documentation
 
 - [Detailed Architecture](docs/architecture.md)
@@ -91,6 +102,13 @@ curl -X POST "http://localhost:8000/jobs/" \
   - [Backups & Disaster Recovery](docs/runbooks/backups.md)
 - [Full Stack with Docker Compose](docs/docker_compose_full_stack.md)
 - [Authentication Guide](docs/authentication.md)
+- [Developer Guide](docs/DEVELOPER_GUIDE.md)
+- [API Reference](docs/API_REFERENCE.md)
+- [Configuration](docs/CONFIGURATION.md)
+- [Operational Runbook](docs/OPERATIONAL_RUNBOOK.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Testing Guide](docs/TESTING_GUIDE.md)
+- [Migrations Guide](docs/MIGRATIONS.md)
 
 ## Architecture
 

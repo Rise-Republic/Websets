@@ -4,9 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Breaking changes must be called out under a `Removed` or `Changed` section with clear upgrade instructions.
 
 ## [Unreleased]
 - Work in progress.
+
+### Template
+Use the sections below when preparing a release.
+
+```
+## [X.Y.Z] - YYYY-MM-DD
+### Added
+-
+### Changed
+-
+### Fixed
+-
+### Removed
+-
+```
 
 ## [0.2.0] - 2025-07-24
 ### Added
