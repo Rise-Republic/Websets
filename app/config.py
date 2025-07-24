@@ -127,9 +127,14 @@ def _load_settings_from_env() -> Settings:
     settings = Settings(**secret_values)
     required_vars = ['jwt_secret_key', 'database_url', 'openai_api_key']
     missing_vars = [var for var in required_vars if not getattr(settings, var)]
+    environment = os.getenv('ENVIRONMENT', 'development').lower()
     if missing_vars:
-        print(f"Error: Missing required secrets: {', '.join(missing_vars)}")
-        sys.exit(1)
+        msg = f"Missing required secrets: {', '.join(missing_vars)}"
+        if environment == 'development':
+            print(f"[config.py] WARNING: {msg} (ignored in development)")
+        else:
+            print(f"Error: {msg}")
+            sys.exit(1)
     return settings
 
 

@@ -8,8 +8,8 @@ services:
       - "9090:9090"  # Metrics port
     environment:
       - DISABLE_VAULT_FOR_LOCAL_DEV=true
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/webset_miner
-      - VAULT_ADDR=https://vault:8200
+      - DATABASE_URL
+      - VAULT_ADDR
       - REDIS_URL=rediss://redis:6379
       - CELERY_BROKER_URL=rediss://redis:6379
       - CELERY_RESULT_BACKEND=rediss://redis:6379
@@ -48,8 +48,8 @@ services:
     command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2
     environment:
       - DISABLE_VAULT_FOR_LOCAL_DEV=true
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/webset_miner
-      - VAULT_ADDR=https://vault:8200
+      - DATABASE_URL
+      - VAULT_ADDR
       - REDIS_URL=rediss://redis:6379
       - CELERY_BROKER_URL=rediss://redis:6379
       - CELERY_RESULT_BACKEND=rediss://redis:6379
@@ -88,8 +88,8 @@ services:
     command: celery -A app.tasks.celery_app beat --loglevel=info
     environment:
       - DISABLE_VAULT_FOR_LOCAL_DEV=true
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/webset_miner
-      - VAULT_ADDR=https://vault:8200
+      - DATABASE_URL
+      - VAULT_ADDR
       - REDIS_URL=rediss://redis:6379
       - CELERY_BROKER_URL=rediss://redis:6379
       - CELERY_RESULT_BACKEND=rediss://redis:6379
@@ -128,7 +128,7 @@ services:
     environment:
       - POSTGRES_DB=webset_miner
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -139,6 +139,8 @@ services:
         limits:
           cpus: '0.50'
           memory: 512m
+    secrets:
+      - postgres_password
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -232,10 +234,12 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin_password
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    secrets:
+      - grafana_admin_password
     depends_on:
       prometheus:
         condition: service_healthy
@@ -344,3 +348,7 @@ secrets:
     file: ./secrets/minio_root_user
   minio_root_password:
     file: ./secrets/minio_root_password
+  postgres_password:
+    file: ./secrets/postgres_password
+  grafana_admin_password:
+    file: ./secrets/grafana_admin_password

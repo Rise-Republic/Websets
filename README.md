@@ -183,21 +183,28 @@ curl -X POST "http://localhost:8000/datasets/DATASET_ID/search" \
 
 ### Environment Variables
 
-Secrets are stored in Vault using `vault_secrets_template.json`:
+Secrets are stored in Vault using `vault_secrets_template.json` and injected at runtime:
 
 ```env
-OPENAI_API_KEY=your_openai_api_key_here
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/webset_miner
-JWT_SECRET_KEY=your_super_secret_jwt_key_here
+OPENAI_API_KEY=<openai-key>
+ANTHROPIC_API_KEY=<anthropic-key>
+DATABASE_URL=postgresql://postgres:<db-password>@db:5432/webset_miner
+JWT_SECRET_KEY=<jwt-secret>
 AUTH0_DOMAIN=dev-your-domain.us.auth0.com
-AUTH0_CLIENT_ID=your-client-id
-AUTH0_CLIENT_SECRET=your-client-secret
+AUTH0_CLIENT_ID=<client-id>
+AUTH0_CLIENT_SECRET=<client-secret>
 AUTH0_AUDIENCE=https://api.websets.local
 AUTH0_ISSUER=https://dev-your-domain.us.auth0.com/
-MINIO_ROOT_USER=replace-with-minio-root-user
-MINIO_ROOT_PASSWORD=replace-with-minio-root-password
+MINIO_ROOT_USER=<minio-user>
+MINIO_ROOT_PASSWORD=<minio-password>
 ```
+
+Populate these secrets using Vault and create Docker secrets for any services
+that support the `*_FILE` pattern. `fetch_vault_env.py` can be used to generate
+a complete `.env` file from Vault for local development.
+
+In non-development environments the application will exit on startup if any of
+the required secrets are missing.
 
 Non-secret configuration in `.env`:
 
