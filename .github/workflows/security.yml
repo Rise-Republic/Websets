@@ -20,6 +20,11 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -48,13 +53,16 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
 
-        - name: Run gitleaks
-          uses: gitleaks/gitleaks-action@v2
-          with:
-            args: --config=.gitleaks.toml --no-git
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          args: --config=.gitleaks.toml --no-git
 
-        - name: Run OSV Scanner
-          uses: google/osv-scanner-action@v1
-          with:
-            scan-args: --lockfile=package-lock.json
+      - name: Run OSV Scanner
+        uses: google/osv-scanner-action@v1
+        with:
+          scan-args: --lockfile=package-lock.json
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high
 
