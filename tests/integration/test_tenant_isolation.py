@@ -3,6 +3,26 @@ import pytest
 from fastapi import status
 
 
+class FakeRedis:
+    def __init__(self):
+        self.store = {}
+
+    def get(self, key):
+        return self.store.get(key)
+
+    def setex(self, key, ttl, value):
+        self.store[key] = value
+
+    def keys(self, pattern):
+        import fnmatch
+
+        return [k for k in self.store if fnmatch.fnmatch(k, pattern)]
+
+    def delete(self, *keys):
+        for k in keys:
+            self.store.pop(k, None)
+
+
 @pytest.fixture(autouse=True)
 def disable_rbac(monkeypatch):
     from app.middleware.rbac import RBACMiddleware
@@ -11,6 +31,15 @@ def disable_rbac(monkeypatch):
         return await call_next(request)
 
     monkeypatch.setattr(RBACMiddleware, "dispatch", allow_all)
+
+
+@pytest.fixture
+def fake_cache(monkeypatch):
+    from app.utils import cache
+
+    fake = FakeRedis()
+    monkeypatch.setattr(cache, "redis_client", fake)
+    return fake
 
 
 @pytest.fixture
@@ -173,4 +202,20 @@ class TestTenantIsolation:
         assert (
             client.delete(f"/datasets/{ds1}", headers=u1["headers"]).status_code
             == status.HTTP_200_OK
+        )
+
+    def test_dataset_records_cache_isolation(
+        self, client, tenant_users, sample_datasets, fake_cache
+    ):
+        u1, u2 = tenant_users
+        ds1 = str(sample_datasets["user1"]["dataset"].id)
+
+        # First request should populate cache
+        r = client.get(f"/datasets/{ds1}/records", headers=u1["headers"])
+        assert r.status_code == status.HTTP_200_OK
+
+        # Second tenant should not get cached data
+        assert (
+            client.get(f"/datasets/{ds1}/records", headers=u2["headers"]).status_code
+            == status.HTTP_404_NOT_FOUND
         )

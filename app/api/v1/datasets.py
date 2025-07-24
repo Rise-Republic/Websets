@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
@@ -38,10 +38,10 @@ class DatasetResponse(BaseModel):
 class DataRecordResponse(BaseModel):
     id: str
     source_url: str
-    source_title: str = None
+    source_title: Optional[str] = None
     data: dict
-    confidence_score: float = None
-    extraction_method: str = None
+    confidence_score: Optional[float] = None
+    extraction_method: Optional[str] = None
     created_at: str
 
     class Config:
@@ -165,7 +165,9 @@ async def get_dataset_records(
     """Get records from a dataset with pagination."""
 
     # Check cache first
-    cached = await get_cached_dataset_records(dataset_id, page, size)
+    cached = await get_cached_dataset_records(
+        dataset_id, page, size, current_user.tenant_id
+    )
     if cached:
         return cached
 
@@ -222,7 +224,9 @@ async def get_dataset_records(
         "dataset_id": dataset_id,
     }
 
-    await set_cached_dataset_records(dataset_id, page, size, response)
+    await set_cached_dataset_records(
+        dataset_id, page, size, current_user.tenant_id, response
+    )
     return response
 
 
