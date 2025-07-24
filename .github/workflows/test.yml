@@ -145,9 +145,9 @@ jobs:
           artifacts/coverage.xml
           artifacts/junit.xml
 
-    - name: Detect flaky tests
-      run: |
-        pytest tests/ -m "not slow and not e2e" --flake-finder --flake-runs=2 -q
+      - name: Detect flaky tests
+        run: |
+          pytest tests/ -m "not slow and not system" --flake-finder --flake-runs=2 -q
 
   frontend-tests:
     needs: [pre-commit, type-check]
