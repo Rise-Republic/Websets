@@ -30,7 +30,6 @@ stop:
 docker-build:
 	docker build -t webset-miner .
 
-# Launch full local development stack
 dev:
 	bash scripts/setup.sh
  docker compose up -d
