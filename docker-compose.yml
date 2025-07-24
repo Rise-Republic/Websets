@@ -151,15 +151,20 @@ services:
     image: hashicorp/vault:1.15
     ports:
       - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: root
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
     command: vault server -dev -dev-root-token-id=root -dev-listen-address=0.0.0.0:8200 \
       -dev-tls-cert=/certs/vault.crt -dev-tls-key=/certs/vault.key -dev-tls-client-ca=/certs/ca.crt
     volumes:
       - ./certs:/certs:ro
+      - vault_data:/vault/file
     healthcheck:
       test: ["CMD", "curl", "--cacert", "/certs/ca.crt", "-f", "https://localhost:8200/v1/sys/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
+      retries: 5
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -183,22 +188,6 @@ services:
       timeout: 5s
       retries: 5
 
-  vault:
-    image: hashicorp/vault:latest
-    ports:
-      - "8200:8200"
-    environment:
-      VAULT_DEV_ROOT_TOKEN_ID: root
-      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
-    volumes:
-      - vault_data:/vault/file
-    command: vault server -dev -dev-root-token-id=root -dev-listen-address=0.0.0.0:8200
-    healthcheck:
-      test: ["CMD", "vault", "status"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:latest
