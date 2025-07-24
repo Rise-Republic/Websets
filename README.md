@@ -394,9 +394,36 @@ spec:
 ```
 
 Full manifests with resource requests, limits, and security context can be found
+
 in the `k8s/` directory. Use `scripts/blue_green_deploy.sh` to perform
 blue/green rollouts between the `webset-miner-blue` and `webset-miner-green`
 deployments.
+
+### Terraform Infrastructure
+
+The infrastructure configuration lives in `infra/terraform`. Provision or update
+resources using the standard Terraform workflow:
+
+```bash
+cd infra/terraform
+terraform init
+
+# Review planned changes
+terraform plan \
+  -var="kubeconfig=$HOME/.kube/config" \
+  -var="vpc_id=<vpc-id>" \
+  -var="subnet_ids=[\"subnet-abc\",\"subnet-def\"]"
+
+# Apply after validation
+terraform apply \
+  -var="kubeconfig=$HOME/.kube/config" \
+  -var="vpc_id=<vpc-id>" \
+  -var="subnet_ids=[\"subnet-abc\",\"subnet-def\"]"
+```
+
+If an apply introduces issues, re-apply the previous commit's configuration or
+use `kubectl rollout undo deployment/webset-miner` to revert the running
+application without invoking the blue/green script.
 
 ## CI/CD Pipeline
 

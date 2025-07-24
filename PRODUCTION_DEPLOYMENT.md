@@ -72,3 +72,18 @@ Following these practices helps ensure the application is delivered over HTTPS a
 Regularly dump the PostgreSQL database and keep the files in secure storage. See
 [Backups & Disaster Recovery](docs/runbooks/backups.md) for the backup script
 and restoration steps.
+
+## Infrastructure Automation
+
+Provision and update infrastructure via Terraform:
+
+```bash
+cd infra/terraform
+terraform init
+terraform plan
+terraform apply
+```
+
+If an apply misbehaves, re-apply the previous commit's configuration or use
+`kubectl rollout undo deployment/webset-miner` to roll back the running
+application without the blue/green procedure.
