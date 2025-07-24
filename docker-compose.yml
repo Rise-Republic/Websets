@@ -33,17 +33,21 @@ x-service-common: &service-common
 services:
   app:
     <<: *service-common
-    network_mode: host          # 🔑 join host namespace
-    # ‼️ remove ports: section – it's ignored in host mode
+    network_mode: host
+    command: ["uvicorn", "app.main:app",
+              "--host", "0.0.0.0",
+              "--port", "8001"]
     deploy:
       resources:
         limits:
           cpus: "1.00"
           memory: 1g
+
+    # single, correct health‑check
     healthcheck:
       test:
         ["CMD", "curl", "--cacert", "/certs/ca.crt",
-         "-f", "https://localhost:8000/health/live"]
+         "-f", "https://localhost:8001/health/live"]
       interval: 30s
       timeout: 10s
       retries: 3
