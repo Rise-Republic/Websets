@@ -54,8 +54,10 @@ vault kv get -field=MINIO_ROOT_USER secret/websets | \
   docker secret create minio_root_user -
 vault kv get -field=MINIO_ROOT_PASSWORD secret/websets | \
   docker secret create minio_root_password -
-vault kv get -field=MINIO_KMS_KEY secret/websets | \
+vault kv get -field=MINIO_KMS_SECRET_KEY secret/websets | \
   docker secret create minio_kms_key -
+vault kv get -field=MINIO_SSE_MASTER_KEY secret/websets | \
+  docker secret create minio_sse_master_key -
 vault kv get -field=POSTGRES_ENCRYPTION_KEY secret/websets | \
   docker secret create postgres_encryption_key -
 ```
@@ -199,7 +201,7 @@ Secrets are stored in Vault using `vault_secrets_template.json` and injected at 
 ```env
 OPENAI_API_KEY=<openai-key>
 ANTHROPIC_API_KEY=<anthropic-key>
-DATABASE_URL=postgresql://postgres:<db-password>@db:5432/webset_miner
+DATABASE_URL=postgresql://postgres:<db-password>@db:5432/webset_miner?sslmode=require
 JWT_SECRET_KEY=<jwt-secret>
 AUTH0_DOMAIN=dev-your-domain.us.auth0.com
 AUTH0_CLIENT_ID=<client-id>
@@ -208,6 +210,8 @@ AUTH0_AUDIENCE=https://api.websets.local
 AUTH0_ISSUER=https://dev-your-domain.us.auth0.com/
 MINIO_ROOT_USER=<minio-user>
 MINIO_ROOT_PASSWORD=<minio-password>
+MINIO_KMS_SECRET_KEY=<kms-key-ref>
+MINIO_SSE_MASTER_KEY=<sse-key-ref>
 SMTP_HOST=<smtp-host>
 SMTP_PORT=<smtp-port>
 SMTP_USERNAME=<smtp-user>
