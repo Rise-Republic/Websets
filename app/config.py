@@ -148,9 +148,9 @@ def get_settings() -> Settings:
             load_vault_env()
         except Exception as exc:  # pragma: no cover - network failure
             if env != "production":
-                logger.warning("Vault error %s, falling back to environment", exc)
+                logger.warning(f"Vault error: {exc}, falling back to environment")
             else:
-                logger.critical("Failed to load settings from Vault: %s", exc)
+                logger.critical(f"Failed to load settings from Vault: {exc}")
                 raise SystemExit(1) from exc
     else:
         if env == "production" and not ci_mode:
@@ -160,7 +160,10 @@ def get_settings() -> Settings:
     try:
         return Settings()
     except ValidationError as exc:
-        logger.error("Invalid configuration: %s", exc)
+        # Fix error logging format to properly display validation errors
+        logger.error(f"Invalid configuration: {exc}")
+        # Print detailed error for debugging
+        print(f"\nDETAILED CONFIG ERROR: {exc}\n")
         raise SystemExit(1) from exc
 
 

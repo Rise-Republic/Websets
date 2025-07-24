@@ -19,8 +19,12 @@ class VaultClient:
     """Simple wrapper around hvac.Client with extra helpers."""
 
     def __init__(self, url: str | None = None, token: str | None = None) -> None:
+        # Add debug logs for Vault connectivity
         self.url = url or _require_env("VAULT_ADDR")
         self.token = token or _require_env("VAULT_TOKEN")
+        logger.debug(f"Initializing Vault client with URL: {self.url}")
+        # Debug logs for environment variables
+        logger.debug(f"Current environment: VAULT_ADDR={os.getenv('VAULT_ADDR')}, VAULT_TOKEN={os.getenv('VAULT_TOKEN') is not None}")
         self.client = hvac.Client(url=self.url, token=self.token)
 
     def verify_secret_path(self, path: str) -> list[str]:
