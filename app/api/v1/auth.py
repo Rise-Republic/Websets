@@ -1,9 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Response, Cookie
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta, datetime
 from pydantic import BaseModel, EmailStr, field_validator
-import re, secrets, pyotp, hashlib, os
+import hashlib
+import os
+import re
+import secrets
+import pyotp
 from prometheus_client import Counter, generate_latest
 
 from app.database import get_db
@@ -75,7 +79,11 @@ class Token(BaseModel):
     refresh_token: str = None
 
 
-@router.post("/register", response_model=UserResponse)
+class RegistrationResponse(UserResponse):
+    verification_token: str
+
+
+@router.post("/register", response_model=RegistrationResponse)
 @limiter.limit(RateLimits.AUTH_REGISTER)
 async def register(
     request: Request, user_data: UserCreate, db: Session = Depends(get_db)
@@ -88,12 +96,17 @@ async def register(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered",
             )
+        import secrets
+        import hashlib
+        from datetime import datetime, timedelta
+
         hashed_password = get_password_hash(user_data.password)
         mfa_secret = None
         if user_data.mfa_enabled and user_data.mfa_method == "totp":
             # Generate a base32 secret for TOTP and store it
             secret = pyotp.random_base32()
             mfa_secret = secret
+        token = secrets.token_urlsafe(32)
         user = User(
             email=user_data.email,
             hashed_password=hashed_password,
@@ -102,11 +115,13 @@ async def register(
             mfa_enabled=user_data.mfa_enabled,
             mfa_method=user_data.mfa_method,
             mfa_secret=mfa_secret,
+            verification_token=hashlib.sha256(token.encode()).hexdigest(),
+            verification_token_expiry=datetime.utcnow() + timedelta(hours=24),
         )
         db.add(user)
         db.commit()
         db.refresh(user)
-        return UserResponse(
+        return RegistrationResponse(
             id=str(user.id),
             email=user.email,
             full_name=user.full_name,
@@ -114,6 +129,7 @@ async def register(
             created_at=user.created_at.isoformat(),
             mfa_enabled=user.mfa_enabled,
             mfa_method=user.mfa_method,
+            verification_token=token,
         )
     except HTTPException as e:
         raise e
@@ -156,6 +172,17 @@ async def login(
         )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
+        )
+
+    if not user.is_verified:
+        SecurityEventLogger.log_failed_login(
+            email=user.email,
+            ip_address=request.client.host if request.client else "unknown",
+            reason="unverified_user",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email not verified",
         )
     # MFA enforcement
     if user.mfa_enabled:
@@ -201,6 +228,34 @@ async def get_current_user_info(
         mfa_enabled=current_user.mfa_enabled,
         mfa_method=current_user.mfa_method,
     )
+
+
+class VerificationRequest(BaseModel):
+    token: str
+
+
+@router.post("/verify")
+@limiter.limit(RateLimits.AUTH_REGISTER)
+async def verify_user(
+    request: Request, data: VerificationRequest, db: Session = Depends(get_db)
+):
+    import hashlib
+    from datetime import datetime
+
+    user = (
+        db.query(User)
+        .filter(
+            User.verification_token == hashlib.sha256(data.token.encode()).hexdigest()
+        )
+        .first()
+    )
+    if not user or user.verification_token_expiry < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+    user.is_verified = True
+    user.verification_token = None
+    user.verification_token_expiry = None
+    db.commit()
+    return {"message": "Email verified"}
 
 
 # MFA setup

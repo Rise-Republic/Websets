@@ -20,20 +20,20 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     full_name: str = None
-    
-    @field_validator('password')
+
+    @field_validator("password")
     @classmethod
     def validate_password(cls, v):
         if len(v) < 8:
-            raise ValueError('Password must be at least 8 characters long')
-        if not re.search(r'[A-Z]', v):
-            raise ValueError('Password must contain at least one uppercase letter')
-        if not re.search(r'[a-z]', v):
-            raise ValueError('Password must contain at least one lowercase letter')
-        if not re.search(r'\d', v):
-            raise ValueError('Password must contain at least one digit')
+            raise ValueError("Password must be at least 8 characters long")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one digit")
         if not re.search(r'[!@#$%^&*(),.?":{}|<>]', v):
-            raise ValueError('Password must contain at least one special character')
+            raise ValueError("Password must contain at least one special character")
         return v
 
 
@@ -53,46 +53,63 @@ class Token(BaseModel):
     token_type: str
 
 
-@router.post("/register", response_model=UserResponse)
+class RegistrationResponse(UserResponse):
+    verification_token: str
+
+
+@router.post("/register", response_model=RegistrationResponse)
 @limiter.limit(RateLimits.AUTH_REGISTER)
-async def register(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
+async def register(
+    request: Request, user_data: UserCreate, db: Session = Depends(get_db)
+):
     """Register a new user."""
-    
+
     # Check if user already exists
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )
-    
+
     # Create new user
+    import secrets
+    import hashlib
+    from datetime import datetime, timedelta
+
     hashed_password = get_password_hash(user_data.password)
+    token = secrets.token_urlsafe(32)
     user = User(
         email=user_data.email,
         hashed_password=hashed_password,
         full_name=user_data.full_name,
-        is_active=True
+        is_active=True,
+        verification_token=hashlib.sha256(token.encode()).hexdigest(),
+        verification_token_expiry=datetime.utcnow() + timedelta(hours=24),
     )
-    
+
     db.add(user)
     db.commit()
     db.refresh(user)
-    
-    return UserResponse(
+
+    return RegistrationResponse(
         id=str(user.id),
         email=user.email,
         full_name=user.full_name,
         is_active=user.is_active,
-        created_at=user.created_at.isoformat()
+        created_at=user.created_at.isoformat(),
+        verification_token=token,
     )
 
 
 @router.post("/login", response_model=Token)
 @limiter.limit(RateLimits.AUTH_LOGIN)
-async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+async def login(
+    request: Request,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+):
     """Login and get access token."""
-    
+
     # Authenticate user
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
@@ -106,7 +123,7 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     if not user.is_active:
         SecurityEventLogger.log_failed_login(
             email=user.email,
@@ -114,32 +131,75 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
             reason="inactive_user",
         )
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive user"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
         )
-    
+
+    if not user.is_verified:
+        SecurityEventLogger.log_failed_login(
+            email=user.email,
+            ip_address=request.client.host if request.client else "unknown",
+            reason="unverified_user",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email not verified",
+        )
+
     # Create access token
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
-    
+
     # Update last login
     from datetime import datetime
+
     user.last_login = datetime.utcnow()
     db.commit()
-    
+
     return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.get("/me", response_model=UserResponse)
 @limiter.limit(RateLimits.API_READ)
-async def get_current_user_info(request: Request, current_user: User = Depends(get_current_active_user)):
+async def get_current_user_info(
+    request: Request, current_user: User = Depends(get_current_active_user)
+):
     """Get current user information."""
     return UserResponse(
         id=str(current_user.id),
         email=current_user.email,
         full_name=current_user.full_name,
         is_active=current_user.is_active,
-        created_at=current_user.created_at.isoformat()
+        created_at=current_user.created_at.isoformat(),
     )
+
+
+class VerificationRequest(BaseModel):
+    token: str
+
+
+@router.post("/verify")
+@limiter.limit(RateLimits.AUTH_REGISTER)
+async def verify_user(
+    request: Request, data: VerificationRequest, db: Session = Depends(get_db)
+):
+    import hashlib
+    from datetime import datetime
+
+    user = (
+        db.query(User)
+        .filter(
+            User.verification_token == hashlib.sha256(data.token.encode()).hexdigest()
+        )
+        .first()
+    )
+    if not user or user.verification_token_expiry < datetime.utcnow():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired token"
+        )
+    user.is_verified = True
+    user.verification_token = None
+    user.verification_token_expiry = None
+    db.commit()
+    return {"message": "Email verified"}
