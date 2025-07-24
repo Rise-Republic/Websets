@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
@@ -38,10 +38,10 @@ class DatasetResponse(BaseModel):
 class DataRecordResponse(BaseModel):
     id: str
     source_url: str
-    source_title: str = None
+    source_title: Optional[str] = None
     data: dict
-    confidence_score: float = None
-    extraction_method: str = None
+    confidence_score: Optional[float] = None
+    extraction_method: Optional[str] = None
     created_at: str
 
     class Config:
