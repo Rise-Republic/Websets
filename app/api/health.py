@@ -13,6 +13,7 @@ from app.storage import get_vector_store
 from app.storage.object_storage import get_object_storage
 from app.monitoring.metrics import MetricsCollector
 from app.tasks.celery_app import celery_app
+from loguru import logger
 from app.middleware import limiter, RateLimits
 
 router = APIRouter(prefix="/health", tags=["health"])
@@ -49,9 +50,10 @@ async def detailed_health_check(db: Session = Depends(get_db)):
         db.execute(text("SELECT 1"))
         health_status["components"]["database"] = {"status": "healthy"}
     except Exception as e:
+        logger.opt(exception=e).error("Database health check failed")
         health_status["components"]["database"] = {
-            "status": "unhealthy", 
-            "error": str(e)
+            "status": "unhealthy",
+            "error": "unavailable"
         }
         health_status["status"] = "unhealthy"
     
@@ -61,9 +63,10 @@ async def detailed_health_check(db: Session = Depends(get_db)):
         r.ping()
         health_status["components"]["redis"] = {"status": "healthy"}
     except Exception as e:
+        logger.opt(exception=e).error("Redis health check failed")
         health_status["components"]["redis"] = {
             "status": "unhealthy",
-            "error": str(e)
+            "error": "unavailable"
         }
         health_status["status"] = "unhealthy"
     
@@ -77,9 +80,10 @@ async def detailed_health_check(db: Session = Depends(get_db)):
             "total_vectors": stats.get("total_vectors", 0)
         }
     except Exception as e:
+        logger.opt(exception=e).error("Vector store health check failed")
         health_status["components"]["vector_store"] = {
             "status": "unhealthy",
-            "error": str(e)
+            "error": "unavailable"
         }
         health_status["status"] = "unhealthy"
     
@@ -94,9 +98,10 @@ async def detailed_health_check(db: Session = Depends(get_db)):
             "accessible": True
         }
     except Exception as e:
+        logger.opt(exception=e).error("Object storage health check failed")
         health_status["components"]["object_storage"] = {
             "status": "unhealthy",
-            "error": str(e)
+            "error": "unavailable"
         }
         health_status["status"] = "unhealthy"
     
@@ -120,9 +125,10 @@ async def detailed_health_check(db: Session = Depends(get_db)):
             health_status["status"] = "unhealthy"
             
     except Exception as e:
+        logger.opt(exception=e).error("Celery health check failed")
         health_status["components"]["celery"] = {
             "status": "unhealthy",
-            "error": str(e)
+            "error": "unavailable"
         }
         health_status["status"] = "unhealthy"
     
@@ -185,9 +191,10 @@ async def system_health():
         }
         
     except Exception as e:
+        logger.opt(exception=e).error("System health check failed")
         return {
             "status": "unhealthy",
-            "error": str(e),
+            "error": "unavailable",
             "timestamp": datetime.utcnow().isoformat()
         }
 
@@ -221,9 +228,10 @@ async def readiness_check(db: Session = Depends(get_db)):
         }
         
     except Exception as e:
+        logger.opt(exception=e).error("Readiness check failed")
         return {
             "status": "not_ready",
-            "error": str(e),
+            "error": "unavailable",
             "timestamp": datetime.utcnow().isoformat()
         }, 503
 

@@ -292,7 +292,7 @@ class WebSocketManager:
                 except Exception as e:
                     logger.error(f"Error handling WebSocket message: {e}")
                     await self.send_to_connection(connection_id, {
-                        "error": str(e)
+                        "error": "Internal error"
                     }, "error")
         
         except Exception as e:

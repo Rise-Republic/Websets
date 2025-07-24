@@ -89,13 +89,13 @@ app.include_router(versioning_router)
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler for unhandled errors."""
-    logger.error(f"Unhandled exception: {exc}")
+    logger.opt(exception=exc).error("Unhandled exception")
     origin = request.headers.get("origin")
     allowed = settings.allowed_origins
     cors_origin = origin if origin in allowed or "*" in allowed else allowed[0]
     return JSONResponse(
         status_code=500,
-        content={"detail": str(exc)},
+        content={"detail": "Internal server error"},
         headers={
             "Access-Control-Allow-Origin": cors_origin,
             "Access-Control-Allow-Credentials": "true",

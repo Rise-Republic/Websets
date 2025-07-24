@@ -344,7 +344,8 @@ class MetricsCollector:
                 },
             }
         except Exception as e:
-            return {"timestamp": datetime.utcnow().isoformat(), "error": str(e)}
+            logger.opt(exception=e).error("Metrics summary failed")
+            return {"timestamp": datetime.utcnow().isoformat(), "error": "unavailable"}
 
 
 class MetricsMiddleware(BaseHTTPMiddleware):

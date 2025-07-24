@@ -7,6 +7,7 @@ from datetime import datetime
 
 from app.database import get_db
 from app.models import Dataset, DataRecord, Job, User
+from loguru import logger
 from app.auth.dependencies import get_current_active_user
 from app.storage import VectorStore, EmbeddingGenerator
 from app.middleware import rbac_required, user_limiter, tenant_limiter, RateLimits
@@ -324,9 +325,10 @@ async def search_dataset(
         )
 
     except Exception as e:
+        logger.opt(exception=e).error("Dataset search failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Search failed: {str(e)}",
+            detail="Search failed",
         )
 
 

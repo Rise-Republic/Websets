@@ -147,12 +147,10 @@ async def register(
     except HTTPException as e:
         raise e
     except Exception as e:
-        import traceback
-
-        logger.exception(traceback.format_exc())
+        logger.opt(exception=e).error("Registration failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Registration failed: {str(e)}",
+            detail="Registration failed",
         )
 
 

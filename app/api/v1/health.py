@@ -8,6 +8,7 @@ from app.database import get_db
 from app.config import settings
 
 from app.monitoring import get_health_monitor, get_metrics_collector
+from loguru import logger
 
 router = APIRouter(prefix="/health", tags=["v1-health"])
 
@@ -68,9 +69,10 @@ async def readiness_check(db: Session = Depends(get_db)):
         
     except Exception as e:
         from fastapi import HTTPException, status
+        logger.opt(exception=e).error("Readiness check failed")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Service not ready: {str(e)}"
+            detail="Service not ready"
         )
 
 
