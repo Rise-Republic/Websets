@@ -351,6 +351,13 @@ safety check -r requirements.txt -r requirements-dev.txt
 docker run --rm -v $(pwd):/repo aquasec/trivy fs --severity CRITICAL /repo
 ```
 
+Monitor outdated dependencies periodically:
+
+```bash
+pip list --outdated
+npm outdated
+```
+
 ### Adding New Agents
 
 1. Create agent class inheriting from `BaseAgent`
