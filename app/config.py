@@ -130,6 +130,15 @@ def validate_settings():
                 'auth0_audience': os.getenv('AUTH0_AUDIENCE'),
                 'auth0_issuer': os.getenv('AUTH0_ISSUER'),
             }
+            # Only pass expected fields to Settings
+            settings = Settings(**secret_values)
+            # Check for required variables
+            required_vars = ['jwt_secret_key', 'database_url', 'openai_api_key']
+            missing_vars = [var for var in required_vars if not getattr(settings, var)]
+            if missing_vars:
+                print(f"Error: Missing required secrets: {', '.join(missing_vars)}")
+                sys.exit(1)
+            return settings
         else:
             # Original Vault logic
             load_dotenv(".env")
