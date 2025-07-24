@@ -18,6 +18,10 @@ fi
 
 # Install Python dependencies
 echo "Installing Python dependencies..."
+
+# Ensure a clean virtual environment
+sudo rm -rf .venv
+
 if [ ! -d ".venv" ]; then
     echo "Creating Python virtual environment..."
     python3 -m venv .venv
