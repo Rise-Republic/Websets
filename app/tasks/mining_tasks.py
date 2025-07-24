@@ -1,4 +1,5 @@
 from typing import List, Dict, Any
+import uuid
 
 from sqlalchemy.orm import Session
 from loguru import logger
@@ -6,6 +7,7 @@ import asyncio
 from datetime import datetime, timedelta
 
 from app.tasks.celery_app import celery_app
+from app.monitoring import get_metrics_collector
 from app.database import SessionLocal
 from app.models import Job, JobStatus, DiscoveredURL, CrawlResult, Dataset, DataRecord
 from app.agents import PlannerAgent, DiscoveryAgent, SchemaInferenceAgent
@@ -22,6 +24,9 @@ def start_mining_job(self, job_id: str):
         job_id: UUID of the job to execute
     """
     db = SessionLocal()
+    metrics = get_metrics_collector()
+    job_start = datetime.utcnow()
+    metrics.record_job_started()
     try:
         # Get job from database
         job = db.query(Job).filter(Job.id == job_id).first()
@@ -61,7 +66,8 @@ def start_mining_job(self, job_id: str):
         }
         
         asyncio.run(tracker.complete_job(summary))
-        
+        metrics.record_job_completed(duration=(datetime.utcnow() - job_start).total_seconds())
+
         return {
             "job_id": job_id,
             "status": "completed",
@@ -70,6 +76,7 @@ def start_mining_job(self, job_id: str):
         
     except Exception as e:
         logger.error(f"Job {job_id} failed: {e}")
+        metrics.record_job_failed(duration=(datetime.utcnow() - job_start).total_seconds())
         tracker = JobProgressTracker(job_id)
         asyncio.run(tracker.report_error(str(e)))
         raise
@@ -92,8 +99,10 @@ def execute_planning_phase(job: Job, db: Session, progress: ProgressContext = No
         if progress:
             asyncio.run(progress.update_step(100, {"plan": plan}))
             asyncio.run(progress.log("Planning phase completed", "success"))
-        
-        return plan.dict()
+
+        if hasattr(plan, "dict"):
+            return plan.dict()
+        return plan
         
     except Exception as e:
         if progress:
@@ -115,7 +124,6 @@ def execute_discovery_phase(job: Job, plan: Dict[str, Any], db: Session, progres
             discovered_url = DiscoveredURL(
                 job_id=job.id,
                 url=url,
-                source="discovery"
             )
             db.add(discovered_url)
         
@@ -146,7 +154,8 @@ def execute_crawling_phase(job: Job, urls: List[str], db: Session, progress: Pro
 
         raw_results = asyncio.run(run_crawls())
 
-        crawl_results = []
+        crawl_results: List[Dict[str, Any]] = []
+        objects_to_save: List[CrawlResult] = []
 
         for result in raw_results:
             url = result.get("url")
@@ -154,8 +163,9 @@ def execute_crawling_phase(job: Job, urls: List[str], db: Session, progress: Pro
                 asyncio.run(progress.log(f"Processed {url}", "info"))
 
             try:
-                
+
                 crawl_result = CrawlResult(
+                    id=uuid.uuid4(),
                     job_id=job.id,
                     url=url,
                     html_content=result.get("html_content", ""),
@@ -164,16 +174,15 @@ def execute_crawling_phase(job: Job, urls: List[str], db: Session, progress: Pro
                     meta_description=result.get("meta_description", ""),
                     status_code=result.get("status_code", 200)
                 )
-                db.add(crawl_result)
-                db.commit()
-                
+                objects_to_save.append(crawl_result)
+
                 crawl_results.append({
                     "url": url,
                     "crawl_result_id": str(crawl_result.id),
                     "title": result.get("title", ""),
                     "content_length": len(result.get("html_content", ""))
                 })
-                
+
                 if progress:
                     asyncio.run(progress.increment({
                         "url": url,
@@ -189,9 +198,13 @@ def execute_crawling_phase(job: Job, urls: List[str], db: Session, progress: Pro
                         "error": str(e)
                     }))
         
+        if objects_to_save:
+            db.bulk_save_objects(objects_to_save)
+            db.commit()
+
         if progress:
             asyncio.run(progress.log(f"Crawled {len(crawl_results)} pages successfully", "success"))
-        
+
         return crawl_results
         
     except Exception as e:
@@ -206,18 +219,19 @@ def execute_extraction_phase(job: Job, crawl_results: List[Dict[str, Any]], db: 
         if progress:
             asyncio.run(progress.log("Starting extraction phase", "info"))
         
-        extracted_data = []
-        
+        extracted_data: List[Dict[str, Any]] = []
+        records_to_save: List[DataRecord] = []
+
         # Create dataset
         dataset = Dataset(
+            id=uuid.uuid4(),
             job_id=job.id,
             name=f"Dataset for {job.prompt[:50]}...",
             description=f"Automatically extracted data for prompt: {job.prompt}",
             schema={"type": "object", "properties": {}}
         )
         db.add(dataset)
-        db.commit()
-        
+
         # Extract data from each crawl result
         for i, result in enumerate(crawl_results):
             if progress:
@@ -246,15 +260,14 @@ def execute_extraction_phase(job: Job, crawl_results: List[Dict[str, Any]], db: 
                 # Store extracted records
                 for record in extracted:
                     data_record = DataRecord(
+                        id=uuid.uuid4(),
                         dataset_id=dataset.id,
                         crawl_result_id=crawl_result.id,
                         data=record,
                         url=crawl_result.url
                     )
-                    db.add(data_record)
+                    records_to_save.append(data_record)
                     extracted_data.append(record)
-                
-                db.commit()
                 
                 if progress:
                     asyncio.run(progress.increment({
@@ -266,6 +279,9 @@ def execute_extraction_phase(job: Job, crawl_results: List[Dict[str, Any]], db: 
                 if progress:
                     asyncio.run(progress.log(f"Failed to extract from {result['url']}: {str(e)}", "warning"))
         
+        if records_to_save:
+            db.bulk_save_objects(records_to_save)
+
         # Update job with final counts
         job.extracted_records = len(extracted_data)
         db.commit()

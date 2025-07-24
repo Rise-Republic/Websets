@@ -54,6 +54,10 @@ vault kv get -field=MINIO_ROOT_USER secret/websets | \
   docker secret create minio_root_user -
 vault kv get -field=MINIO_ROOT_PASSWORD secret/websets | \
   docker secret create minio_root_password -
+vault kv get -field=MINIO_KMS_KEY secret/websets | \
+  docker secret create minio_kms_key -
+vault kv get -field=POSTGRES_ENCRYPTION_KEY secret/websets | \
+  docker secret create postgres_encryption_key -
 ```
 
 You can also open the repository in a [Dev Container](.devcontainer/devcontainer.json) which will
@@ -82,6 +86,7 @@ curl -X POST "http://localhost:8000/jobs/" \
 - [Runbooks](docs/runbooks)
   - [Backups & Disaster Recovery](docs/runbooks/backups.md)
 - [Full Stack with Docker Compose](docs/docker_compose_full_stack.md)
+- [Authentication Guide](docs/authentication.md)
 
 ## Architecture
 
@@ -104,11 +109,15 @@ User Prompt → Planning → URL Discovery → Crawling → Schema Inference →
 ## API Endpoints
 
 ### Authentication
-- `POST /auth/register` - Register new user
-- `POST /auth/login` - Login and get JWT token (returns 202 with `X-MFA-Required` when MFA enabled)
-- `GET /auth/me` - Get current user info
-- `POST /auth/mfa/setup` - Enable TOTP MFA and receive a secret key
-- `POST /auth/mfa/verify` - Verify MFA code and obtain tokens
+- `POST /v1/auth/register`  Register new user
+- `GET /v1/auth/verify-email`  Confirm email address *(planned)*
+- `POST /v1/auth/login`  Login and obtain access + refresh tokens (returns 202 with `X-MFA-Required` when MFA is enabled)_
+- `POST /v1/auth/mfa/setup`  Enable TOTP MFA and receive a secret key
+- `POST /v1/auth/mfa/verify`  Verify MFA challenge and obtain tokens
+- `POST /v1/auth/refresh`  Refresh expired access token
+- `POST /v1/auth/password-reset/request`  Send password reset link
+- `POST /v1/auth/password-reset/confirm`  Confirm new password
+- `GET /v1/auth/me`  Get current user info
 
 ### Jobs
 - `POST /jobs/` - Create new mining job
@@ -199,6 +208,11 @@ AUTH0_AUDIENCE=https://api.websets.local
 AUTH0_ISSUER=https://dev-your-domain.us.auth0.com/
 MINIO_ROOT_USER=<minio-user>
 MINIO_ROOT_PASSWORD=<minio-password>
+SMTP_HOST=<smtp-host>
+SMTP_PORT=<smtp-port>
+SMTP_USERNAME=<smtp-user>
+SMTP_PASSWORD=<smtp-pass>
+EMAIL_FROM=no-reply@example.com
 ```
 
 Populate these secrets using Vault and create Docker secrets for any services
@@ -381,9 +395,36 @@ spec:
 ```
 
 Full manifests with resource requests, limits, and security context can be found
+
 in the `k8s/` directory. Use `scripts/blue_green_deploy.sh` to perform
 blue/green rollouts between the `webset-miner-blue` and `webset-miner-green`
 deployments.
+
+### Terraform Infrastructure
+
+The infrastructure configuration lives in `infra/terraform`. Provision or update
+resources using the standard Terraform workflow:
+
+```bash
+cd infra/terraform
+terraform init
+
+# Review planned changes
+terraform plan \
+  -var="kubeconfig=$HOME/.kube/config" \
+  -var="vpc_id=<vpc-id>" \
+  -var="subnet_ids=[\"subnet-abc\",\"subnet-def\"]"
+
+# Apply after validation
+terraform apply \
+  -var="kubeconfig=$HOME/.kube/config" \
+  -var="vpc_id=<vpc-id>" \
+  -var="subnet_ids=[\"subnet-abc\",\"subnet-def\"]"
+```
+
+If an apply introduces issues, re-apply the previous commit's configuration or
+use `kubectl rollout undo deployment/webset-miner` to revert the running
+application without invoking the blue/green script.
 
 ## CI/CD Pipeline
 
@@ -428,7 +469,8 @@ logger.info("Job started", job_id=job.id, user_id=user.id)
 ```
 
 ### Metrics
-Monitor these key metrics:
+Monitor these key metrics and export Prometheus data using the
+[metrics templates](observability/metrics/metrics_setup.md):
 - Job completion rate
 - Crawl success rate
 - Average crawl duration
@@ -436,6 +478,13 @@ Monitor these key metrics:
 - API response times
 - Worker queue length
 - Celery queue length
+
+### Tracing
+OpenTelemetry tracing is enabled via `configure_tracing` and the Celery
+instrumentor. Traces are exported to the OTLP endpoint configured in
+`app.config`. Import the provided Grafana dashboard JSON from
+`monitoring/grafana/dashboards/websets_overview.json` to visualize metrics and
+traces together.
 
 ## Security
 

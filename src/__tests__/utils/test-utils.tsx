@@ -19,6 +19,8 @@ export const createMockAuthContext = (overrides = {}) => ({
   login: jest.fn(),
   register: jest.fn(),
   logout: jest.fn(),
+  requestPasswordReset: jest.fn(),
+  confirmPasswordReset: jest.fn(),
   error: null,
   ...overrides,
 });
