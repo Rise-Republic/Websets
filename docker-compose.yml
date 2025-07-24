@@ -128,6 +128,8 @@ services:
       - POSTGRES_ENCRYPTION_KEY_FILE=/run/secrets/postgres_encryption_key
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - /home/bmsul/Websets/secrets/postgres_password:/run/secrets/postgres_password:ro
+      - /home/bmsul/Websets/secrets/postgres_encryption_key:/run/secrets/postgres_encryption_key:ro
     ports:
       - "5432:5432"
     restart: unless-stopped
@@ -136,9 +138,6 @@ services:
         limits:
           cpus: '0.50'
           memory: 512m
-    secrets:
-      - postgres_password
-      - postgres_encryption_key
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -152,9 +151,11 @@ services:
     environment:
       VAULT_DEV_ROOT_TOKEN_ID: root
       VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
-    command: sh -c "vault server -dev -dev-tls-cert=/certs/vault.crt -dev-tls-key=/certs/vault.key -dev-tls-client-ca=/certs/ca.crt"
-    cap_add:
-      - IPC_LOCK
+      VAULT_ADDR: https://localhost:8200
+      VAULT_CACERT: /certs/ca.crt
+      VAULT_CLIENT_CERT: /certs/vault.crt
+      VAULT_CLIENT_KEY: /certs/vault.key
+    command: server -dev -dev-tls-cert /certs/vault.crt -dev-tls-key /certs/vault.key -dev-tls-client-ca /certs/ca.crt
     volumes:
       - ./certs:/certs:ro
       - vault_data:/vault/file
@@ -186,7 +187,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
 
   prometheus:
     image: prom/prometheus:latest
@@ -226,8 +226,7 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
-    secrets:
-      - grafana_admin_password
+      - /home/bmsul/Websets/secrets/grafana_admin_password:/run/secrets/grafana_admin_password:ro
     depends_on:
       prometheus:
         condition: service_healthy
@@ -311,11 +310,10 @@ services:
     volumes:
       - ./data/minio:/data
       - ./certs:/certs:ro
-    secrets:
-      - minio_root_user
-      - minio_root_password
-      - minio_kms_key
-      - minio_sse_master_key
+      - /home/bmsul/Websets/secrets/minio_root_user:/run/secrets/minio_root_user:ro
+      - /home/bmsul/Websets/secrets/minio_root_password:/run/secrets/minio_root_password:ro
+      - /home/bmsul/Websets/secrets/minio_kms_key:/run/secrets/minio_kms_key:ro
+      - /home/bmsul/Websets/secrets/minio_sse_master_key:/run/secrets/minio_sse_master_key:ro
     healthcheck:
       test: ["CMD", "curl", "--cacert", "/certs/ca.crt", "-f", "https://localhost:9000/minio/health/live"]
       interval: 30s
@@ -336,19 +334,3 @@ volumes:
   qdrant_data:
   weaviate_data:
   vault_data:
-
-secrets:
-  minio_root_user:
-    file: /home/bmsul/Websets/secrets/minio_root_user
-  minio_root_password:
-    file: /home/bmsul/Websets/secrets/minio_root_password
-  postgres_password:
-    file: /home/bmsul/Websets/secrets/postgres_password
-  postgres_encryption_key:
-    file: /home/bmsul/Websets/secrets/postgres_encryption_key
-  grafana_admin_password:
-    file: /home/bmsul/Websets/secrets/grafana_admin_password
-  minio_kms_key:
-    file: /home/bmsul/Websets/secrets/minio_kms_key
-  minio_sse_master_key:
-    file: /home/bmsul/Websets/secrets/minio_sse_master_key
