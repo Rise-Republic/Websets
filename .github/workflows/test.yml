@@ -329,3 +329,41 @@ jobs:
     - name: Validate Alertmanager config
       run: |
         docker run --rm -v ${{ github.workspace }}/monitoring/alertmanager:/am prom/prometheus promtool check config /am/alertmanager.yml
+
+    - name: Lint observability YAML
+      run: |
+        pip install yamllint
+        yamllint observability monitoring infra/observability || true
+
+    - name: Helm diff (if charts present)
+      run: |
+        if find monitoring observability infra/observability -name Chart.yaml | grep -q Chart.yaml; then
+          curl -sSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm plugin install https://github.com/databus23/helm-diff
+          for chart in $(find monitoring observability infra/observability -name Chart.yaml -printf '%h\n'); do
+            helm dependency build "$chart"
+            helm diff upgrade --allow-unreleased $(basename "$chart") "$chart"
+          done
+        else
+          echo "No Helm charts detected"
+        fi
+
+    - name: Terraform plan for observability stack
+      run: |
+        terraform -chdir=infra/terraform init -backend=false
+        terraform -chdir=infra/terraform plan -no-color
+
+  grafana-dashboard-check:
+    runs-on: ubuntu-latest
+    needs: [observability-checks]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Verify Grafana dashboard JSON
+      run: python scripts/check_grafana_drift.py monitoring/grafana/dashboards
