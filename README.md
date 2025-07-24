@@ -41,6 +41,7 @@ make dev
 ```bash
 # Copy the sample env file and adjust non‑secret settings
 cp .env.example .env
+# VAULT_TOKEN is intentionally omitted; supply it via env var or Docker secret
 ```
 
 # Seed Vault with secrets from the template
@@ -651,7 +652,7 @@ For support and questions:
 ## 🔐 Secure Secrets Management (HashiCorp Vault)
 
 - All sensitive secrets (API keys, DB passwords) should be loaded from Vault, not .env or plaintext files.
-- Set `VAULT_ADDR` and `VAULT_TOKEN` environment variables for the app.
+- Set `VAULT_ADDR` and provide `VAULT_TOKEN` via an environment variable or Docker secret (not included in `.env.example`).
 - Use `app/secrets/vault.py` to fetch secrets at runtime.
 
 Docker deployments can use [Docker secrets](secrets/README.md) to inject
