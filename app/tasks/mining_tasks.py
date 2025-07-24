@@ -1,4 +1,3 @@
-```python
 from typing import List, Dict, Any
 import uuid
 
@@ -365,4 +364,3 @@ def cleanup_old_jobs():
         db.rollback()
     finally:
         db.close()
-```
