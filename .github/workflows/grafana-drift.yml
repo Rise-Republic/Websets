@@ -1,0 +1,20 @@
+name: Grafana Dashboard Drift
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  drift-check:
+    runs-on: ubuntu-latest
+    env:
+      GRAFANA_URL: ${{ secrets.GRAFANA_URL }}
+      GRAFANA_USER: ${{ secrets.GRAFANA_USER }}
+      GRAFANA_PASS: ${{ secrets.GRAFANA_PASS }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Check dashboards
+        run: ./scripts/compare_grafana_dashboards.sh
