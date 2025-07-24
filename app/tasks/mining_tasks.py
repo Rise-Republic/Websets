@@ -6,6 +6,7 @@ import asyncio
 from datetime import datetime, timedelta
 
 from app.tasks.celery_app import celery_app
+from app.monitoring import get_metrics_collector
 from app.database import SessionLocal
 from app.models import Job, JobStatus, DiscoveredURL, CrawlResult, Dataset, DataRecord
 from app.agents import PlannerAgent, DiscoveryAgent, SchemaInferenceAgent
@@ -22,6 +23,9 @@ def start_mining_job(self, job_id: str):
         job_id: UUID of the job to execute
     """
     db = SessionLocal()
+    metrics = get_metrics_collector()
+    job_start = datetime.utcnow()
+    metrics.record_job_started()
     try:
         # Get job from database
         job = db.query(Job).filter(Job.id == job_id).first()
@@ -61,7 +65,8 @@ def start_mining_job(self, job_id: str):
         }
         
         asyncio.run(tracker.complete_job(summary))
-        
+        metrics.record_job_completed(duration=(datetime.utcnow() - job_start).total_seconds())
+
         return {
             "job_id": job_id,
             "status": "completed",
@@ -70,6 +75,7 @@ def start_mining_job(self, job_id: str):
         
     except Exception as e:
         logger.error(f"Job {job_id} failed: {e}")
+        metrics.record_job_failed(duration=(datetime.utcnow() - job_start).total_seconds())
         tracker = JobProgressTracker(job_id)
         asyncio.run(tracker.report_error(str(e)))
         raise
