@@ -17,3 +17,23 @@ def send_email(to_address: str, subject: str, body: str) -> None:
         server.send_message(msg)
 
 
+def send_password_reset(to_address: str, reset_token: str) -> None:
+    """Send a password reset email with a reset token link."""
+    subject = "Password Reset Request"
+    reset_url = f"{settings.frontend_url}/reset-password?token={reset_token}"
+    body = f"""Hello,
+
+You have requested to reset your password for your Websets account.
+
+Please use the link below to reset your password:
+{reset_url}
+
+This link will expire in 30 minutes.
+
+If you did not request this password reset, please ignore this email.
+
+Best regards,
+The Websets Team
+"""
+    
+    send_email(to_address=to_address, subject=subject, body=body)

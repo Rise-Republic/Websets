@@ -55,7 +55,7 @@ class VaultClient:
 
 def cli_test_connection() -> None:
     """CLI helper to verify Vault connectivity and secret availability."""
-    vault_path = os.getenv("VAULT_SECRET_PATH", "secret/websets")
+    vault_path = os.getenv("VAULT_SECRET_PATH", "websets")
     try:
         client = VaultClient()
         keys = client.verify_secret_path(vault_path)

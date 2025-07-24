@@ -66,7 +66,7 @@ class Settings(BaseSettings):
     """Main application settings."""
     # Environment
     environment: str = "development"
-    log_level: str = "INFO"
+    log_level: str = "DEBUG"
     
     # API Keys
     openai_api_key: str
@@ -117,7 +117,7 @@ def load_vault_env() -> None:
     if not (vault_addr and vault_token):
         raise ConnectionError("VAULT_ADDR and VAULT_TOKEN must be set to use Vault")
 
-    path = os.getenv("VAULT_SECRET_PATH", "secret/websets")
+    path = os.getenv("VAULT_SECRET_PATH", "websets")
     client = VaultClient()
     client.verify_secret_path(path)
 
