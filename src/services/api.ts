@@ -61,12 +61,14 @@ export interface ErrorResponse {
 
 class ApiService {
   private token: string | (() => Promise<string | null>) | null = null;
+  private refreshToken: string | null = null;
   private readonly maxRetries = 3;
   private readonly retryDelay = 1000; // 1 second
   private useVersionedEndpoints = true; // Toggle for versioned vs legacy endpoints
 
   constructor() {
-    this.token = null;
+    this.token = localStorage.getItem('websets_token');
+    this.refreshToken = localStorage.getItem('websets_refresh_token');
   }
 
   private getBaseUrl(endpoint: string): string {
@@ -196,8 +198,8 @@ class ApiService {
   }
 
   private async fetchWithRetry(
-    url: string, 
-    options: RequestInit = {}, 
+    url: string,
+    options: RequestInit = {},
     attemptNumber = 1
   ): Promise<Response> {
     try {
@@ -216,25 +218,69 @@ class ApiService {
     }
   }
 
-  // Authentication
-  async register(email: string, password: string, fullName: string): Promise<User> {
-    const response = await fetch(this.getBaseUrl('/auth/register'), {
+  private async refreshAccessToken() {
+    if (!this.refreshToken) {
+      throw new Error('No refresh token available');
+    }
+    const response = await fetch(this.getBaseUrl('/auth/refresh'), {
       method: 'POST',
       headers: await this.getHeaders(false),
-      body: JSON.stringify({
-        email,
-        password,
-        full_name: fullName,
-      }),
+      body: JSON.stringify({ refresh_token: this.refreshToken }),
     });
-    
+    const data = await this.handleResponse(response);
+    this.token = data.access_token;
+    this.refreshToken = data.refresh_token;
+    localStorage.setItem('websets_token', this.token);
+    localStorage.setItem('websets_refresh_token', this.refreshToken);
+  }
+
+  private async request(
+    endpoint: string,
+    options: RequestInit = {},
+    includeAuth = true
+  ): Promise<Response> {
+    const url = this.getBaseUrl(endpoint);
+    let response = await this.fetchWithRetry(url, {
+      ...options,
+      headers: await this.getHeaders(includeAuth),
+    });
+    if (response.status === 401 && this.refreshToken) {
+      try {
+        await this.refreshAccessToken();
+        response = await this.fetchWithRetry(url, {
+          ...options,
+          headers: await this.getHeaders(includeAuth),
+        });
+      } catch (err) {
+        this.logout();
+        throw err;
+      }
+    }
+    return response;
+  }
+
+  // Authentication
+  async register(email: string, password: string, fullName: string): Promise<User> {
+    const response = await this.request(
+      '/auth/register',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          email,
+          password,
+          full_name: fullName,
+        }),
+      },
+      false
+    );
+
     return this.handleResponse(response);
   }
 
   async login(
     email: string,
     password: string
-  ): Promise<{ access_token: string; token_type: string }> {
+  ): Promise<{ access_token: string; token_type: string; refresh_token: string }> {
     const formData = new URLSearchParams();
     formData.append('username', email);
     formData.append('password', password);
@@ -248,7 +294,9 @@ class ApiService {
 
       const data = await this.handleResponse(response);
       this.token = data.access_token;
+      this.refreshToken = data.refresh_token;
       localStorage.setItem('websets_token', this.token!);
+      localStorage.setItem('websets_refresh_token', this.refreshToken!);
       return data;
     } catch (error: any) {
       // Provide clearer message for network failures
@@ -259,54 +307,73 @@ class ApiService {
     }
   }
 
+  async passwordResetRequest(email: string): Promise<{ message: string; token: string }> {
+    const response = await this.request(
+      '/auth/password-reset/request',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      },
+      false
+    );
+    return this.handleResponse(response);
+  }
+
+  async passwordResetConfirm(token: string, newPassword: string): Promise<{ message: string }> {
+    const response = await this.request(
+      '/auth/password-reset/confirm',
+      {
+        method: 'POST',
+        body: JSON.stringify({ token, new_password: newPassword }),
+      },
+      false
+    );
+    return this.handleResponse(response);
+  }
+
   async getCurrentUser(): Promise<User> {
-    const response = await fetch(this.getBaseUrl('/auth/me'), {
-      headers: await this.getHeaders(),
-    });
+    const response = await this.request('/auth/me');
     
     return this.handleResponse(response);
   }
 
   logout() {
     this.token = null;
+    this.refreshToken = null;
     localStorage.removeItem('websets_token');
+    localStorage.removeItem('websets_refresh_token');
   }
 
   // Jobs
   async getJobs(): Promise<Job[]> {
-    const response = await fetch(this.getBaseUrl('/jobs/'), {
-      headers: await this.getHeaders(),
-    });
+    const response = await this.request('/jobs/');
     
     return this.handleResponse(response);
   }
 
   async getJob(jobId: string): Promise<Job> {
-    const response = await fetch(this.getBaseUrl('/jobs/' + jobId), {
-      headers: await this.getHeaders(),
-    });
+    const response = await this.request('/jobs/' + jobId);
     
     return this.handleResponse(response);
   }
 
   async createJob(prompt: string, options?: { estimated_urls?: number; complexity?: string }): Promise<Job> {
-    const response = await fetch(this.getBaseUrl('/jobs/'), {
-      method: 'POST',
-      headers: await this.getHeaders(),
-      body: JSON.stringify({
-        prompt,
-        ...options,
-      }),
-    });
+    const response = await this.request(
+      '/jobs/',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          prompt,
+          ...options,
+        }),
+      }
+    );
     
     return this.handleResponse(response);
   }
 
   async cancelJob(jobId: string): Promise<void> {
-    const response = await fetch(this.getBaseUrl('/jobs/' + jobId), {
-      method: 'DELETE',
-      headers: await this.getHeaders(),
-    });
+    const response = await this.request('/jobs/' + jobId, { method: 'DELETE' });
     
     if (!response.ok) {
       throw new Error(`Failed to cancel job: ${response.status}`);
@@ -315,33 +382,28 @@ class ApiService {
 
   // Datasets
   async getDatasets(): Promise<Dataset[]> {
-    const response = await fetch(this.getBaseUrl('/datasets/'), {
-      headers: await this.getHeaders(),
-    });
+    const response = await this.request('/datasets/');
     
     return this.handleResponse(response);
   }
 
   async getDataset(datasetId: string): Promise<Dataset> {
-    const response = await fetch(this.getBaseUrl('/datasets/' + datasetId), {
-      headers: await this.getHeaders(),
-    });
+    const response = await this.request('/datasets/' + datasetId);
     
     return this.handleResponse(response);
   }
 
   async getDatasetRecords(datasetId: string, limit = 50, offset = 0): Promise<DatasetRecord[]> {
-    const response = await fetch(this.getBaseUrl(`/datasets/${datasetId}/records?limit=${limit}&offset=${offset}`), {
-      headers: await this.getHeaders(),
-    });
+    const response = await this.request(
+      `/datasets/${datasetId}/records?limit=${limit}&offset=${offset}`
+    );
     
     return this.handleResponse(response);
   }
 
   async searchDataset(datasetId: string, query: string, limit = 10, threshold = 0.7): Promise<DatasetRecord[]> {
-    const response = await fetch(this.getBaseUrl('/datasets/' + datasetId + '/search'), {
+    const response = await this.request(`/datasets/${datasetId}/search`, {
       method: 'POST',
-      headers: await this.getHeaders(),
       body: JSON.stringify({
         query,
         limit,
@@ -353,9 +415,9 @@ class ApiService {
   }
 
   async exportDataset(datasetId: string, format: 'json' | 'csv' = 'json'): Promise<Blob> {
-    const response = await fetch(this.getBaseUrl(`/datasets/${datasetId}/export?format=${format}`), {
-      headers: await this.getHeaders(),
-    });
+    const response = await this.request(
+      `/datasets/${datasetId}/export?format=${format}`
+    );
     
     if (!response.ok) {
       throw new Error(`Failed to export dataset: ${response.status}`);
@@ -366,12 +428,12 @@ class ApiService {
 
   // Health
   async getHealth(): Promise<{ status: string; timestamp: string }> {
-    const response = await fetch(this.getBaseUrl('/health/'));
+    const response = await this.request('/health/', {}, false);
     return this.handleResponse(response);
   }
 
   async getDetailedHealth(): Promise<any> {
-    const response = await fetch(this.getBaseUrl('/health/detailed'));
+    const response = await this.request('/health/detailed', {}, false);
     return this.handleResponse(response);
   }
 
