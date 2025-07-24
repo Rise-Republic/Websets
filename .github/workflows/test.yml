@@ -123,6 +123,7 @@ jobs:
         JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         ENVIRONMENT: testing
+        CI: false
       run: |
         pytest tests/ -v --cov=app \
           --cov-report=xml:artifacts/coverage.xml \
