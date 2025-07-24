@@ -67,19 +67,24 @@ class TestConfigLoading(unittest.TestCase):
             validate_settings()
 
     @patch('app.secrets.vault.hvac.Client')
-    def test_vault_connection_failure_exits(self, mock_hvac_client):
-        """Test that the application exits if Vault connection fails."""
+    def test_vault_connection_failure_falls_back_to_env(self, mock_hvac_client):
+        """If Vault fails, config should fall back to environment variables."""
         # Arrange
         mock_hvac_client.side_effect = Exception("Vault connection failed")
         os.environ['VAULT_ADDR'] = 'http://fake-vault:8200'
         os.environ['VAULT_TOKEN'] = 'fake-token'
+        os.environ['OPENAI_API_KEY'] = 'env_openai'
+        os.environ['DATABASE_URL'] = 'sqlite:///test.db'
+        os.environ['JWT_SECRET_KEY'] = 'a-very-secure-jwt-secret-key-from-env'
 
-        # Act & Assert
-        with self.assertRaises(SystemExit) as cm:
-            # Importing the module will trigger the load and validation logic
-            from app.config import validate_settings
-            validate_settings()
-        self.assertEqual(cm.exception.code, 1)
+        # Act
+        from app.config import validate_settings
+        settings = validate_settings()
+
+        # Assert
+        self.assertEqual(settings.openai_api_key, 'env_openai')
+        self.assertEqual(settings.database_url, 'sqlite:///test.db')
+        self.assertEqual(settings.jwt_secret_key, 'a-very-secure-jwt-secret-key-from-env')
 
 if __name__ == '__main__':
     unittest.main()
