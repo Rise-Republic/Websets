@@ -32,7 +32,8 @@ docker-build:
 
 # Launch full local development stack
 dev:
-	bash scripts/setup.sh
-	docker compose up -d
-	alembic upgrade head
-	vault kv put secret/websets @vault_secrets_template.json
+	dev:
+    bash scripts/setup.sh
+    docker compose up -d
+    DB_URL=$$DATABASE_URL alembic upgrade head
+    vault kv put secret/websets @vault_secrets_template.json
