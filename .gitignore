@@ -39,3 +39,7 @@ secrets/minio_root_password.txt
 secrets/minio_kms_key.txt
 secrets/postgres_encryption_key.txt
 artifacts/
+
+# Certificates
+*.key  
+*.crt
