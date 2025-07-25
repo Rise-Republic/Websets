@@ -18,7 +18,7 @@ def load_config():
 
 def test_disable_vault_in_production_exits(monkeypatch):
     monkeypatch.setenv("ENVIRONMENT", "production")
-    monkeypatch.setenv("DISABLE_VAULT", "true")
+    monkeypatch.setenv("DISABLE_VAULT_FOR_LOCAL_DEV", "true")
     monkeypatch.setenv("CI", "false")
     monkeypatch.delenv("VAULT_ADDR", raising=False)
     monkeypatch.delenv("VAULT_TOKEN", raising=False)
@@ -31,6 +31,6 @@ def test_missing_vault_vars_in_production_exits(monkeypatch):
     monkeypatch.setenv("CI", "false")
     monkeypatch.delenv("VAULT_ADDR", raising=False)
     monkeypatch.delenv("VAULT_TOKEN", raising=False)
-    monkeypatch.delenv("DISABLE_VAULT", raising=False)
+    monkeypatch.delenv("DISABLE_VAULT_FOR_LOCAL_DEV", raising=False)
     with pytest.raises(SystemExit):
         config.get_settings()

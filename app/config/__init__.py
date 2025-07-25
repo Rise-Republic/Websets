@@ -6,6 +6,7 @@ from typing import Optional
 from loguru import logger
 from pydantic import ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from dotenv import load_dotenv
 
 from .auth import AuthSettings
 from .env import load_vault_env, _load_file_secrets
@@ -49,7 +50,6 @@ class Settings(BaseSettings):
     otlp_endpoint: str = "http://localhost:4318"
 
     model_config = SettingsConfigDict(
-        env_file=".env",
         case_sensitive=False,
         extra="ignore",
     )
@@ -66,9 +66,13 @@ class Settings(BaseSettings):
 
 def get_settings() -> Settings:
     """Return application settings with optional Vault integration."""
-    disable_vault = os.getenv("DISABLE_VAULT", "false").lower() == "true"
+    disable_vault = os.getenv("DISABLE_VAULT_FOR_LOCAL_DEV", "false").lower() == "true"
     env = os.getenv("ENVIRONMENT", "development").lower()
     ci_mode = os.getenv("CI", "false").lower() == "true"
+
+    if disable_vault:
+        # Load local .env only when explicitly bypassing Vault
+        load_dotenv(".env")
 
     use_vault = (
         not disable_vault and os.getenv("VAULT_ADDR") and os.getenv("VAULT_TOKEN")
