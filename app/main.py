@@ -56,8 +56,17 @@ app.add_middleware(
 # Security headers
 app.add_middleware(SecurityMiddleware)
 
+# Add CSRF middleware
+from app.middleware.csrf import CSRFMiddleware
+app.add_middleware(CSRFMiddleware)
+
 # Security middleware
 app.add_middleware(SessionMiddleware)  # WorkOS AuthKit session validation
+
+# Add tenant guard middleware
+from app.middleware.tenant_guard import TenantGuardMiddleware
+app.add_middleware(TenantGuardMiddleware)
+
 app.add_middleware(RBACMiddleware)
 app.add_middleware(AuditMiddleware)
 

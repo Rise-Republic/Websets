@@ -184,15 +184,16 @@ async def auth_callback(
         # In production, should use SameSite=None and secure=True with HTTPS
         is_prod = os.getenv("ENV", "development").lower() == "production"
         
+        # ASVS 3.4.2, 3.4.3: Secure cookie flags
         response.set_cookie(
             COOKIE_NAME,
             auth_response.sealed_session,
-            httponly=True,
+            httponly=True,  # Always
             secure=is_prod,  # Only use secure in production with HTTPS
-            samesite="lax" if not is_prod else "none",  # Use lax for local development
+            samesite="lax" if not is_prod else "none",  # Use lax for local development, none for SSO prod
             max_age=COOKIE_MAX_AGE,
-            path="/",
-            domain=None  # Allow the browser to handle domain matching
+            path="/"
+            # Do not set domain unless cross-domain SSO is required
         )
         
         # Log successful authentication (without PII)
