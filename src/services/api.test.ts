@@ -16,14 +16,10 @@ function mockResponse(data: any, status = 200, headers = { 'Content-Type': 'appl
 
 beforeEach(() => {
   jest.clearAllMocks();
-  apiService.logout();
+  (anyService.token = null);
+  (anyService.refreshToken = null);
+  (anyService.tenantId = null);
   global.fetch = jest.fn();
-  global.localStorage = {
-    getItem: jest.fn(),
-    setItem: jest.fn(),
-    removeItem: jest.fn(),
-    clear: jest.fn(),
-  } as any;
 });
 
 describe('apiService getHeaders', () => {
@@ -62,16 +58,18 @@ describe('apiService getHeaders', () => {
 
 describe('apiService login', () => {
   test('returns tokens on success', async () => {
-    (global.fetch as jest.Mock).mockResolvedValue(
-      mockResponse({ access_token: 'a', refresh_token: 'r', token_type: 'Bearer' })
-    );
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce(
+        mockResponse({ access_token: 'a', refresh_token: 'r', token_type: 'Bearer' })
+      )
+      .mockResolvedValueOnce(mockResponse({ authenticated: true }));
     await apiService.login('u@example.com', 'pw');
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/auth/login'),
       expect.objectContaining({ method: 'POST' })
     );
     expect(apiService.getToken()).toBe('a');
-    expect(apiService.isAuthenticated()).toBe(true);
+    expect(await apiService.isAuthenticated()).toBe(true);
   });
 
   test('provides helpful message on network failure', async () => {
@@ -102,10 +100,12 @@ describe('getSession', () => {
 describe('authentication helpers', () => {
   test('isAuthenticated and getToken reflect logout', async () => {
     anyService.token = 'zz';
-    expect(apiService.isAuthenticated()).toBe(true);
+    (global.fetch as jest.Mock).mockResolvedValueOnce(mockResponse({ authenticated: true }));
+    expect(await apiService.isAuthenticated()).toBe(true);
     global.fetch = jest.fn().mockResolvedValue({ ok: true } as any);
     await apiService.logout();
-    expect(apiService.isAuthenticated()).toBe(false);
+    (global.fetch as jest.Mock).mockResolvedValueOnce({ status: 401, ok: false, json: async () => ({}) } as any);
+    expect(await apiService.isAuthenticated()).toBe(false);
     expect(apiService.getToken()).toBeNull();
   });
 });

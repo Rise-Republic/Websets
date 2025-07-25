@@ -12,20 +12,14 @@ test("shows login screen when not authenticated", async ({ page }) => {
 // Authenticated dashboard flow with mocked API
 
 test("allows creating a new job", async ({ page }) => {
-  await page.addInitScript(() => {
-    // Mark the user as authenticated for the client-side checks
-    localStorage.setItem("websets_authenticated", "true");
-  });
-
-  await page.route("**/auth/me", (route) => {
+  await page.route("**/api/session", (route) => {
     route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        id: "1",
-        email: "test@example.com",
-        full_name: "Test User",
-        is_active: true,
+        authenticated: true,
+        tenant_id: "t1",
+        user: { id: "1", email: "test@example.com" },
       }),
     });
   });

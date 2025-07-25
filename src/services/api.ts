@@ -69,9 +69,6 @@ class ApiService {
   private baseUrl: string;
 
   constructor() {
-    this.token = localStorage.getItem('websets_token');
-    this.refreshToken = localStorage.getItem('websets_refresh_token');
-    this.tenantId = localStorage.getItem('websets_tenant_id');
     this.baseUrl = this.useVersionedEndpoints ? VERSIONED_API_BASE : API_BASE;
   }
   private getBaseUrl(endpoint: string): string {
@@ -93,11 +90,6 @@ class ApiService {
 
   setTenantId(id: string | null) {
     this.tenantId = id;
-    if (id) {
-      localStorage.setItem('websets_tenant_id', id);
-    } else {
-      localStorage.removeItem('websets_tenant_id');
-    }
   }
 
   private ensureTenant() {
@@ -428,9 +420,6 @@ class ApiService {
     // Clear any local tokens
     this.token = null;
     this.tenantId = null;
-    localStorage.removeItem('websets_token');
-    localStorage.removeItem('websets_refresh_token');
-    localStorage.removeItem('websets_tenant_id');
 
     if (typeof window !== 'undefined') {
       try {
@@ -567,25 +556,13 @@ class ApiService {
   }
 
   // Utility methods
-  isAuthenticated(): boolean {
-    // Check token in memory
-    const hasToken = !!this.token;
-
-    // Local storage flag set after successful auth
-    const hasAuthFlag = localStorage.getItem('websets_authenticated') === 'true';
-
-    // Check for WorkOS session cookie
-    const hasSessionCookie =
-      typeof document !== 'undefined' && document.cookie.includes('session=');
-
-    console.log('Authentication check:', {
-      hasToken,
-      hasAuthFlag,
-      hasSessionCookie,
-      result: hasToken || hasAuthFlag || hasSessionCookie,
-    });
-
-    return hasToken || hasAuthFlag || hasSessionCookie;
+  async isAuthenticated(): Promise<boolean> {
+    try {
+      const session = await this.getSession();
+      return session.authenticated;
+    } catch {
+      return false;
+    }
   }
 
   getToken(): string | null {

@@ -20,7 +20,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["workos-auth"])
 
 # Security constants
-COOKIE_NAME = "session"
+# New session cookie name. The old 'session' cookie is still accepted
+# for a transitional period to allow session rotation.
+COOKIE_NAME = "session_v2"
+LEGACY_COOKIE_NAME = "session"
 COOKIE_MAX_AGE = 14 * 24 * 3600  # 14 days in seconds
 STATE_MAX_AGE = 300  # 5 minutes in seconds
 
@@ -75,7 +78,7 @@ async def require_session(request: Request):
     Raises 401 if session is invalid or missing
     """
     logger.info(f"Cookies received: {request.cookies}")
-    sealed_session = request.cookies.get(COOKIE_NAME)
+    sealed_session = request.cookies.get(COOKIE_NAME) or request.cookies.get(LEGACY_COOKIE_NAME)
     logger.info(f"Session cookie found: {bool(sealed_session)}")
     
     if not sealed_session:
@@ -186,19 +189,18 @@ async def auth_callback(
         # Set session cookie with sealed session (per official docs)
         # For local development, use SameSite=Lax and secure=False
         # In production, use SameSite=None and secure=True with HTTPS
-        is_prod = IS_PRODUCTION
-        
-        # ASVS 3.4.2, 3.4.3: Secure cookie flags
+        # Always set secure flags on the new session cookie
         response.set_cookie(
             COOKIE_NAME,
             auth_response.sealed_session,
-            httponly=True,  # Always
-            secure=is_prod,  # Only use secure in production with HTTPS
-            samesite="lax" if not is_prod else "none",  # Use lax for local development, none for SSO prod
+            httponly=True,
+            secure=True,
+            samesite="none",
             max_age=COOKIE_MAX_AGE,
-            path="/"
-            # Do not set domain unless cross-domain SSO is required
+            path="/",
         )
+        # Remove legacy cookie if present
+        response.delete_cookie(LEGACY_COOKIE_NAME, path="/")
         
         # Log successful authentication (without PII)
         logger.info(f"User authenticated: {auth_response.user.id}")
@@ -225,6 +227,7 @@ async def logout(request: Request, session = Depends(require_session)):
         # Create response that redirects to WorkOS logout
         response = RedirectResponse(url=logout_url)
         response.delete_cookie(COOKIE_NAME, path="/")
+        response.delete_cookie(LEGACY_COOKIE_NAME, path="/")
         
         logger.info("User logged out successfully")
         return response
@@ -237,6 +240,7 @@ async def logout_api(request: Request):
     """Clear session cookie without redirect."""
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
     response.delete_cookie(COOKIE_NAME, path="/")
+    response.delete_cookie(LEGACY_COOKIE_NAME, path="/")
     return response
 
 @router.get("/session")
@@ -295,7 +299,7 @@ class SessionMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
             
         # Check for session cookie
-        session_cookie = request.cookies.get(COOKIE_NAME)
+        session_cookie = request.cookies.get(COOKIE_NAME) or request.cookies.get(LEGACY_COOKIE_NAME)
         if not session_cookie and request.url.path.startswith("/api/"):
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
