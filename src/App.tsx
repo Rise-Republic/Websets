@@ -1,11 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from './hooks/useAuth';
 import LoginForm from './components/Auth/LoginForm';
 import Dashboard from './components/Dashboard/Dashboard';
 
 function App() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user, error } = useAuth();
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  
+  // Debug authentication and routing
+  console.log('Auth state:', { isAuthenticated, isLoading, currentPath, user, error });
+  console.log('Cookies:', document.cookie);
+  
+  // Log when we're on the dashboard path
+  useEffect(() => {
+    if (currentPath === '/dashboard') {
+      console.log('On dashboard path, auth state:', { isAuthenticated, isLoading });
+    }
+  }, [currentPath, isAuthenticated, isLoading]);
 
   // Handle routing based on URL path
   useEffect(() => {

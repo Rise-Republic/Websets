@@ -347,12 +347,39 @@ class ApiService {
   }
 
   async getCurrentUser(): Promise<User> {
-    // Use the WorkOS auth endpoint for user info
-    const response = await this.request('/auth/me', {
-      credentials: 'include' // Important: Include cookies in the request
-    });
+    console.log('Getting current user, cookies:', document.cookie);
     
-    return this.handleResponse(response);
+    try {
+      // Force a manual check of authentication
+      const isAuth = this.isAuthenticated();
+      console.log('Manual auth check:', isAuth);
+      
+      // Use the WorkOS auth endpoint for user info
+      // Make a direct fetch to ensure cookies are included
+      console.log('Fetching from:', `${API_BASE}/api/auth/me`);
+      const response = await fetch(`${API_BASE}/api/auth/me`, {
+        method: 'GET',
+        credentials: 'include', // Important: Include cookies in the request
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      console.log('Response status:', response.status);
+      console.log('Response headers:', [...response.headers.entries()]);
+      
+      if (!response.ok) {
+        console.error('Failed to get user:', response.status, response.statusText);
+        throw new Error(`Failed to get user: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('User data:', data);
+      return data;
+    } catch (error) {
+      console.error('Error getting current user:', error);
+      throw error;
+    }
   }
 
   logout() {
@@ -463,7 +490,17 @@ class ApiService {
   isAuthenticated(): boolean {
     // Check for WorkOS session cookie or token
     // The cookie name should match what's set in the backend (session)
-    return document.cookie.includes('session=') || !!this.token;
+    const hasCookie = document.cookie.includes('session=');
+    const hasToken = !!this.token;
+    
+    console.log('Authentication check:', {
+      cookies: document.cookie,
+      hasCookie,
+      hasToken,
+      result: hasCookie || hasToken
+    });
+    
+    return hasCookie || hasToken;
   }
 
   getToken(): string | null {

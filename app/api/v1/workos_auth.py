@@ -75,7 +75,9 @@ async def require_session(request: Request):
     Validate user session using WorkOS sealed session pattern from official docs
     Raises 401 if session is invalid or missing
     """
+    logger.info(f"Cookies received: {request.cookies}")
     sealed_session = request.cookies.get(COOKIE_NAME)
+    logger.info(f"Session cookie found: {bool(sealed_session)}")
     
     if not sealed_session:
         raise HTTPException(
@@ -232,7 +234,9 @@ async def get_current_user(request: Request, session = Depends(require_session))
     Protected route that returns the current authenticated user
     Returns complete WorkOS user object structure
     """
+    logger.info(f"ME endpoint called, session authenticated")
     user = request.state.user
+    logger.info(f"User found: {user.id} - {user.email}")
     return {
         "object": "user",
         "id": user.id,
