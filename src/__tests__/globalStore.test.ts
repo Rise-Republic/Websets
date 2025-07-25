@@ -13,6 +13,7 @@ const mockDefaultApi = {
   isAuthenticated: jest.fn(),
   passwordResetRequest: jest.fn(),
   passwordResetConfirm: jest.fn(),
+  setTenantId: jest.fn(),
 };
 (apiService as any).default = mockDefaultApi;
 
@@ -36,7 +37,7 @@ test('setters update state', () => {
 });
 
 test('login stores user on success', async () => {
-  const user = { id: 'u1' };
+  const user = { id: 'u1', tenant_id: 't1' };
   mockDefaultApi.login.mockResolvedValue(undefined);
   mockDefaultApi.getCurrentUser.mockResolvedValue(user);
   await act(async () => {
@@ -44,8 +45,10 @@ test('login stores user on success', async () => {
   });
   const state = useGlobalStore.getState();
   expect(state.user).toEqual(user);
+  expect(state.tenantId).toBe('t1');
   expect(state.isAuthenticated).toBe(true);
   expect(state.error).toBe(null);
+  expect(mockDefaultApi.setTenantId).toHaveBeenCalledWith('t1');
 });
 
 test('logout resets state', () => {
