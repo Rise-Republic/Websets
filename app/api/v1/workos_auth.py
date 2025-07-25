@@ -178,12 +178,13 @@ async def auth_callback(
         response = RedirectResponse(url="http://localhost:5173/dashboard", status_code=302)
         
         # Set secure session cookie with sealed session (per official docs)
+        # Using SameSite=None for cross-domain cookies between frontend and backend
         response.set_cookie(
             COOKIE_NAME,
             auth_response.sealed_session,
             httponly=True,
-            secure=IS_PRODUCTION,  # Only use secure=True in production
-            samesite="lax",
+            secure=True,  # Required for SameSite=None
+            samesite="none",  # Allow cross-domain cookies
             max_age=COOKIE_MAX_AGE,
             path="/"
         )

@@ -1,10 +1,25 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from './hooks/useAuth';
 import LoginForm from './components/Auth/LoginForm';
 import Dashboard from './components/Dashboard/Dashboard';
 
 function App() {
   const { isAuthenticated, isLoading } = useAuth();
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+
+  // Handle routing based on URL path
+  useEffect(() => {
+    const handleRouteChange = () => {
+      setCurrentPath(window.location.pathname);
+    };
+
+    // Listen for popstate events (back/forward navigation)
+    window.addEventListener('popstate', handleRouteChange);
+    
+    return () => {
+      window.removeEventListener('popstate', handleRouteChange);
+    };
+  }, []);
 
   if (isLoading) {
     return (
@@ -17,7 +32,20 @@ function App() {
     );
   }
 
-  return isAuthenticated ? <Dashboard /> : <LoginForm />;
+  // If user is authenticated and on /dashboard path, show Dashboard
+  if (isAuthenticated && currentPath === '/dashboard') {
+    return <Dashboard />;
+  }
+  
+  // If user is authenticated but on root path, redirect to dashboard
+  if (isAuthenticated && currentPath === '/') {
+    window.history.pushState({}, '', '/dashboard');
+    setCurrentPath('/dashboard');
+    return <Dashboard />;
+  }
+
+  // Otherwise show login form
+  return <LoginForm />;
 }
 
 export default App;

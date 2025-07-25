@@ -253,21 +253,23 @@ class ApiService {
     };
 
     try {
-      return await this.fetchWithRetry(url, requestOptions);
-    } catch (error: any) {
+      const response = await this.fetchWithRetry(url, requestOptions);
+      
+      // Handle token refresh if needed
       if (response.status === 401 && this.refreshToken) {
         try {
           await this.refreshAccessToken();
           return await this.fetchWithRetry(url, requestOptions);
-        } catch (err) {
+        } catch (refreshError) {
           this.logout();
-          throw err;
+          throw refreshError;
         }
-        this.logout();
-        throw err;
       }
+      
+      return response;
+    } catch (error) {
+      throw error;
     }
-    return response;
   }
 
   // Authentication
