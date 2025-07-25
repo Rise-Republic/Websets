@@ -51,7 +51,7 @@ services:
       WORKOS_API_KEY_LIVE: "${WORKOS_API_KEY_LIVE:-}"
       WORKOS_CLIENT_ID_TEST: "client_01JE4TKWY9039H6QSH7XNZHQ6Q"
       WORKOS_CLIENT_ID_LIVE: "${WORKOS_CLIENT_ID_LIVE:-}"
-      WORKOS_REDIRECT_URI: "http://localhost:8001/api/auth/callback"
+      WORKOS_REDIRECT_URI: "http://localhost:8001/api/auth/workos/callback"
       WORKOS_COOKIE_PASSWORD: "yvHkj2U4tkv+oYGZon1EDfQVtbb4ro9cabdEAV9YH9A="
       WORKOS_ENFORCE_MFA: "false"
       ENVIRONMENT: "development"

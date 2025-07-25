@@ -534,23 +534,43 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  async processWorkOSCallback(code: string): Promise<void> {
+   async processWorkOSCallback(code: string): Promise<any> {
     const response = await fetch(
-      `${API_BASE}/api/auth/callback?code=${encodeURIComponent(code)}`,
+      `${API_BASE}/api/auth/workos/callback?code=${encodeURIComponent(code)}`,
       {
         method: 'GET',
         credentials: 'include',
+        headers: { Accept: 'application/json' },
       }
     );
 
     if (!response.ok) {
       throw new Error(`Auth callback failed: ${response.status}`);
     }
+
+    return response.json();
   }
 
   // Utility methods
   isAuthenticated(): boolean {
-    return !!this.token;
+    // Check token in memory
+    const hasToken = !!this.token;
+
+    // Local storage flag set after successful auth
+    const hasAuthFlag = localStorage.getItem('websets_authenticated') === 'true';
+
+    // Check for WorkOS session cookie
+    const hasSessionCookie =
+      typeof document !== 'undefined' && document.cookie.includes('session=');
+
+    console.log('Authentication check:', {
+      hasToken,
+      hasAuthFlag,
+      hasSessionCookie,
+      result: hasToken || hasAuthFlag || hasSessionCookie,
+    });
+
+    return hasToken || hasAuthFlag || hasSessionCookie;
   }
 
   getToken(): string | null {

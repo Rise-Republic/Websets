@@ -6,8 +6,8 @@ from app.main import app
 async def test_login_and_cookie_flags():
     async with AsyncClient(app=app, base_url="http://test") as ac:
         # Simulate login (mock WorkOS or use test credentials)
-        resp = await ac.get("/api/callback?code=testcode")
-        assert resp.status_code == 302
+        resp = await ac.get("/api/auth/workos/callback?code=testcode")
+        assert resp.status_code == 200
         cookie = resp.cookies.get("session")
         assert cookie, "Session cookie not set"
         # Check flags
