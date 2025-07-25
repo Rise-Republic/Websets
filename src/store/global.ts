@@ -4,6 +4,7 @@ import apiService from '@/services/api';
 export interface GlobalState {
   user: any;
   tenantId: string | null;
+  orgId: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -13,6 +14,7 @@ export interface GlobalState {
 export interface GlobalActions {
   setUser: (user: any) => void;
   setTenantId: (tenantId: string | null) => void;
+  setOrgId: (orgId: string | null) => void;
   setAuthenticated: (auth: boolean) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -29,6 +31,7 @@ export interface GlobalActions {
 const initialState: Omit<GlobalState, never> = {
   user: null,
   tenantId: null,
+  orgId: null,
   isAuthenticated: false,
   isLoading: true,
   error: null,
@@ -39,6 +42,7 @@ export const useGlobalStore = create<GlobalState & GlobalActions>((set, get) => 
   ...initialState,
   setUser: (user) => set({ user }),
   setTenantId: (tenantId) => set({ tenantId }),
+  setOrgId: (orgId) => set({ orgId }),
   setAuthenticated: (auth) => set({ isAuthenticated: auth }),
   setLoading: (loading) => set({ isLoading: loading }),
   setError: (error) => set({ error }),
@@ -46,41 +50,20 @@ export const useGlobalStore = create<GlobalState & GlobalActions>((set, get) => 
     set((state) => ({ features: { ...state.features, [flag]: enabled } })),
   reset: () => set({ ...initialState, isLoading: false }),
   checkAuth: async () => {
-    console.log('Starting checkAuth...');
     set({ isLoading: true });
     try {
-      // Check if authenticated with WorkOS session cookie or token
-      const isAuth = (apiService as any).isAuthenticated?.();
-      console.log('Initial auth check result:', isAuth);
-      
-      if (isAuth) {
-        console.log('Auth check passed, fetching current user...');
-        try {
-          const current = await apiService.getCurrentUser();
-          console.log('User data received:', current);
-          set({ user: current, isAuthenticated: true, error: null });
-          console.log('Authentication state updated: true');
-        } catch (err: any) {
-          console.error('Error fetching user:', err);
-          set({ error: err.message });
-          console.log('Logging out due to error...');
-          apiService.logout();
-          get().reset();
-        }
-      } else {
-        // Not authenticated
-        console.log('Not authenticated, setting state...');
-        set({ isAuthenticated: false });
-      }
-    } catch (error) {
-      console.error('Authentication check failed:', error);
+      const current = await apiService.getCurrentUser();
+      set({
+        user: current,
+        tenantId: (current as any).tenant_id ?? null,
+        orgId: (current as any).org_id ?? null,
+        isAuthenticated: true,
+        error: null,
+      });
+    } catch (err: any) {
+      set({ user: null, tenantId: null, orgId: null, isAuthenticated: false, error: err.message });
     } finally {
       set({ isLoading: false });
-      console.log('checkAuth complete, state:', { 
-        isAuthenticated: get().isAuthenticated,
-        user: get().user,
-        error: get().error
-      });
     }
   },
   login: async (email, password) => {
@@ -88,9 +71,15 @@ export const useGlobalStore = create<GlobalState & GlobalActions>((set, get) => 
     try {
       await apiService.login(email, password);
       const current = await apiService.getCurrentUser();
-      set({ user: current, isAuthenticated: true, error: null });
+      set({
+        user: current,
+        tenantId: (current as any).tenant_id ?? null,
+        orgId: (current as any).org_id ?? null,
+        isAuthenticated: true,
+        error: null,
+      });
     } catch (err: any) {
-      set({ user: null, isAuthenticated: false, error: err.message });
+      set({ user: null, tenantId: null, orgId: null, isAuthenticated: false, error: err.message });
       throw err;
     } finally {
       set({ isLoading: false });

@@ -16,35 +16,13 @@ function mockResponse(data: any, status = 200, headers = { 'Content-Type': 'appl
 
 beforeEach(() => {
   jest.clearAllMocks();
-  apiService.logout();
   global.fetch = jest.fn();
-  global.localStorage = {
-    getItem: jest.fn(),
-    setItem: jest.fn(),
-    removeItem: jest.fn(),
-    clear: jest.fn(),
-  } as any;
 });
 
 describe('apiService getHeaders', () => {
-  test('returns Authorization header when token is string', async () => {
-    anyService.token = 'abc';
+  test('returns base headers', async () => {
     const headers = await anyService.getHeaders();
-    expect(headers['Authorization']).toBe('Bearer abc');
-  });
-
-  test('calls token provider function', async () => {
-    const provider = jest.fn().mockResolvedValue('def');
-    apiService.setTokenProvider(provider);
-    const headers = await anyService.getHeaders();
-    expect(provider).toHaveBeenCalled();
-    expect(headers['Authorization']).toBe('Bearer def');
-  });
-
-  test('omits Authorization if provider throws', async () => {
-    apiService.setTokenProvider(() => Promise.reject(new Error('bad')));
-    const headers = await anyService.getHeaders();
-    expect(headers['Authorization']).toBeUndefined();
+    expect(headers['Content-Type']).toBe('application/json');
   });
 });
 
@@ -58,8 +36,6 @@ describe('apiService login', () => {
       expect.stringContaining('/auth/login'),
       expect.objectContaining({ method: 'POST' })
     );
-    expect(apiService.getToken()).toBe('a');
-    expect(apiService.isAuthenticated()).toBe(true);
   });
 
   test('provides helpful message on network failure', async () => {
@@ -70,15 +46,6 @@ describe('apiService login', () => {
   });
 });
 
-describe('authentication helpers', () => {
-  test('isAuthenticated and getToken reflect logout', () => {
-    anyService.token = 'zz';
-    expect(apiService.isAuthenticated()).toBe(true);
-    apiService.logout();
-    expect(apiService.isAuthenticated()).toBe(false);
-    expect(apiService.getToken()).toBeNull();
-  });
-});
 
 describe('apiService internals', () => {
   test('getBaseUrl switches with legacy mode', () => {

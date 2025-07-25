@@ -12,10 +12,6 @@ test("shows login screen when not authenticated", async ({ page }) => {
 // Authenticated dashboard flow with mocked API
 
 test("allows creating a new job", async ({ page }) => {
-  await page.addInitScript(() => {
-    localStorage.setItem("websets_token", "test-token");
-    localStorage.setItem("websets_refresh_token", "refresh");
-  });
 
   await page.route("**/auth/me", (route) => {
     route.fulfill({

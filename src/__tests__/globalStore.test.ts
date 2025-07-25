@@ -10,7 +10,6 @@ const mockDefaultApi = {
   register: jest.fn(),
   logout: jest.fn(),
   getCurrentUser: jest.fn(),
-  isAuthenticated: jest.fn(),
   passwordResetRequest: jest.fn(),
   passwordResetConfirm: jest.fn(),
 };
@@ -18,7 +17,6 @@ const mockDefaultApi = {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockDefaultApi.isAuthenticated.mockReturnValue(false);
   useGlobalStore.getState().reset();
 });
 
@@ -36,7 +34,7 @@ test('setters update state', () => {
 });
 
 test('login stores user on success', async () => {
-  const user = { id: 'u1' };
+  const user = { id: 'u1', tenant_id: 't1', org_id: 'o1' };
   mockDefaultApi.login.mockResolvedValue(undefined);
   mockDefaultApi.getCurrentUser.mockResolvedValue(user);
   await act(async () => {
@@ -44,17 +42,23 @@ test('login stores user on success', async () => {
   });
   const state = useGlobalStore.getState();
   expect(state.user).toEqual(user);
+  expect(state.tenantId).toBe('t1');
+  expect(state.orgId).toBe('o1');
   expect(state.isAuthenticated).toBe(true);
   expect(state.error).toBe(null);
 });
 
 test('logout resets state', () => {
-  const { logout, setUser } = useGlobalStore.getState();
+  const { logout, setUser, setTenantId, setOrgId } = useGlobalStore.getState();
   act(() => {
     setUser({ id: '1' });
+    setTenantId('t');
+    setOrgId('o');
   });
   logout();
   const state = useGlobalStore.getState();
   expect(state.user).toBe(null);
+  expect(state.tenantId).toBe(null);
+  expect(state.orgId).toBe(null);
   expect(state.isAuthenticated).toBe(false);
 });

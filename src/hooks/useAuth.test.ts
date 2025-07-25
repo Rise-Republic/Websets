@@ -13,7 +13,6 @@ const mockDefaultApiService = {
   register: jest.fn(),
   logout: jest.fn(),
   getCurrentUser: jest.fn(),
-  isAuthenticated: jest.fn(),
   passwordResetRequest: jest.fn(),
   passwordResetConfirm: jest.fn(),
 };
@@ -24,7 +23,7 @@ const mockDefaultApiService = {
 describe('useAuthProvider', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockDefaultApiService.isAuthenticated.mockReturnValue(false);
+    mockDefaultApiService.getCurrentUser.mockRejectedValue(new Error('no session'));
     useGlobalStore.getState().reset();
   });
 
@@ -42,7 +41,6 @@ describe('useAuthProvider', () => {
 
   test('checks for existing authentication on mount', async () => {
     const mockUser = { id: '1', email: 'test@example.com', fullName: 'Test User' };
-    mockDefaultApiService.isAuthenticated.mockReturnValue(true);
     mockDefaultApiService.getCurrentUser.mockResolvedValue(mockUser);
 
     const { result } = renderHook(() => useAuthProvider());
@@ -57,7 +55,6 @@ describe('useAuthProvider', () => {
   });
 
   test('handles expired token on mount', async () => {
-    mockDefaultApiService.isAuthenticated.mockReturnValue(true);
     mockDefaultApiService.getCurrentUser.mockRejectedValue(new Error('Token expired'));
 
     const { result } = renderHook(() => useAuthProvider());
@@ -68,7 +65,6 @@ describe('useAuthProvider', () => {
 
     expect(result.current.user).toBe(null);
     expect(result.current.isAuthenticated).toBe(false);
-    expect(mockDefaultApiService.logout).toHaveBeenCalledTimes(1);
   });
 
   test('login success', async () => {
@@ -163,9 +159,8 @@ describe('useAuthProvider', () => {
 
   test('logout clears user state', async () => {
     const mockUser = { id: '1', email: 'test@example.com', fullName: 'Test User' };
-    
+
     // Set up initial authenticated state
-    mockDefaultApiService.isAuthenticated.mockReturnValue(true);
     mockDefaultApiService.getCurrentUser.mockResolvedValue(mockUser);
 
     const { result } = renderHook(() => useAuthProvider());
@@ -202,12 +197,9 @@ describe('useAuthProvider', () => {
 
     expect(result.current.user).toBe(null);
     expect(result.current.isAuthenticated).toBe(false);
-    expect(mockDefaultApiService.logout).toHaveBeenCalledTimes(1);
   });
 
   test('isAuthenticated works correctly', async () => {
-    mockDefaultApiService.isAuthenticated.mockReturnValue(true);
-    
     const { result } = renderHook(() => useAuthProvider());
 
     // Initially false because user is null

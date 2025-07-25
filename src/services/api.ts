@@ -60,16 +60,12 @@ export interface ErrorResponse {
 }
 
 class ApiService {
-  private token: string | (() => Promise<string | null>) | null = null;
-  private refreshToken: string | null = null;
   private readonly maxRetries = 3;
   private readonly retryDelay = 1000; // 1 second
   private useVersionedEndpoints = true; // Toggle for versioned vs legacy endpoints
   private baseUrl: string;
 
   constructor() {
-    this.token = localStorage.getItem('websets_token');
-    this.refreshToken = localStorage.getItem('websets_refresh_token');
     this.baseUrl = this.useVersionedEndpoints ? VERSIONED_API_BASE : API_BASE;
   }
 
@@ -84,10 +80,6 @@ class ApiService {
 
   setLegacyMode(useLegacy: boolean) {
     this.useVersionedEndpoints = !useLegacy;
-  }
-
-  setTokenProvider(fn: () => Promise<string | null>) {
-    this.token = fn;
   }
 
   private async delay(ms: number): Promise<void> {
@@ -109,22 +101,6 @@ class ApiService {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-
-    if (includeAuth && this.token) {
-      let token: string | null = null;
-      if (typeof this.token === 'function') {
-        try {
-          token = await this.token();
-        } catch {
-          token = null;
-        }
-      } else {
-        token = this.token;
-      }
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-    }
 
     return headers;
   }
@@ -220,21 +196,6 @@ class ApiService {
     }
   }
 
-  private async refreshAccessToken() {
-    if (!this.refreshToken) {
-      throw new Error('No refresh token available');
-    }
-    const response = await fetch(this.getBaseUrl('/auth/refresh'), {
-      method: 'POST',
-      headers: await this.getHeaders(false),
-      body: JSON.stringify({ refresh_token: this.refreshToken }),
-    });
-    const data = await this.handleResponse(response);
-    this.token = data.access_token;
-    this.refreshToken = data.refresh_token;
-    localStorage.setItem('websets_token', this.token);
-    localStorage.setItem('websets_refresh_token', this.refreshToken);
-  }
 
   private async request(
     endpoint: string,
@@ -256,18 +217,6 @@ class ApiService {
 
     try {
       const response = await this.fetchWithRetry(url, requestOptions);
-      
-      // Handle token refresh if needed
-      if (response.status === 401 && this.refreshToken) {
-        try {
-          await this.refreshAccessToken();
-          return await this.fetchWithRetry(url, requestOptions);
-        } catch (refreshError) {
-          this.logout();
-          throw refreshError;
-        }
-      }
-      
       return response;
     } catch (error) {
       throw error;
@@ -308,10 +257,6 @@ class ApiService {
       });
 
       const data = await this.handleResponse(response);
-      this.token = data.access_token;
-      this.refreshToken = data.refresh_token;
-      localStorage.setItem('websets_token', this.token!);
-      localStorage.setItem('websets_refresh_token', this.refreshToken!);
       return data;
     } catch (error: any) {
       // Provide clearer message for network failures
@@ -365,28 +310,16 @@ class ApiService {
       console.log('Response status:', response.status);
       
       if (!response.ok) {
-        // If we get a 401, the session is invalid or expired
         if (response.status === 401) {
-          console.log('Session invalid or expired, redirecting to login');
-          // Clear any local tokens
-          this.token = null;
-          localStorage.removeItem('websets_token');
-          localStorage.removeItem('websets_refresh_token');
-          // Return to login page
-          window.location.href = '/';
           throw new Error('Session expired');
         }
-        
+
         console.error('Failed to get user:', response.status, response.statusText);
         throw new Error(`Failed to get user: ${response.status} ${response.statusText}`);
       }
       
       const data = await response.json();
       console.log('User data received:', data);
-      
-      // If we successfully get user data, we're authenticated
-      // Set a flag in localStorage to remember authentication state
-      localStorage.setItem('websets_authenticated', 'true');
       
       return data;
     } catch (error) {
@@ -396,12 +329,6 @@ class ApiService {
   }
 
   async logout(): Promise<void> {
-    // Clear any local tokens and authentication flags
-    this.token = null;
-    localStorage.removeItem('websets_token');
-    localStorage.removeItem('websets_refresh_token');
-    localStorage.removeItem('websets_authenticated');
-    
     // Redirect to backend logout endpoint which will clear the session cookie
     // and redirect to WorkOS logout URL
     window.location.href = `${API_BASE}/api/auth/logout`;
@@ -500,37 +427,7 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  // Utility methods
-  isAuthenticated(): boolean {
-    // Since the session cookie is HTTP-only, we can't check it directly
-    // We'll use multiple strategies to determine authentication state
-    
-    // 1. Check for token in memory
-    const hasToken = !!this.token;
-    
-    // 2. Check if we're on the dashboard after a redirect from auth
-    const isAfterAuthRedirect = window.location.pathname === '/dashboard' && 
-                               document.referrer.includes('localhost:8001');
-    
-    // 3. Check localStorage for authentication flag
-    // This is set by getCurrentUser when it successfully gets user data
-    const hasAuthFlag = localStorage.getItem('websets_authenticated') === 'true';
-    
-    console.log('Authentication check:', {
-      hasToken,
-      hasAuthFlag,
-      isAfterAuthRedirect,
-      pathname: window.location.pathname,
-      referrer: document.referrer,
-      result: hasToken || isAfterAuthRedirect || hasAuthFlag
-    });
-    
-    return hasToken || isAfterAuthRedirect || hasAuthFlag;
-  }
-
-  getToken(): string | null {
-    return typeof this.token === 'string' ? this.token : null;
-  }
+  // Utility methods can be expanded in the future as needed
 }
 
 export const apiService = new ApiService();
