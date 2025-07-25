@@ -13,7 +13,6 @@ const mockDefaultApiService = {
   register: jest.fn(),
   logout: jest.fn(),
   getCurrentUser: jest.fn(),
-  getSession: jest.fn(),
   passwordResetRequest: jest.fn(),
   passwordResetConfirm: jest.fn(),
   setTenantId: jest.fn(),
@@ -25,7 +24,7 @@ const mockDefaultApiService = {
 describe('useAuthProvider', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockDefaultApiService.getSession.mockResolvedValue({ authenticated: false, tenant_id: null });
+    mockDefaultApiService.getCurrentUser.mockRejectedValue(new Error('unauthenticated'));
     useGlobalStore.getState().reset();
   });
 
@@ -43,7 +42,7 @@ describe('useAuthProvider', () => {
 
   test('checks for existing authentication on mount', async () => {
     const mockUser = { id: '1', email: 'test@example.com', fullName: 'Test User', tenant_id: 't1' };
-    mockDefaultApiService.getSession.mockResolvedValue({ authenticated: true, tenant_id: 't1', user: mockUser });
+    mockDefaultApiService.getCurrentUser.mockResolvedValue(mockUser);
 
     const { result } = renderHook(() => useAuthProvider());
 
@@ -53,11 +52,11 @@ describe('useAuthProvider', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(mockDefaultApiService.getSession).toHaveBeenCalledTimes(1);
+    expect(mockDefaultApiService.getCurrentUser).toHaveBeenCalledTimes(1);
   });
 
   test('handles expired token on mount', async () => {
-    mockDefaultApiService.getSession.mockRejectedValue(new Error('Token expired'));
+    mockDefaultApiService.getCurrentUser.mockRejectedValue(new Error('Token expired'));
 
     const { result } = renderHook(() => useAuthProvider());
 
@@ -165,7 +164,7 @@ describe('useAuthProvider', () => {
     const mockUser = { id: '1', email: 'test@example.com', fullName: 'Test User' };
     
     // Set up initial authenticated state
-    mockDefaultApiService.getSession.mockResolvedValue({ authenticated: true, tenant_id: 't1', user: mockUser });
+    mockDefaultApiService.getCurrentUser.mockResolvedValueOnce(mockUser);
 
     const { result } = renderHook(() => useAuthProvider());
 
