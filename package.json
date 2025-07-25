@@ -14,8 +14,8 @@
     "system": "playwright test"
   },
   "dependencies": {
-    "@auth0/auth0-react": "^2.1.0",
     "@hookform/resolvers": "^5.1.1",
+    "@workos-inc/authkit-react": "^0.11.0",
     "@workos-inc/node": "^7.14.0",
     "@workos-inc/authkit-react": "^0.11.0",
     "lucide-react": "^0.344.0",

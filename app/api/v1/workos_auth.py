@@ -26,19 +26,26 @@ STATE_MAX_AGE = 300  # 5 minutes in seconds
 # Authentication options
 ENFORCE_MFA = os.getenv("WORKOS_ENFORCE_MFA", "false").lower() == "true"  # Make MFA optional by default
 ALLOW_PASSKEYS = True  # Enable passkey support
+
+# Environment-aware WorkOS configuration
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 IS_PRODUCTION = ENVIRONMENT == "production"
 
-# Initialize WorkOS client
-api_key = os.getenv("WORKOS_API_KEY")
-client_id = os.getenv("WORKOS_CLIENT_ID")
+# Use test credentials in development, live in production
+api_key = os.getenv("WORKOS_API_KEY_LIVE" if IS_PRODUCTION else "WORKOS_API_KEY_TEST")
+client_id = os.getenv("WORKOS_CLIENT_ID_LIVE" if IS_PRODUCTION else "WORKOS_CLIENT_ID_TEST")
+redirect_uri = os.getenv("WORKOS_REDIRECT_URI", "http://localhost:8001/api/auth/callback")
 
 if not api_key or not client_id:
-    raise RuntimeError("WorkOS credentials missing: WORKOS_API_KEY and/or WORKOS_CLIENT_ID not set")
+    raise RuntimeError(f"WorkOS credentials missing for {ENVIRONMENT} environment: API_KEY and/or CLIENT_ID not set")
 
-# Log the client ID being used (for debugging)
-logger.debug(f"Using WorkOS client ID: {client_id}")
+# Debug logging for WorkOS credentials
+print(f"DEBUG: Environment: {ENVIRONMENT}")
+print(f"DEBUG: Using WorkOS client_id: {client_id}")
+print(f"DEBUG: Using WorkOS API key: {api_key[:10]}...")
+print(f"DEBUG: Using WorkOS redirect URI: {redirect_uri}")
 
+# Initialize WorkOS client with environment-specific credentials
 workos_client = WorkOSClient(
     api_key=api_key,
     client_id=client_id
@@ -62,33 +69,65 @@ WORKOS_COOKIE_PASSWORD = cookie_password
 # Session cookie security
 session_cookie = APIKeyCookie(name=COOKIE_NAME, auto_error=False)
 
-# Session validation dependency
-async def require_session(request: Request, session_cookie: str = Depends(session_cookie)):
+# Session validation dependency using WorkOS sealed sessions
+async def require_session(request: Request):
     """
-    Validate user session from encrypted cookie
+    Validate user session using WorkOS sealed session pattern from official docs
     Raises 401 if session is invalid or missing
     """
-    if not session_cookie:
+    sealed_session = request.cookies.get(COOKIE_NAME)
+    
+    if not sealed_session:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required"
         )
     
     try:
-        # Deserialize and verify session
-        session = workos_client.user_management.deserialize_session(
-            session_cookie,
-            WORKOS_COOKIE_PASSWORD,
-            max_token_age_seconds=COOKIE_MAX_AGE
+        # Load sealed session using WorkOS SDK (per official docs)
+        session = workos_client.user_management.load_sealed_session(
+            sealed_session=sealed_session,
+            cookie_password=cookie_password
         )
         
-        # Store user in request state for route handlers
-        request.state.user = session.user
-        request.state.session = session
-        return session
+        # Authenticate the session (per official docs)
+        auth_response = session.authenticate()
         
+        if auth_response.authenticated:
+            # Store user in request state for route handlers
+            request.state.user = auth_response.user
+            request.state.session = session
+            return session
+        
+        # If session is not authenticated, try to refresh
+        if auth_response.reason == "no_session_cookie_provided":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required"
+            )
+        
+        # Attempt session refresh (per official docs)
+        try:
+            refresh_result = session.refresh()
+            if refresh_result.authenticated:
+                request.state.user = refresh_result.user
+                request.state.session = session
+                return session
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Session expired"
+                )
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session expired"
+            )
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.warning(f"Session verification failed: {type(e).__name__}")
+        logger.warning(f"Session verification failed: {type(e).__name__}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired session"
@@ -98,34 +137,16 @@ async def require_session(request: Request, session_cookie: str = Depends(sessio
 async def initiate_login(request: Request):
     """
     Redirect users to WorkOS AuthKit for authentication
-    Implements PKCE flow with state parameter for security
+    Follows official WorkOS documentation pattern
     """
     try:
-        # Generate random state for CSRF protection
-        state = secrets.token_urlsafe(32)
-        
-        # Generate WorkOS authorization URL with state
-        redirect_uri = "http://localhost:8001/api/auth/callback"
-        # Note: organization_id parameter is not supported in this version of the SDK
+        # Generate WorkOS authorization URL (per official docs)
         authorization_url = workos_client.user_management.get_authorization_url(
             provider="authkit",
-            redirect_uri=redirect_uri,
-            state=state
+            redirect_uri=redirect_uri
         )
         
-        # Create response with state cookie for verification
-        response = RedirectResponse(url=authorization_url)
-        response.set_cookie(
-            "workos_state",
-            state,
-            httponly=True,
-            secure=IS_PRODUCTION,  # Only use secure=True in production
-            samesite="Lax",
-            max_age=STATE_MAX_AGE,
-            path="/api/auth"
-        )
-        
-        return response
+        return RedirectResponse(url=authorization_url, status_code=302)
         
     except Exception as e:
         logger.error(f"Failed to initiate login: {str(e)}")
@@ -133,55 +154,43 @@ async def initiate_login(request: Request):
 
 @router.get("/callback")
 async def auth_callback(
-    request: Request, 
-    response: Response,
-    code: Optional[str] = None,
-    state: Optional[str] = None
+    request: Request,
+    code: Optional[str] = None
 ):
     """
     Handle WorkOS callback after user authentication
-    Implements secure session with encrypted cookies
+    Uses official WorkOS sealed session pattern from documentation
     """
     if not code:
         raise HTTPException(status_code=400, detail="Authorization code missing")
     
-    # Verify state parameter to prevent CSRF
-    expected_state = request.cookies.get("workos_state")
-    if not state or not expected_state or state != expected_state:
-        logger.warning("State parameter mismatch or missing")
-        raise HTTPException(status_code=400, detail="Invalid state parameter")
-    
     try:
-        # Exchange code for user profile with state verification and expiration
-        profile = workos_client.user_management.authenticate_with_code(
+        # Exchange code for user profile using WorkOS sealed session (per official docs)
+        auth_response = workos_client.user_management.authenticate_with_code(
             code=code,
-            expected_state=state,
-            max_age=STATE_MAX_AGE
+            session={
+                "seal_session": True,
+                "cookie_password": cookie_password
+            }
         )
         
-        # Create encrypted session cookie
-        encrypted_session = workos_client.user_management.serialize_session(
-            profile, 
-            WORKOS_COOKIE_PASSWORD
-        )
+        # Create redirect response to frontend Vite server
+        response = RedirectResponse(url="http://localhost:5173/dashboard", status_code=302)
         
-        # Clear state cookie
-        response = RedirectResponse(url="/dashboard", status_code=302)
-        response.delete_cookie("workos_state", path="/api/auth")
-        
-        # Set secure session cookie
+        # Set secure session cookie with sealed session (per official docs)
+        # Using SameSite=None for cross-domain cookies between frontend and backend
         response.set_cookie(
             COOKIE_NAME,
-            encrypted_session,
+            auth_response.sealed_session,
             httponly=True,
-            secure=IS_PRODUCTION,  # Only use secure=True in production
-            samesite="Lax",
+            secure=True,  # Required for SameSite=None
+            samesite="none",  # Allow cross-domain cookies
             max_age=COOKIE_MAX_AGE,
             path="/"
         )
         
         # Log successful authentication (without PII)
-        logger.info(f"User authenticated: {profile.user.id}")
+        logger.info(f"User authenticated: {auth_response.user.id}")
         
         return response
         
@@ -193,14 +202,11 @@ async def auth_callback(
         raise HTTPException(status_code=500, detail=f"Authentication failed: {str(e)}")
 
 @router.post("/logout")
-async def logout(request: Request, session: Dict = Depends(require_session)):
+async def logout(request: Request, session = Depends(require_session)):
     """
     Handle user logout by clearing session cookie
     """
     try:
-        # Log logout event
-        logger.info(f"User logged out: {session.user.id}")
-        
         # Clear session cookie
         response = JSONResponse(content={"message": "Logged out successfully"})
         response.delete_cookie(COOKIE_NAME, path="/")
@@ -212,19 +218,25 @@ async def logout(request: Request, session: Dict = Depends(require_session)):
 
 # Example protected route
 @router.get("/me")
-async def get_current_user(session: Dict = Depends(require_session)):
+async def get_current_user(request: Request, session = Depends(require_session)):
     """
-    Example protected route that requires authentication
-    Returns the current authenticated user
+    Protected route that returns the current authenticated user
+    Returns complete WorkOS user object structure
     """
+    user = request.state.user
     return {
-        "user": {
-            "id": session.user.id,
-            "email": session.user.email,
-            "first_name": session.user.first_name,
-            "last_name": session.user.last_name,
-            "is_mfa_verified": session.is_mfa_verified
-        }
+        "object": "user",
+        "id": user.id,
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "email_verified": getattr(user, 'email_verified', True),
+        "profile_picture_url": getattr(user, 'profile_picture_url', None),
+        "last_sign_in_at": getattr(user, 'last_sign_in_at', None),
+        "external_id": getattr(user, 'external_id', None),
+        "metadata": getattr(user, 'metadata', {}),
+        "created_at": getattr(user, 'created_at', None),
+        "updated_at": getattr(user, 'updated_at', None)
     }
 
 # Middleware class for global session validation

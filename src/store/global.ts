@@ -47,17 +47,27 @@ export const useGlobalStore = create<GlobalState & GlobalActions>((set, get) => 
   reset: () => set({ ...initialState, isLoading: false }),
   checkAuth: async () => {
     set({ isLoading: true });
-    if ((apiService as any).isAuthenticated?.()) {
-      try {
-        const current = await apiService.getCurrentUser();
-        set({ user: current, isAuthenticated: true });
-      } catch (err: any) {
-        set({ error: err.message });
-        apiService.logout();
-        get().reset();
+    try {
+      // Check if authenticated with WorkOS session cookie or token
+      if ((apiService as any).isAuthenticated?.()) {
+        try {
+          const current = await apiService.getCurrentUser();
+          set({ user: current, isAuthenticated: true, error: null });
+        } catch (err: any) {
+          console.error('Error fetching user:', err);
+          set({ error: err.message });
+          apiService.logout();
+          get().reset();
+        }
+      } else {
+        // Not authenticated
+        set({ isAuthenticated: false });
       }
+    } catch (error) {
+      console.error('Authentication check failed:', error);
+    } finally {
+      set({ isLoading: false });
     }
-    set({ isLoading: false });
   },
   login: async (email, password) => {
     set({ isLoading: true });

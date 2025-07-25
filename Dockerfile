@@ -1,46 +1,41 @@
-FROM python:3.11-slim@sha256:6310ad99788c86b074f6277f2199636da09e0d3c25b176d4e58ab7c6d1fe110e
+# syntax=docker/dockerfile:1
 
-# Create application user
-RUN useradd --create-home --system appuser
+########## Frontend build stage ##########
+FROM node:20-alpine AS frontend-build
+WORKDIR /frontend
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY index.html vite.config.ts tsconfig*.json postcss.config.js tailwind.config.js ./
+COPY src ./src
+RUN npm run build
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget \
-    gnupg \
-    unzip \
-    curl \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Playwright dependencies
-RUN pip install playwright
-RUN playwright install chromium
-RUN playwright install-deps
-
+########## Backend build stage ##########
+FROM python:3.11-slim AS backend-build
+ENV PYTHONUNBUFFERED=1
 WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget gnupg unzip curl git \
+    && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt ./
+RUN pip install --upgrade pip && pip install --prefix /install --no-cache-dir -r requirements.txt \
+    && pip install --prefix /install playwright \
+    && playwright install chromium \
+    && playwright install-deps
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --upgrade pip==25.1.1
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application code
-COPY . .
-
-# Copy CA bundle before switching to USER appuser
-COPY ./certs/ /certs
-RUN chown -R appuser:appuser /certs
-RUN chown -R appuser:appuser /app
-
-# Create data directory
-RUN mkdir -p /app/data && chown -R appuser:appuser /app/data
-
-# Expose port
-EXPOSE 8001
-
+########## Final runtime stage ##########
+FROM python:3.11-slim
+ENV PYTHONUNBUFFERED=1
+WORKDIR /app
+RUN adduser --system --home /app --disabled-password appuser
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget gnupg unzip curl git \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=backend-build /install /usr/local
+RUN playwright install-deps && playwright install chromium
+COPY app ./app
+COPY migrations ./migrations
+COPY alembic.ini .
+COPY --from=frontend-build /frontend/dist ./static
+EXPOSE 8000
 USER appuser
-
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD curl -f http://localhost:8000/health/live || exit 1
-
-# Default command
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

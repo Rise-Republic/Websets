@@ -240,23 +240,36 @@ class ApiService {
     includeAuth = true
   ): Promise<Response> {
     const url = this.getBaseUrl(endpoint);
-    let response = await this.fetchWithRetry(url, {
+    const headers = await this.getHeaders(includeAuth);
+
+    const requestOptions: RequestInit = {
       ...options,
-      headers: await this.getHeaders(includeAuth),
-    });
-    if (response.status === 401 && this.refreshToken) {
-      try {
-        await this.refreshAccessToken();
-        response = await this.fetchWithRetry(url, {
-          ...options,
-          headers: await this.getHeaders(includeAuth),
-        });
-      } catch (err) {
-        this.logout();
-        throw err;
+      headers: {
+        ...headers,
+        ...(options.headers || {}),
+      },
+      // Always include credentials for cookie-based auth (WorkOS)
+      credentials: 'include',
+    };
+
+    try {
+      const response = await this.fetchWithRetry(url, requestOptions);
+      
+      // Handle token refresh if needed
+      if (response.status === 401 && this.refreshToken) {
+        try {
+          await this.refreshAccessToken();
+          return await this.fetchWithRetry(url, requestOptions);
+        } catch (refreshError) {
+          this.logout();
+          throw refreshError;
+        }
       }
+      
+      return response;
+    } catch (error) {
+      throw error;
     }
-    return response;
   }
 
   // Authentication
@@ -332,7 +345,10 @@ class ApiService {
   }
 
   async getCurrentUser(): Promise<User> {
-    const response = await this.request('/auth/me');
+    // Use the WorkOS auth endpoint for user info
+    const response = await this.request('/auth/me', {
+      credentials: 'include' // Important: Include cookies in the request
+    });
     
     return this.handleResponse(response);
   }
@@ -439,7 +455,8 @@ class ApiService {
 
   // Utility methods
   isAuthenticated(): boolean {
-    return !!this.token;
+    // Check for WorkOS session cookie or token
+    return document.cookie.includes('wos_session=') || !!this.token;
   }
 
   getToken(): string | null {
