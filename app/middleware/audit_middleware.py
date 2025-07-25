@@ -14,7 +14,7 @@ from loguru import logger
 
 from app.models.role import AuditLog, DataAccessLog
 from app.database import SessionLocal
-from app.auth.dependencies import get_current_user_optional
+
 
 
 class AuditMiddleware(BaseHTTPMiddleware):
@@ -42,6 +42,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
         request.state.trace_id = trace_id
 
         # Get user info
+        from app.auth.dependencies import get_current_user_optional
         user = await get_current_user_optional(request)
         user_id = user.id if user else None
         user_email = user.email if user else None

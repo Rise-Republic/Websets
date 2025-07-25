@@ -4,7 +4,7 @@ from starlette.routing import Match
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.auth.dependencies import get_current_user_optional
+
 from app.middleware.audit_middleware import SecurityEventLogger
 from app.tenancy import set_current_tenant
 

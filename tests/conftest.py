@@ -1,3 +1,5 @@
+import dotenv
+dotenv.load_dotenv('.env.test')
 import pytest
 import asyncio
 from fastapi.testclient import TestClient

@@ -7,7 +7,7 @@ from loguru import logger
 from pydantic import BaseModel
 from enum import Enum
 
-from app.auth.dependencies import get_current_user_optional
+
 
 
 class ConnectionType(str, Enum):
