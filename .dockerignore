@@ -1,42 +1,25 @@
-# Python virtual environments
+# Python
+__pycache__/
+*.pyc
 .venv/
 
-# Python bytecode
-**/*.pyc
-**/__pycache__/
-
-# Test artifacts
-tests/
-tests/__pycache__/
-test.db
-test_warnings.txt
-
-# Node and build output
+# Node
 node_modules/
 dist/
 dist-ssr/
 
-# Local environment files
-.env
+# Tests and docs
+tests/
+docs/
 
-# Logs
-*.log
-
-# Version control
-.git
-.github/
-
-# Secrets
-secrets/
-
-# Development scripts and configurations
+# Development artifacts
 scripts/
-k8s/
 monitoring/
 observability/
 supabase/
-
-# Temporary data directories
-/data/minio/.minio.sys/tmp/
+k8s/
+.git
+.github/
+.env
+secrets/
 data/
-
