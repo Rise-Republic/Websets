@@ -9,7 +9,7 @@ import secrets
 from loguru import logger
 
 import pyotp
-from prometheus_client import Counter, generate_latest
+from prometheus_client import Counter
 from app.utils.mailer import send_password_reset
 from app.utils.password_validation import validate_password
 
@@ -410,15 +410,3 @@ async def refresh_token(
     }
 
 
-@router.get("/debug")
-async def auth_debug(
-    current_user: User = Depends(lambda: __import__('app.auth.dependencies', fromlist=['get_current_active_user']).get_current_active_user()), request: Request = None
-):
-    perms = getattr(request.state, "token_permissions", []) if request else []
-    return {"user": current_user.email, "permissions": perms}
-
-
-# Prometheus metrics endpoint
-@router.get("/metrics")
-def metrics():
-    return Response(generate_latest(), media_type="text/plain")

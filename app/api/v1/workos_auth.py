@@ -175,20 +175,16 @@ async def auth_callback(
         response = RedirectResponse(url="http://localhost:5173/dashboard", status_code=302)
         
         # Set session cookie with sealed session (per official docs)
-        # For local development, use SameSite=Lax and secure=False
-        # In production, use SameSite=None and secure=True with HTTPS
-        is_prod = IS_PRODUCTION
-        
-        # ASVS 3.4.2, 3.4.3: Secure cookie flags
+        # Rotate any existing session cookie and set a fresh one
+        response.delete_cookie(COOKIE_NAME, path="/")
         response.set_cookie(
             COOKIE_NAME,
             auth_response.sealed_session,
-            httponly=True,  # Always
-            secure=is_prod,  # Only use secure in production with HTTPS
-            samesite="lax" if not is_prod else "none",  # Use lax for local development, none for SSO prod
+            httponly=True,
+            secure=True,
+            samesite="lax",
             max_age=COOKIE_MAX_AGE,
-            path="/"
-            # Do not set domain unless cross-domain SSO is required
+            path="/",
         )
         
         # Log successful authentication (without PII)
