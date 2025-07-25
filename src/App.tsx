@@ -4,32 +4,23 @@ import LoginForm from './components/Auth/LoginForm';
 import Dashboard from './components/Dashboard/Dashboard';
 
 function App() {
-  const { isAuthenticated, isLoading, user, error } = useAuth();
+  const { isAuthenticated, isLoading, user, error, checkAuth, logout } = useAuth();
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
-  const [forceReload, setForceReload] = useState(false);
   
   // Debug authentication and routing
   console.log('Auth state:', { isAuthenticated, isLoading, currentPath, user, error });
   
   // Handle authentication after redirect from backend
   useEffect(() => {
-    const isRedirectFromAuth = 
-      currentPath === '/dashboard' && 
+    const isRedirectFromAuth =
+      currentPath === '/dashboard' &&
       document.referrer.includes('localhost:8001');
-      
+
     if (isRedirectFromAuth && !isAuthenticated && !isLoading) {
-      console.log('Detected redirect from auth, triggering reload');
-      // Force a reload to re-check authentication
-      setForceReload(true);
+      console.log('Detected redirect from auth, running checkAuth');
+      checkAuth();
     }
-  }, [currentPath, isAuthenticated, isLoading]);
-  
-  // Trigger a page reload if needed
-  useEffect(() => {
-    if (forceReload) {
-      window.location.reload();
-    }
-  }, [forceReload]);
+  }, [currentPath, isAuthenticated, isLoading, checkAuth]);
 
   // Handle routing based on URL path
   useEffect(() => {
@@ -45,6 +36,13 @@ function App() {
     };
   }, []);
 
+  // Trigger logout when navigating to /logout
+  useEffect(() => {
+    if (currentPath === '/logout') {
+      logout();
+    }
+  }, [currentPath, logout]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -52,6 +50,14 @@ function App() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading Websets...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (currentPath === '/logout') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p className="text-gray-600">Signing out...</p>
       </div>
     );
   }
