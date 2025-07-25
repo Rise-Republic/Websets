@@ -1,8 +1,9 @@
 # Docker Secrets
 
 Store sensitive values like database and MinIO credentials as Docker secrets.
-Secrets are typically pulled from Vault and loaded using `docker secret create`.
-The individual secret files shown here are ignored and should not be committed.
+Secrets are pulled from Vault and loaded using `docker secret create`.
+The actual secret files are **not** tracked in git. Create them locally by
+pulling from Vault and avoid committing any credentials.
 For example:
 
 ```bash

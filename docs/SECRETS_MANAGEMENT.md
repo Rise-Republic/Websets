@@ -13,9 +13,9 @@ This project uses **HashiCorp Vault** to securely store and rotate all sensitive
 - After each rotation, dependent services load the new values from Vault automatically.
 
 ## Minimal Secrets Exposure
-- Secrets are injected via environment variables or Docker secrets at runtime and never committed to the repository.
-- Local development can generate a `.env` file using `fetch_vault_env.py`.
-- Services read secrets from `/run/secrets/<NAME>` when running in Docker.
+ - Secrets are injected via environment variables or Docker secrets at runtime and never committed to the repository. The `secrets/` directory only contains a README and is kept empty so local secrets must be created manually.
+ - Local development can generate a `.env` file using `fetch_vault_env.py`.
+ - Services read secrets from `/run/secrets/<NAME>` when running in Docker.
 
 ## Audit & Access Control
 - Vault access is logged and can be audited to track which service retrieved or updated a secret.
