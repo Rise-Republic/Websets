@@ -10,7 +10,7 @@ Create a new user account. The body must include `email`, `password`, and option
 
 ## Email Verification
 
-`GET /v1/auth/verify-email?token=<token>` *(not yet implemented)*
+`GET /v1/auth/verify-email?token=<token>`
 
 After registration, a verification email will be sent containing a link to this endpoint. Visiting the link marks the account as verified.
 

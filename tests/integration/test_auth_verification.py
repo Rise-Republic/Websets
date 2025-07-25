@@ -39,3 +39,28 @@ class TestAuthVerification:
 
         login_after = client.post("/auth/login", data=login_data)
         assert login_after.status_code == status.HTTP_200_OK
+
+    def test_verification_via_get_endpoint(self, client, sample_user_data, db_session):
+        resp = client.post("/auth/register", json=sample_user_data)
+        token = resp.json()["verification_token"]
+
+        from app.models.user import User
+
+        user = (
+            db_session.query(User)
+            .filter(User.email == sample_user_data["email"])
+            .first()
+        )
+
+        login_data = {
+            "username": sample_user_data["email"],
+            "password": sample_user_data["password"],
+        }
+        login = client.post("/auth/login", data=login_data)
+        assert login.status_code == status.HTTP_403_FORBIDDEN
+
+        verify_resp = client.get(f"/auth/verify-email?token={token}")
+        assert verify_resp.status_code == status.HTTP_200_OK
+
+        db_session.refresh(user)
+        assert user.is_verified is True
