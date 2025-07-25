@@ -142,11 +142,10 @@ Swagger UI for interactive docs.
 
 ## Usage Examples
 
-### 1. Login via Auth0
-Use the hosted login page to obtain an access token. After logging in you can call the API with the returned token:
+### 1. Login via WorkOS AuthKit
+Open the app and click **Sign in with AuthKit**. After authenticating you will be redirected back with a session cookie already set. You can then call the API directly:
 ```bash
-ACCESS_TOKEN="<your Auth0 access token>"
-curl -H "Authorization: Bearer $ACCESS_TOKEN" http://localhost:8000/v1/jobs/
+curl -b cookie.txt -c cookie.txt http://localhost:8001/api/auth/me
 ```
 
 ### 2. Create Mining Jobs
@@ -318,9 +317,7 @@ npm run dev
 
 Set these environment variables locally:
 
-- `VITE_AUTH0_DOMAIN` – Auth0 domain
-- `VITE_AUTH0_CLIENT_ID` – Auth0 client ID
-- `VITE_AUTH0_AUDIENCE` – API audience (optional)
+- `VITE_WORKOS_CLIENT_ID` – WorkOS client ID
 - `VITE_API_BASE` – backend URL override (optional)
 
 Build the production bundle:

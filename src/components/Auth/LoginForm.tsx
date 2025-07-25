@@ -1,10 +1,12 @@
 import React from 'react';
+import { useAuth } from '@workos-inc/authkit-react';
 
 const LoginForm: React.FC = () => {
+  const { signIn } = useAuth();
+
   const handleSignIn = () => {
     console.log('Redirecting to WorkOS AuthKit...');
-    // Redirect to WorkOS AuthKit hosted login
-    window.location.href = 'http://localhost:8001/api/auth/login';
+    signIn();
   };
 
   return (
