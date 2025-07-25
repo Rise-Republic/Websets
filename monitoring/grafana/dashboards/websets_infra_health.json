@@ -1,0 +1,26 @@
+{
+  "title": "Infrastructure Health",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "CPU Usage",
+      "targets": [
+        { "expr": "avg(rate(node_cpu_seconds_total{mode!='idle'}[5m])) * 100" }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Memory Usage",
+      "targets": [
+        { "expr": "(node_memory_Active_bytes / node_memory_MemTotal_bytes) * 100" }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Disk Usage",
+      "targets": [
+        { "expr": "(node_filesystem_size_bytes{mountpoint='/'} - node_filesystem_free_bytes{mountpoint='/'}) / node_filesystem_size_bytes{mountpoint='/'} * 100" }
+      ]
+    }
+  ]
+}

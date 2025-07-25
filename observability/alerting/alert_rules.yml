@@ -25,6 +25,17 @@ groups:
       description: "Burn rate exceeded threshold for Tier 1 SLO."
       pagerduty_service: "platform-core"
       slack_channel: "#alerts-core"
+  - alert: JobFailureRate
+    expr: rate(websets_jobs_total{status="failed"}[5m]) / rate(websets_jobs_total[5m]) > 0.1
+    for: 10m
+    labels:
+      severity: critical
+      runbook: https://confluence.company.com/runbooks/job-failure
+    annotations:
+      summary: "High job failure rate"
+      description: "Over 10% of jobs are failing"
+      pagerduty_service: "platform-core"
+      slack_channel: "#alerts-core"
 - name: InfraAlerts
   rules:
   - alert: HighMemoryUsage
@@ -36,6 +47,28 @@ groups:
     annotations:
       summary: "High memory usage"
       description: "Memory usage above 90% on node."
+      pagerduty_service: "platform-infra"
+      slack_channel: "#alerts-infra"
+  - alert: HighCPUUsage
+    expr: (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 0.9
+    for: 5m
+    labels:
+      severity: warning
+      runbook: https://confluence.company.com/runbooks/cpu
+    annotations:
+      summary: "High CPU usage"
+      description: "CPU usage above 90% on node."
+      pagerduty_service: "platform-infra"
+      slack_channel: "#alerts-infra"
+  - alert: DiskSpaceExhaustion
+    expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} > 0.9
+    for: 5m
+    labels:
+      severity: warning
+      runbook: https://confluence.company.com/runbooks/disk
+    annotations:
+      summary: "Low disk space"
+      description: "Disk usage above 90% on node."
       pagerduty_service: "platform-infra"
       slack_channel: "#alerts-infra"
 - name: SecurityAlerts
