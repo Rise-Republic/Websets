@@ -30,3 +30,30 @@ groups:
       summary: "SLO burn rate high"
       description: "Error budget is burning faster than expected"
       runbook: ../../docs/runbooks/alerts.md#slo-error-budget-burn
+  - alert: JobFailureRate
+    expr: rate(websets_jobs_total{status="failed"}[5m]) / rate(websets_jobs_total[5m]) > 0.1
+    for: 10m
+    labels:
+      severity: critical
+    annotations:
+      summary: "High job failure rate"
+      description: "More than 10% of jobs are failing"
+      runbook: ../../docs/runbooks/alerts.md#job-failure-rate
+  - alert: HighCPUUsage
+    expr: (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 0.9
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High CPU usage"
+      description: "CPU usage above 90% on node"
+      runbook: ../../docs/runbooks/alerts.md#resource-exhaustion
+  - alert: DiskSpaceExhaustion
+    expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} > 0.9
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Disk usage above 90%"
+      description: "Disk usage above 90% on node"
+      runbook: ../../docs/runbooks/alerts.md#resource-exhaustion

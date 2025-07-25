@@ -16,6 +16,12 @@ This runbook describes standard procedures for handling common alerts.
 3. Scale workers or throttle jobs as needed.
 4. Document actions in the incident channel.
 
+## Job Failure Rate
+
+1. Inspect recent Celery task logs to identify common errors.
+2. Check worker CPU and memory usage for spikes.
+3. Retry or reschedule failed jobs after addressing the root cause.
+
 ## High Request Latency
 
 1. Review recent deployments or spikes in traffic.

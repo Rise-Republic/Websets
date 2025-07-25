@@ -533,6 +533,10 @@ instrumentor. Traces are exported to the OTLP endpoint configured in
 `app.config`. Import the provided Grafana dashboard JSON from
 `monitoring/grafana/dashboards/websets_overview.json` to visualize metrics and
 traces together.
+Additional dashboards:
+- `monitoring/grafana/dashboards/websets_job_health.json`
+- `monitoring/grafana/dashboards/websets_api_health.json`
+- `monitoring/grafana/dashboards/websets_infra_health.json`
 
 ## Security
 

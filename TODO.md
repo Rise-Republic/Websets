@@ -24,10 +24,10 @@
 - [x] Add incident response procedures
 
 ## Observability & Reliability
-- [ ] Integrate OpenTelemetry for distributed tracing
-- [ ] Expose Prometheus metrics for all critical flows
-- [ ] Add dashboards for job, API, and infra health
-- [ ] Define and implement alert rules for failures, latency, and resource exhaustion
+- [x] Integrate OpenTelemetry for distributed tracing
+- [x] Expose Prometheus metrics for all critical flows
+- [x] Add dashboards for job, API, and infra health
+- [x] Define and implement alert rules for failures, latency, and resource exhaustion
 - [x] Document SLOs/SLIs for core APIs
 
 - [x] Add GitHub Actions or GitLab CI for build, test, deploy
