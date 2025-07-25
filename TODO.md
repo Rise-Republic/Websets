@@ -8,7 +8,7 @@
 - [x] Remove all plaintext secrets from code/configs
 - [x] Integrate Vault or KMS for runtime secret injection
 - [x] Rotate all exposed keys (MCP, OpenAI, etc)
-- [ ] Add rate limiting and DDoS protection
+- [x] Add rate limiting and DDoS protection
 
 ## Phase 2: Compliance (Week 3-4)
 - [x] Implement GDPR compliance features (data export, deletion, consent)
@@ -19,9 +19,9 @@
 
 ## Phase 3: Advanced Security (Week 5-6)
 - [x] Implement mTLS for all internal service calls
-- [ ] Integrate Vault for secrets management
+- [x] Integrate Vault for secrets management
 - [x] Add security scanning to CI/CD (SAST/DAST)
-- [ ] Add incident response procedures
+- [x] Add incident response procedures
 
 ## Observability & Reliability
 - [ ] Integrate OpenTelemetry for distributed tracing

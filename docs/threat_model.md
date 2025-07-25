@@ -16,4 +16,5 @@ This document summarizes the key security risks for Websets and the mitigations 
 - JWT authentication and role based access control guard all API endpoints.
 - Dependencies are scanned in CI with Safety and Dependabot keeps versions patched.
 - Rate limiting middleware caps the number of requests per user.
+- Additional network filtering and WAF guidance is documented in [DDoS Mitigation](DDOS_MITIGATION.md)
 - Audit logs are stored immutably and signed to detect tampering.

@@ -77,6 +77,7 @@ docker-compose.yml # Local services
 - [API Reference](docs/API_REFERENCE.md)
 - [Configuration](docs/CONFIGURATION.md)
 - [Operational Runbook](docs/OPERATIONAL_RUNBOOK.md)
+- [DDoS Mitigation](docs/DDOS_MITIGATION.md)
 - [Secret Rotation Guide](docs/SECRET_ROTATION.md)
 - [Secrets Management](docs/SECRETS_MANAGEMENT.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
@@ -107,7 +108,7 @@ User Prompt → Planning → URL Discovery → Crawling → Schema Inference →
 
 ### Authentication
 - `POST /v1/auth/register`  Register new user
-- `GET /v1/auth/verify-email`  Confirm email address *(planned)*
+- `GET /v1/auth/verify-email`  Confirm email address
 - `POST /v1/auth/login`  Login and obtain access + refresh tokens (returns 202 with `X-MFA-Required` when MFA is enabled)_
 - `POST /v1/auth/mfa/setup`  Enable TOTP MFA and receive a secret key
 - `POST /v1/auth/mfa/verify`  Verify MFA challenge and obtain tokens

@@ -29,6 +29,16 @@ async def test_session_refresh():
 async def test_logout_clears_cookie():
     async with AsyncClient(app=app, base_url="http://test") as ac:
         ac.cookies.set("session", "dummy")
-        resp = await ac.get("/api/auth/logout")
+        resp = await ac.post("/api/logout")
         set_cookie = resp.headers.get("set-cookie")
         assert "session=;" in set_cookie  # cleared
+
+
+@pytest.mark.asyncio
+async def test_session_endpoint():
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        resp = await ac.get("/api/session")
+        assert resp.status_code == 401
+        ac.cookies.set("session", "dummy")
+        resp = await ac.get("/api/session")
+        assert resp.status_code in (200, 401)

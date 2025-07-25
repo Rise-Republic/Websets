@@ -12,6 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from workos import WorkOSClient
 from workos.exceptions import AuthenticationException, BadRequestException
 from typing import Optional, Dict, Any, Callable
+from app.tenancy import set_current_tenant
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -231,6 +232,31 @@ async def logout(request: Request, session = Depends(require_session)):
         logger.error(f"Logout error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Logout failed: {str(e)}")
 
+@router.post("/logout")
+async def logout_api(request: Request):
+    """Clear session cookie without redirect."""
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    response.delete_cookie(COOKIE_NAME, path="/")
+    return response
+
+@router.get("/session")
+async def session_status(request: Request):
+    """Return session info if authenticated."""
+    try:
+        await require_session(request)
+    except HTTPException:
+        raise
+    user = request.state.user
+    tenant_id = getattr(user, "tenant_id", getattr(user, "org_id", None))
+    return {"authenticated": True, "user": {
+        "id": user.id,
+        "email": user.email,
+        "first_name": getattr(user, "first_name", None),
+        "last_name": getattr(user, "last_name", None),
+        "org_id": getattr(user, "org_id", None),
+        "tenant_id": tenant_id
+    }, "tenant_id": tenant_id}
+
 # Example protected route
 @router.get("/me")
 async def get_current_user(request: Request, session = Depends(require_session)):
@@ -286,11 +312,16 @@ class SessionMiddleware(BaseHTTPMiddleware):
                 )
                 request.state.user = session.user
                 request.state.session = session
+                tenant_id = getattr(session.user, "tenant_id", getattr(session.user, "org_id", None))
+                request.state.tenant_id = tenant_id
+                set_current_tenant(tenant_id)
             except Exception as e:
                 logger.warning(f"Session verification failed in middleware: {type(e).__name__}")
                 return JSONResponse(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     content={"detail": "Invalid or expired session"}
                 )
-                
-        return await call_next(request)
+        try:
+            return await call_next(request)
+        finally:
+            set_current_tenant(None)

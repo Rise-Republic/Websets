@@ -253,6 +253,29 @@ async def verify_user(
     return {"message": "Email verified"}
 
 
+@router.get("/verify-email")
+@limiter.limit(RateLimits.AUTH_REGISTER)
+async def verify_email(
+    request: Request,
+    token: str,
+    user_repo: UserRepository = Depends(get_user_repository),
+):
+    """Confirm a user's email address using a verification token."""
+    import hashlib
+    from datetime import datetime
+
+    user = user_repo.get_by_verification_token(
+        hashlib.sha256(token.encode()).hexdigest()
+    )
+    if not user or user.verification_token_expiry < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+    user.is_verified = True
+    user.verification_token = None
+    user.verification_token_expiry = None
+    user_repo.commit()
+    return {"message": "Email verified"}
+
+
 # MFA setup
 class MFASetupResponse(BaseModel):
     secret: str
