@@ -89,7 +89,9 @@ def test_dataset_repository_basic_operations(db_session):
     fetched = repo.get_dataset(str(dataset.id), tenant)
     assert fetched.id == dataset.id
 
-    records, total_records = repo.get_dataset_records(str(dataset.id), page=1, size=10)
+    records, total_records = repo.get_dataset_records(
+        str(dataset.id), page=1, size=10, tenant_id=tenant
+    )
     assert total_records == 0
 
     repo.delete_dataset(dataset)

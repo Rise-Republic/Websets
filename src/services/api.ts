@@ -100,6 +100,12 @@ class ApiService {
     }
   }
 
+  private ensureTenant() {
+    if (!this.tenantId) {
+      throw new Error('Tenant context missing. Please sign in again.');
+    }
+  }
+
   private async delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
@@ -421,18 +427,21 @@ class ApiService {
   
   // Jobs
   async getJobs(): Promise<Job[]> {
+    this.ensureTenant();
     const response = await this.request('/jobs/');
     
     return this.handleResponse(response);
   }
 
   async getJob(jobId: string): Promise<Job> {
+    this.ensureTenant();
     const response = await this.request('/jobs/' + jobId);
     
     return this.handleResponse(response);
   }
 
   async createJob(prompt: string, options?: { estimated_urls?: number; complexity?: string }): Promise<Job> {
+    this.ensureTenant();
     const response = await this.request(
       '/jobs/',
       {
@@ -448,6 +457,7 @@ class ApiService {
   }
 
   async cancelJob(jobId: string): Promise<void> {
+    this.ensureTenant();
     const response = await this.request('/jobs/' + jobId, { method: 'DELETE' });
     
     if (!response.ok) {
@@ -457,18 +467,21 @@ class ApiService {
 
   // Datasets
   async getDatasets(): Promise<Dataset[]> {
+    this.ensureTenant();
     const response = await this.request('/datasets/');
     
     return this.handleResponse(response);
   }
 
   async getDataset(datasetId: string): Promise<Dataset> {
+    this.ensureTenant();
     const response = await this.request('/datasets/' + datasetId);
     
     return this.handleResponse(response);
   }
 
   async getDatasetRecords(datasetId: string, limit = 50, offset = 0): Promise<DatasetRecord[]> {
+    this.ensureTenant();
     const response = await this.request(
       `/datasets/${datasetId}/records?limit=${limit}&offset=${offset}`
     );
@@ -477,6 +490,7 @@ class ApiService {
   }
 
   async searchDataset(datasetId: string, query: string, limit = 10, threshold = 0.7): Promise<DatasetRecord[]> {
+    this.ensureTenant();
     const response = await this.request(`/datasets/${datasetId}/search`, {
       method: 'POST',
       body: JSON.stringify({
@@ -490,6 +504,7 @@ class ApiService {
   }
 
   async exportDataset(datasetId: string, format: 'json' | 'csv' = 'json'): Promise<Blob> {
+    this.ensureTenant();
     const response = await this.request(
       `/datasets/${datasetId}/export?format=${format}`
     );

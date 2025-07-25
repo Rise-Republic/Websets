@@ -20,6 +20,13 @@ async def test_super_admin_header_spoof():
         assert resp.status_code in (403, 401)
 
 @pytest.mark.asyncio
+async def test_header_tenant_mismatch():
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        ac.cookies.set("session", "dummy-session-for-org1")
+        resp = await ac.get("/v1/jobs", headers={"X-Org-ID": "2"})
+        assert resp.status_code in (403, 401)
+
+@pytest.mark.asyncio
 async def test_orphaned_session_revoked():
     async with AsyncClient(app=app, base_url="http://test") as ac:
         # Simulate org_id change after login

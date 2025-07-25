@@ -34,9 +34,15 @@ class DatasetRepository:
         )
 
     def get_dataset_records(
-        self, dataset_id: str, page: int, size: int
+        self, dataset_id: str, page: int, size: int, tenant_id: uuid.UUID
     ) -> Tuple[List[DataRecord], int]:
-        query = self.db.query(DataRecord).filter(DataRecord.dataset_id == dataset_id)
+        query = (
+            self.db.query(DataRecord)
+            .filter(
+                DataRecord.dataset_id == dataset_id,
+                DataRecord.tenant_id == tenant_id,
+            )
+        )
         total = query.count()
         offset = (page - 1) * size
         records = (
@@ -44,8 +50,15 @@ class DatasetRepository:
         )
         return records, total
 
-    def get_all_records(self, dataset_id: str) -> List[DataRecord]:
-        return self.db.query(DataRecord).filter(DataRecord.dataset_id == dataset_id).all()
+    def get_all_records(self, dataset_id: str, tenant_id: uuid.UUID) -> List[DataRecord]:
+        return (
+            self.db.query(DataRecord)
+            .filter(
+                DataRecord.dataset_id == dataset_id,
+                DataRecord.tenant_id == tenant_id,
+            )
+            .all()
+        )
 
     def get_records_by_ids(self, record_ids: List[uuid.UUID]) -> List[DataRecord]:
         if not record_ids:
