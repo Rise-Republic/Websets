@@ -38,3 +38,29 @@ bash scripts/ci-run.sh
 
 Tests are organized to be idempotent and clean up resources. If a test fails intermittently, add retry logic using `pytest-rerunfailures` and open an issue for investigation.
 
+## Additional Test Suites
+
+### End-to-End
+
+Playwright tests validate the frontend and API together:
+
+```bash
+npm run system
+```
+
+### Security Scans
+
+Run an OWASP ZAP baseline scan against the local API:
+
+```bash
+zap-baseline.py -t http://localhost:8000 -r zap_report.html
+```
+
+### Load Testing
+
+Use Locust to generate load against the service:
+
+```bash
+locust -f tests/performance/locustfile.py
+```
+

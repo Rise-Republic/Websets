@@ -18,3 +18,4 @@ PyYAML==6.0.2
 
 hvac==2.1.0
 packaging>=22.0
+locust==2.26.0
