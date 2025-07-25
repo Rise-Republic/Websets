@@ -13,8 +13,8 @@ test("shows login screen when not authenticated", async ({ page }) => {
 
 test("allows creating a new job", async ({ page }) => {
   await page.addInitScript(() => {
-    localStorage.setItem("websets_token", "test-token");
-    localStorage.setItem("websets_refresh_token", "refresh");
+    // Mark the user as authenticated for the client-side checks
+    localStorage.setItem("websets_authenticated", "true");
   });
 
   await page.route("**/auth/me", (route) => {

@@ -68,8 +68,9 @@ class ApiService {
   private baseUrl: string;
 
   constructor() {
-    this.token = localStorage.getItem('websets_token');
-    this.refreshToken = localStorage.getItem('websets_refresh_token');
+    // Tokens are kept only in memory when using cookie-based sessions
+    this.token = null;
+    this.refreshToken = null;
     this.baseUrl = this.useVersionedEndpoints ? VERSIONED_API_BASE : API_BASE;
   }
 
@@ -232,8 +233,6 @@ class ApiService {
     const data = await this.handleResponse(response);
     this.token = data.access_token;
     this.refreshToken = data.refresh_token;
-    localStorage.setItem('websets_token', this.token);
-    localStorage.setItem('websets_refresh_token', this.refreshToken);
   }
 
   private async request(
@@ -310,8 +309,6 @@ class ApiService {
       const data = await this.handleResponse(response);
       this.token = data.access_token;
       this.refreshToken = data.refresh_token;
-      localStorage.setItem('websets_token', this.token!);
-      localStorage.setItem('websets_refresh_token', this.refreshToken!);
       return data;
     } catch (error: any) {
       // Provide clearer message for network failures
@@ -370,8 +367,6 @@ class ApiService {
           console.log('Session invalid or expired, redirecting to login');
           // Clear any local tokens
           this.token = null;
-          localStorage.removeItem('websets_token');
-          localStorage.removeItem('websets_refresh_token');
           // Return to login page
           window.location.href = '/';
           throw new Error('Session expired');
@@ -396,10 +391,8 @@ class ApiService {
   }
 
   async logout(): Promise<void> {
-    // Clear any local tokens and authentication flags
+    // Clear any local authentication flags
     this.token = null;
-    localStorage.removeItem('websets_token');
-    localStorage.removeItem('websets_refresh_token');
     localStorage.removeItem('websets_authenticated');
     
     // Redirect to backend logout endpoint which will clear the session cookie
