@@ -13,6 +13,7 @@ const mockDefaultApi = {
   isAuthenticated: jest.fn(),
   passwordResetRequest: jest.fn(),
   passwordResetConfirm: jest.fn(),
+  processWorkOSCallback: jest.fn(),
 };
 (apiService as any).default = mockDefaultApi;
 
