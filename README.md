@@ -28,6 +28,7 @@ For detailed onboarding instructions see [ONBOARDING.md](ONBOARDING.md).
 ### Setup
 
 1. **Clone the repository and start the development environment:**
+
 ```bash
 git clone <repository>
 cd webset-miner
@@ -36,13 +37,13 @@ make dev
 
 `make dev` installs dependencies, generates certificates, seeds Vault, applies database migrations, and starts the Docker Compose stack. A `.env` file will be created from `.env.example` if it doesn't exist. Provide `SEED_USER_EMAIL` and `SEED_USER_PASSWORD` in your environment to create the initial user.
 
-
 2. **Run your first mining job:**
 
 curl -X POST "http://localhost:8000/jobs/" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "AI startups in Europe hiring ML engineers"}'
+ -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+ -H "Content-Type: application/json" \
+ -d '{"prompt": "AI startups in Europe hiring ML engineers"}'
+
 ```
 
 3. **Explore the API interactively:**
@@ -55,12 +56,14 @@ requests directly from the browser.
 ### Folder Structure
 
 ```
-app/            # Backend source code
-src/            # React frontend
-tests/          # Unit and integration tests
-scripts/        # Helper scripts
-docs/           # Project documentation
-docker-compose.yml  # Local services
+
+app/ # Backend source code
+src/ # React frontend
+tests/ # Unit and integration tests
+scripts/ # Helper scripts
+docs/ # Project documentation
+docker-compose.yml # Local services
+
 ```
 ## Documentation
 
@@ -95,8 +98,10 @@ docker-compose.yml  # Local services
 ### Data Flow
 
 ```
+
 User Prompt → Planning → URL Discovery → Crawling → Schema Inference → Data Extraction → Storage
-```
+
+````
 
 ## API Endpoints
 
@@ -135,21 +140,25 @@ Generate a full OpenAPI specification by running:
 
 ```bash
 python scripts/generate_openapi_spec.py
-```
+````
 
 The spec is written to `openapi.json` and can be used with tooling such as
 Swagger UI for interactive docs.
 
 ## Usage Examples
 
-### 1. Login via Auth0
-Use the hosted login page to obtain an access token. After logging in you can call the API with the returned token:
+### 1. Login via WorkOS AuthKit
+
+Visit `/api/auth/login` to start the AuthKit flow. After authenticating you will
+receive a sealed session cookie. Use that cookie when making API requests:
+
 ```bash
-ACCESS_TOKEN="<your Auth0 access token>"
-curl -H "Authorization: Bearer $ACCESS_TOKEN" http://localhost:8000/v1/jobs/
+SESSION="<your WorkOS session>"
+curl -H "Authorization: Bearer $SESSION" http://localhost:8000/v1/jobs/
 ```
 
 ### 2. Create Mining Jobs
+
 ```bash
 # Job for finding AI companies
 curl -X POST "http://localhost:8000/jobs/" \
@@ -165,12 +174,14 @@ curl -X POST "http://localhost:8000/jobs/" \
 ```
 
 ### 3. Monitor Job Progress
+
 ```bash
 curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   "http://localhost:8000/jobs/JOB_ID"
 ```
 
 ### 4. Search Extracted Data
+
 ```bash
 curl -X POST "http://localhost:8000/datasets/DATASET_ID/search" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -202,11 +213,10 @@ OPENAI_API_KEY=<openai-key>
 ANTHROPIC_API_KEY=<anthropic-key>
 DATABASE_URL=postgresql://postgres:<db-password>@db:5432/webset_miner?sslmode=require
 JWT_SECRET_KEY=<jwt-secret>
-AUTH0_DOMAIN=dev-your-domain.us.auth0.com
-AUTH0_CLIENT_ID=<client-id>
-AUTH0_CLIENT_SECRET=<client-secret>
-AUTH0_AUDIENCE=https://api.websets.local
-AUTH0_ISSUER=https://dev-your-domain.us.auth0.com/
+WORKOS_API_KEY_TEST=<workos-test-key>
+WORKOS_CLIENT_ID_TEST=<workos-test-client>
+WORKOS_COOKIE_PASSWORD=<session-password>
+WORKOS_WEBHOOK_SECRET=<webhook-secret>
 MINIO_ROOT_USER=<minio-user>
 MINIO_ROOT_PASSWORD=<minio-password>
 MINIO_KMS_SECRET_KEY=<kms-key-ref>
@@ -259,6 +269,7 @@ For production deployments, adjust these settings:
 ## Development
 
 ### Running Tests
+
 ```bash
 # Install dev dependencies
 pip install -r requirements.txt -r requirements-dev.txt
@@ -289,6 +300,7 @@ pytest --cov=app --cov-report=term-missing
 ```
 
 ### Adding Fixtures
+
 Shared fixtures live in [`tests/conftest.py`](tests/conftest.py). When adding a
 new fixture:
 
@@ -298,6 +310,7 @@ new fixture:
 4. Reuse existing fixtures where possible to speed up tests.
 
 ### Linting
+
 This project uses **pre-commit** with Ruff for formatting and linting.
 Install the hooks with `pre-commit install` and run them on all files before committing:
 
@@ -318,9 +331,8 @@ npm run dev
 
 Set these environment variables locally:
 
-- `VITE_AUTH0_DOMAIN` – Auth0 domain
-- `VITE_AUTH0_CLIENT_ID` – Auth0 client ID
-- `VITE_AUTH0_AUDIENCE` – API audience (optional)
+- `VITE_WORKOS_CLIENT_ID` – WorkOS project client ID
+- `VITE_WORKOS_REDIRECT_URI` – callback URL (optional)
 - `VITE_API_BASE` – backend URL override (optional)
 
 Build the production bundle:
@@ -336,9 +348,11 @@ npm test
 ```
 
 ### Editor Configuration
+
 The repository defines basic formatting rules in [.editorconfig](.editorconfig). Python files use 4-space indents while the frontend code under `src/` uses 2 spaces. Most editors will pick up these settings automatically and ensure newlines end with `LF`.
 
 ### Running Security Scans
+
 Security scans run automatically in CI using **Bandit**, **Safety**, and **Trivy**.
 The workflow executes on every push and on a weekly schedule so vulnerabilities
 are caught even when the code is idle. Install the tools locally before pushing
@@ -391,6 +405,7 @@ For HTTPS configuration and container hardening guidance see
 [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md).
 
 ### Docker Production Build
+
 ```bash
 # Build optimized image
 docker build -t webset-miner:latest .
@@ -400,6 +415,7 @@ docker-compose -f docker-compose.prod.yml up -d
 ```
 
 ### Kubernetes Deployment
+
 ```yaml
 # Example Kubernetes deployment
 apiVersion: apps/v1
@@ -417,16 +433,16 @@ spec:
         app: webset-miner
     spec:
       containers:
-      - name: webset-miner
-        image: webset-miner:latest
-        ports:
-        - containerPort: 8000
-        env:
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: webset-miner-secrets
-              key: database-url
+        - name: webset-miner
+          image: webset-miner:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: webset-miner-secrets
+                  key: database-url
 ```
 
 Full manifests with resource requests, limits, and security context can be found
@@ -493,28 +509,32 @@ The script spins up the compose stack, waits for services to become healthy, run
 
 The workflow in `.github/workflows/ci.yml` performs the same steps in CI. Logs for service startup and tests appear in the Actions UI under the `Run CI pipeline` step. Any failing health check or test will mark the job as failed.
 
-
 ## Monitoring
 
 Detailed monitoring steps and rollback procedures are documented in
 [docs/monitoring_and_rollback.md](docs/monitoring_and_rollback.md).
 
 ### Health Checks
+
 - `/health/` - Basic health check
 - `/health/detailed` - Component status
 - `/health/readiness` - Kubernetes readiness probe
 - `/health/liveness` - Kubernetes liveness probe
 
 ### Logging
+
 Structured logging with loguru:
+
 ```python
 from loguru import logger
 logger.info("Job started", job_id=job.id, user_id=user.id)
 ```
 
 ### Metrics
+
 Monitor these key metrics and export Prometheus data using the
 [metrics templates](observability/metrics/metrics_setup.md):
+
 - Job completion rate
 - Crawl success rate
 - Average crawl duration
@@ -524,6 +544,7 @@ Monitor these key metrics and export Prometheus data using the
 - Celery queue length
 
 ### Tracing
+
 OpenTelemetry tracing is enabled via `configure_tracing` and the Celery
 instrumentor. Traces are exported to the OTLP endpoint configured in
 `app.config`. Import the provided Grafana dashboard JSON from
@@ -533,6 +554,7 @@ traces together.
 ## Security
 
 ### Best Practices
+
 - Always use HTTPS in production
 - Rotate JWT secret keys regularly
 - Implement rate limiting
@@ -543,6 +565,7 @@ traces together.
 - Dependency review on pull requests prevents introducing vulnerable packages
 
 ### Rate Limiting
+
 ```python
 # Add to FastAPI app
 from slowapi import Limiter
@@ -562,20 +585,23 @@ async def create_job(...):
 ### Common Issues
 
 1. **Playwright browser not found**
+
    ```bash
    playwright install chromium
    ```
 
 2. **Celery workers not starting**
+
    ```bash
    # Check Redis connection
    redis-cli ping
-   
+
    # Check Celery logs
    celery -A app.tasks.celery_app worker --loglevel=debug
    ```
 
 3. **Database connection errors**
+
    ```bash
    # Check PostgreSQL status
    docker-compose logs db
@@ -619,6 +645,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Support
 
 For support and questions:
+
 - Open an issue on GitHub
 - Check the documentation
 - Review the troubleshooting guide
@@ -648,6 +675,7 @@ values from `/run/secrets/<NAME>` automatically via the `read_secret()` helper
 before falling back to environment variables.
 
 Example:
+
 ```python
 from app.secrets.vault import VaultClient
 vault = VaultClient()
@@ -661,6 +689,7 @@ python fetch_vault_env.py > .env
 ```
 
 ## 🚀 MinIO Security Automation & Compliance
+
 - All bucket policies and scripts are versioned and reviewed in git.
 - CI/CD pipelines apply, audit, and rotate policies and secrets automatically.
 - Vault integration ensures all credentials are rotated and injected securely.

@@ -1,5 +1,4 @@
 import os
-import sys
 from typing import Optional
 
 from loguru import logger
@@ -20,21 +19,19 @@ SECRET_KEY_MAP = {
     "celery_broker_url": "CELERY_BROKER_URL",
     "celery_result_backend": "CELERY_RESULT_BACKEND",
     "jwt_secret_key": "JWT_SECRET_KEY",
-    "auth0_client_secret": "AUTH0_CLIENT_SECRET",
 }
 
 # --- Structured Settings using Nested Models (Recommendation #4) ---
 
+
 class AuthSettings(BaseSettings):
     """Authentication related settings."""
+
     jwt_secret_key: str = Field(validation_alias="JWT_SECRET_KEY")
     jwt_algorithm: str = Field("HS256", validation_alias="JWT_ALGORITHM")
-    access_token_expire_minutes: int = Field(30, validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES")
-    auth0_domain: Optional[str] = Field(None, validation_alias="AUTH0_DOMAIN")
-    auth0_client_id: Optional[str] = Field(None, validation_alias="AUTH0_CLIENT_ID")
-    auth0_client_secret: Optional[str] = Field(None, validation_alias="AUTH0_CLIENT_SECRET")
-    auth0_audience: Optional[str] = Field(None, validation_alias="AUTH0_AUDIENCE")
-    auth0_issuer: Optional[str] = Field(None, validation_alias="AUTH0_ISSUER")
+    access_token_expire_minutes: int = Field(
+        30, validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES"
+    )
 
     @field_validator("jwt_secret_key")
     @classmethod
@@ -47,43 +44,50 @@ class AuthSettings(BaseSettings):
             raise ValueError("JWT secret key cannot be a default or weak value")
         return v
 
+
 class VectorStoreSettings(BaseSettings):
     """Settings for vector storage providers."""
+
     provider: str = Field("chromadb", validation_alias="VECTOR_STORE_PROVIDER")
     path: str = Field("./data/vector_store", validation_alias="VECTOR_STORE_PATH")
     # Pinecone
     pinecone_api_key: Optional[str] = Field(None, validation_alias="PINECONE_API_KEY")
-    pinecone_environment: str = Field("us-east1-gcp", validation_alias="PINECONE_ENVIRONMENT")
+    pinecone_environment: str = Field(
+        "us-east1-gcp", validation_alias="PINECONE_ENVIRONMENT"
+    )
     # Weaviate
     weaviate_url: str = Field("http://localhost:8080", validation_alias="WEAVIATE_URL")
     weaviate_api_key: Optional[str] = Field(None, validation_alias="WEAVIATE_API_KEY")
     # Qdrant
-    qdrant_url: Optional[str] = Field(None, validation_alias="QDRANT_URL")  # e.g., "http://localhost:6333"
+    qdrant_url: Optional[str] = Field(
+        None, validation_alias="QDRANT_URL"
+    )  # e.g., "http://localhost:6333"
     qdrant_api_key: Optional[str] = Field(None, validation_alias="QDRANT_API_KEY")
 
 
 class Settings(BaseSettings):
     """Main application settings."""
+
     # Environment
     environment: str = "development"
     log_level: str = "DEBUG"
-    
+
     # API Keys
     openai_api_key: str
     anthropic_api_key: Optional[str] = None
-    
+
     # Database
     database_url: str
-    
+
     # Redis/Celery
     redis_url: str = "redis://localhost:6379/0"
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_result_backend: str = "redis://localhost:6379/0"
-    
+
     # Nested Settings
     auth: Optional[AuthSettings] = None
     vector_store: Optional[VectorStoreSettings] = None
-    
+
     # CORS
     allowed_origins: list[str] = [
         "http://localhost:3000",
@@ -130,7 +134,6 @@ def load_vault_env() -> None:
             os.environ[key] = value
 
 
-
 def _load_file_secrets() -> None:
     """Populate ``os.environ`` from files under /run/secrets if present."""
     for key in SECRET_KEY_MAP.values():
@@ -145,7 +148,9 @@ def get_settings() -> Settings:
     env = os.getenv("ENVIRONMENT", "development").lower()
     ci_mode = os.getenv("CI", "false").lower() == "true"
 
-    use_vault = not disable_vault and os.getenv("VAULT_ADDR") and os.getenv("VAULT_TOKEN")
+    use_vault = (
+        not disable_vault and os.getenv("VAULT_ADDR") and os.getenv("VAULT_TOKEN")
+    )
     if use_vault:
         try:
             load_vault_env()
@@ -185,4 +190,3 @@ if __name__ == "__main__":
         logger.info(f"JWT Algorithm: {settings.auth.jwt_algorithm}")
     if settings.vector_store:
         logger.info(f"Vector Store Provider: {settings.vector_store.provider}")
-
