@@ -77,6 +77,7 @@ docker-compose.yml # Local services
 - [API Reference](docs/API_REFERENCE.md)
 - [Configuration](docs/CONFIGURATION.md)
 - [Operational Runbook](docs/OPERATIONAL_RUNBOOK.md)
+- [DDoS Mitigation](docs/DDOS_MITIGATION.md)
 - [Secret Rotation Guide](docs/SECRET_ROTATION.md)
 - [Secrets Management](docs/SECRETS_MANAGEMENT.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
