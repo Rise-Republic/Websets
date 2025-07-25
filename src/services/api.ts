@@ -74,7 +74,6 @@ class ApiService {
     this.tenantId = localStorage.getItem('websets_tenant_id');
     this.baseUrl = this.useVersionedEndpoints ? VERSIONED_API_BASE : API_BASE;
   }
-
   private getBaseUrl(endpoint: string): string {
     return this.useVersionedEndpoints ? `${VERSIONED_API_BASE}${endpoint}` : `${API_BASE}${endpoint}`;
   }
@@ -247,8 +246,6 @@ class ApiService {
     const data = await this.handleResponse(response);
     this.token = data.access_token;
     this.refreshToken = data.refresh_token;
-    localStorage.setItem('websets_token', this.token);
-    localStorage.setItem('websets_refresh_token', this.refreshToken);
   }
 
   private async request(
@@ -325,8 +322,6 @@ class ApiService {
       const data = await this.handleResponse(response);
       this.token = data.access_token;
       this.refreshToken = data.refresh_token;
-      localStorage.setItem('websets_token', this.token!);
-      localStorage.setItem('websets_refresh_token', this.refreshToken!);
       return data;
     } catch (error: any) {
       // Provide clearer message for network failures
@@ -385,8 +380,6 @@ class ApiService {
           console.log('Session invalid or expired, redirecting to login');
           // Clear any local tokens
           this.token = null;
-          localStorage.removeItem('websets_token');
-          localStorage.removeItem('websets_refresh_token');
           // Return to login page
           window.location.href = '/';
           throw new Error('Session expired');
@@ -425,7 +418,7 @@ class ApiService {
       window.location.href = `${API_BASE}/api/auth/logout`;
     }
   }
-
+  
   // Jobs
   async getJobs(): Promise<Job[]> {
     const response = await this.request('/jobs/');
@@ -519,32 +512,35 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  async processWorkOSCallback(code: string): Promise<void> {
+    const response = await fetch(
+      `${API_BASE}/api/auth/callback?code=${encodeURIComponent(code)}`,
+      {
+        method: 'GET',
+        credentials: 'include',
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Auth callback failed: ${response.status}`);
+    }
+  }
+
   // Utility methods
   isAuthenticated(): boolean {
-    // Since the session cookie is HTTP-only, we can't check it directly
-    // We'll use multiple strategies to determine authentication state
-    
-    // 1. Check for token in memory
+    // Check token in memory
     const hasToken = !!this.token;
-    
-    // 2. Check if we're on the dashboard after a redirect from auth
-    const isAfterAuthRedirect = window.location.pathname === '/dashboard' && 
-                               document.referrer.includes('localhost:8001');
-    
-    // 3. Check localStorage for authentication flag
-    // This is set by getCurrentUser when it successfully gets user data
+
+    // Local storage flag set after successful auth
     const hasAuthFlag = localStorage.getItem('websets_authenticated') === 'true';
-    
+
     console.log('Authentication check:', {
       hasToken,
       hasAuthFlag,
-      isAfterAuthRedirect,
-      pathname: window.location.pathname,
-      referrer: document.referrer,
-      result: hasToken || isAfterAuthRedirect || hasAuthFlag
+      result: hasToken || hasAuthFlag,
     });
-    
-    return hasToken || isAfterAuthRedirect || hasAuthFlag;
+
+    return hasToken || hasAuthFlag;
   }
 
   getToken(): string | null {

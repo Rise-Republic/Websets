@@ -61,7 +61,7 @@ describe('apiService getHeaders', () => {
 });
 
 describe('apiService login', () => {
-  test('stores tokens on success', async () => {
+  test('returns tokens on success', async () => {
     (global.fetch as jest.Mock).mockResolvedValue(
       mockResponse({ access_token: 'a', refresh_token: 'r', token_type: 'Bearer' })
     );
@@ -72,6 +72,7 @@ describe('apiService login', () => {
     );
     expect(apiService.getToken()).toBe('a');
     expect(apiService.isAuthenticated()).toBe(true);
+    expect(global.localStorage.setItem).not.toHaveBeenCalled();
   });
 
   test('provides helpful message on network failure', async () => {
