@@ -6,17 +6,30 @@ import Dashboard from './components/Dashboard/Dashboard';
 function App() {
   const { isAuthenticated, isLoading, user, error } = useAuth();
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  const [forceReload, setForceReload] = useState(false);
   
   // Debug authentication and routing
   console.log('Auth state:', { isAuthenticated, isLoading, currentPath, user, error });
-  console.log('Cookies:', document.cookie);
   
-  // Log when we're on the dashboard path
+  // Handle authentication after redirect from backend
   useEffect(() => {
-    if (currentPath === '/dashboard') {
-      console.log('On dashboard path, auth state:', { isAuthenticated, isLoading });
+    const isRedirectFromAuth = 
+      currentPath === '/dashboard' && 
+      document.referrer.includes('localhost:8001');
+      
+    if (isRedirectFromAuth && !isAuthenticated && !isLoading) {
+      console.log('Detected redirect from auth, triggering reload');
+      // Force a reload to re-check authentication
+      setForceReload(true);
     }
   }, [currentPath, isAuthenticated, isLoading]);
+  
+  // Trigger a page reload if needed
+  useEffect(() => {
+    if (forceReload) {
+      window.location.reload();
+    }
+  }, [forceReload]);
 
   // Handle routing based on URL path
   useEffect(() => {

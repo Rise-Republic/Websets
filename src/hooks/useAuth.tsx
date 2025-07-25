@@ -12,6 +12,7 @@ export const useAuth = () =>
     requestPasswordReset: state.requestPasswordReset,
     confirmPasswordReset: state.confirmPasswordReset,
     error: state.error,
+    checkAuth: state.checkAuth, // Expose checkAuth method
   }));
 
 export const useAuthProvider = () => {

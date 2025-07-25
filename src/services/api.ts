@@ -347,34 +347,44 @@ class ApiService {
   }
 
   async getCurrentUser(): Promise<User> {
-    console.log('Getting current user, cookies:', document.cookie);
+    console.log('Getting current user');
     
     try {
-      // Force a manual check of authentication
-      const isAuth = this.isAuthenticated();
-      console.log('Manual auth check:', isAuth);
-      
-      // Use the WorkOS auth endpoint for user info
-      // Make a direct fetch to ensure cookies are included
+      // For WorkOS with HTTP-only cookies, we need to make a request to the backend
+      // The backend will validate the session cookie and return the user info
       console.log('Fetching from:', `${API_BASE}/api/auth/me`);
+      
       const response = await fetch(`${API_BASE}/api/auth/me`, {
         method: 'GET',
-        credentials: 'include', // Important: Include cookies in the request
+        credentials: 'include', // Critical: Include cookies in the request
         headers: {
           'Accept': 'application/json'
         }
       });
       
       console.log('Response status:', response.status);
-      console.log('Response headers:', [...response.headers.entries()]);
       
       if (!response.ok) {
+        // If we get a 401, the session is invalid or expired
+        if (response.status === 401) {
+          console.log('Session invalid or expired, redirecting to login');
+          // Clear any local tokens
+          this.token = null;
+          localStorage.removeItem('websets_token');
+          localStorage.removeItem('websets_refresh_token');
+          // Return to login page
+          window.location.href = '/';
+          throw new Error('Session expired');
+        }
+        
         console.error('Failed to get user:', response.status, response.statusText);
         throw new Error(`Failed to get user: ${response.status} ${response.statusText}`);
       }
       
       const data = await response.json();
-      console.log('User data:', data);
+      console.log('User data received:', data);
+      
+      // If we successfully get user data, we're authenticated
       return data;
     } catch (error) {
       console.error('Error getting current user:', error);
@@ -488,19 +498,24 @@ class ApiService {
 
   // Utility methods
   isAuthenticated(): boolean {
-    // Check for WorkOS session cookie or token
-    // The cookie name should match what's set in the backend (session)
-    const hasCookie = document.cookie.includes('session=');
+    // Since the session cookie is HTTP-only, we can't check it directly
+    // Instead, we'll rely on the token or a previous successful authentication
     const hasToken = !!this.token;
     
+    // We'll assume authentication if we have a token or if we're on the dashboard path
+    // after a redirect from the authentication flow
+    const isAfterAuthRedirect = window.location.pathname === '/dashboard' && 
+                               document.referrer.includes('localhost:8001');
+    
     console.log('Authentication check:', {
-      cookies: document.cookie,
-      hasCookie,
       hasToken,
-      result: hasCookie || hasToken
+      isAfterAuthRedirect,
+      pathname: window.location.pathname,
+      referrer: document.referrer,
+      result: hasToken || isAfterAuthRedirect
     });
     
-    return hasCookie || hasToken;
+    return hasToken || isAfterAuthRedirect;
   }
 
   getToken(): string | null {
