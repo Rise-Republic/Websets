@@ -3,11 +3,11 @@
 ## Phase 1: Critical Security (Week 1-2)
 - [x] Implement RBAC system (roles, permissions, enforcement)
 - [x] Add comprehensive audit logging (user actions, data access, failed auth)
-- [ ] Encrypt sensitive data at rest (Postgres, S3, etc)
+- [x] Encrypt sensitive data at rest (Postgres, S3, etc)
 - [x] Enforce HTTPS everywhere; add mTLS for internal APIs
-- [ ] Remove all plaintext secrets from code/configs
-- [ ] Integrate Vault or KMS for runtime secret injection
-- [ ] Rotate all exposed keys (MCP, OpenAI, etc)
+- [x] Remove all plaintext secrets from code/configs
+- [x] Integrate Vault or KMS for runtime secret injection
+- [x] Rotate all exposed keys (MCP, OpenAI, etc)
 - [ ] Add rate limiting and DDoS protection
 
 ## Phase 2: Compliance (Week 3-4)

@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { ReactElement } from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import LoginForm from './components/Auth/LoginForm';
 import Dashboard from './components/Dashboard/Dashboard';
+import AuthCallback from './components/Auth/AuthCallback';
 
 function App() {
   const { isAuthenticated, isLoading, user, error, checkAuth, logout } = useAuth();

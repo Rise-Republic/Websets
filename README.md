@@ -202,7 +202,9 @@ runtime. For local development you can set `DISABLE_VAULT_FOR_LOCAL_DEV=true`
 (for example in your `.env` file) so the app reads secrets from that file
 instead of Vault. In production this variable should be omitted so the
 application loads secrets directly from Vault and fails fast if any are
-missing:
+missing. Vault is therefore **mandatory** in production deployments—set
+`VAULT_ADDR` and provide `VAULT_TOKEN` via an environment variable or Docker
+secret so startup succeeds:
 
 > **Note**
 > The example values below are **placeholders only**. Replace them with your

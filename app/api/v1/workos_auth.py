@@ -181,8 +181,8 @@ async def auth_callback(
         
         # Set session cookie with sealed session (per official docs)
         # For local development, use SameSite=Lax and secure=False
-        # In production, should use SameSite=None and secure=True with HTTPS
-        is_prod = os.getenv("ENV", "development").lower() == "production"
+        # In production, use SameSite=None and secure=True with HTTPS
+        is_prod = IS_PRODUCTION
         
         # ASVS 3.4.2, 3.4.3: Secure cookie flags
         response.set_cookie(
