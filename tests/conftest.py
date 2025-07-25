@@ -155,7 +155,7 @@ def create_user(client, db_session):
         }
         reg = client.post("/auth/register", json=data)
         token = reg.json()["verification_token"]
-        client.post("/auth/verify", json={"token": token})
+        client.get(f"/auth/verify-email?token={token}")
 
         user = db_session.query(User).filter(User.email == email).first()
         user.tenant_id = uuid.uuid4()
