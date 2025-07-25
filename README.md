@@ -198,13 +198,10 @@ curl -X POST "http://localhost:8000/datasets/DATASET_ID/search" \
 ### Environment Variables
 
 Secrets are stored in Vault using `vault_secrets_template.json` and injected at
-runtime. For local development you can set `DISABLE_VAULT_FOR_LOCAL_DEV=true`
-(for example in your `.env` file) so the app reads secrets from that file
-instead of Vault. In production this variable should be omitted so the
-application loads secrets directly from Vault and fails fast if any are
-missing. Vault is therefore **mandatory** in production deployments—set
-`VAULT_ADDR` and provide `VAULT_TOKEN` via an environment variable or Docker
-secret so startup succeeds:
+runtime. When `DISABLE_VAULT_FOR_LOCAL_DEV=true` is set (for example in a
+local `.env` file) the app reads secrets from that file instead of Vault.
+Otherwise all credentials are pulled directly from Vault during startup and the
+application fails fast if any are missing:
 
 > **Note**
 > The example values below are **placeholders only**. Replace them with your
@@ -276,7 +273,7 @@ For production deployments, adjust these settings:
 pip install -r requirements.txt -r requirements-dev.txt
 
 # Set minimal environment so tests run without Vault
-export DISABLE_VAULT=true
+export DISABLE_VAULT_FOR_LOCAL_DEV=true
 export OPENAI_API_KEY=dummy
 export DATABASE_URL=sqlite://
 export JWT_SECRET_KEY=super-secret-key-change-me-1234567890

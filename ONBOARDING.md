@@ -29,7 +29,7 @@ Run backend tests with **pytest** and frontend tests with **Jest**:
 
 ```bash
 # Backend
-export DISABLE_VAULT=true
+export DISABLE_VAULT_FOR_LOCAL_DEV=true
 export OPENAI_API_KEY=dummy
 export DATABASE_URL=sqlite://
 export JWT_SECRET_KEY=super-secret-key-change-me-1234567890
