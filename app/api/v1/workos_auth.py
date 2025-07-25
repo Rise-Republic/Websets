@@ -174,8 +174,8 @@ async def auth_callback(
             }
         )
         
-        # Create redirect response
-        response = RedirectResponse(url="/dashboard", status_code=302)
+        # Create redirect response to frontend Vite server
+        response = RedirectResponse(url="http://localhost:5173/dashboard", status_code=302)
         
         # Set secure session cookie with sealed session (per official docs)
         response.set_cookie(
