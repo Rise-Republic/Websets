@@ -16,6 +16,7 @@ const mockDefaultApiService = {
   isAuthenticated: jest.fn(),
   passwordResetRequest: jest.fn(),
   passwordResetConfirm: jest.fn(),
+  setTenantId: jest.fn(),
 };
 
 // Set up the default export mock
@@ -41,7 +42,7 @@ describe('useAuthProvider', () => {
   });
 
   test('checks for existing authentication on mount', async () => {
-    const mockUser = { id: '1', email: 'test@example.com', fullName: 'Test User' };
+  const mockUser = { id: '1', email: 'test@example.com', fullName: 'Test User', tenant_id: 't1' };
     mockDefaultApiService.isAuthenticated.mockReturnValue(true);
     mockDefaultApiService.getCurrentUser.mockResolvedValue(mockUser);
 
@@ -86,6 +87,7 @@ describe('useAuthProvider', () => {
     expect(result.current.error).toBe(null);
     expect(result.current.isLoading).toBe(false);
     expect(mockDefaultApiService.login).toHaveBeenCalledWith('test@example.com', 'password');
+    expect(mockDefaultApiService.setTenantId).toHaveBeenCalled();
   });
 
   test('login failure', async () => {
@@ -124,7 +126,7 @@ describe('useAuthProvider', () => {
   });
 
   test('register success and auto-login', async () => {
-    const mockUser = { id: '1', email: 'test@example.com', fullName: 'Test User' };
+    const mockUser = { id: '1', email: 'test@example.com', fullName: 'Test User', tenant_id: 't1' };
     mockDefaultApiService.register.mockResolvedValue(mockUser);
     mockDefaultApiService.login.mockResolvedValue(undefined);
     mockDefaultApiService.getCurrentUser.mockResolvedValue(mockUser);
@@ -140,6 +142,7 @@ describe('useAuthProvider', () => {
     expect(result.current.isLoading).toBe(false);
     expect(mockDefaultApiService.register).toHaveBeenCalledWith('test@example.com', 'password', 'Test User');
     expect(mockDefaultApiService.login).toHaveBeenCalledWith('test@example.com', 'password');
+    expect(mockDefaultApiService.setTenantId).toHaveBeenCalled();
   });
 
   test('register failure', async () => {

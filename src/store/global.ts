@@ -58,7 +58,13 @@ export const useGlobalStore = create<GlobalState & GlobalActions>((set, get) => 
         try {
           const current = await apiService.getCurrentUser();
           console.log('User data received:', current);
-          set({ user: current, isAuthenticated: true, error: null });
+          set({
+            user: current,
+            tenantId: (current as any).tenant_id ?? null,
+            isAuthenticated: true,
+            error: null,
+          });
+          apiService.setTenantId((current as any).tenant_id ?? null);
           console.log('Authentication state updated: true');
         } catch (err: any) {
           console.error('Error fetching user:', err);
@@ -70,7 +76,8 @@ export const useGlobalStore = create<GlobalState & GlobalActions>((set, get) => 
       } else {
         // Not authenticated
         console.log('Not authenticated, setting state...');
-        set({ isAuthenticated: false });
+        set({ isAuthenticated: false, tenantId: null });
+        apiService.setTenantId(null);
       }
     } catch (error) {
       console.error('Authentication check failed:', error);
@@ -88,7 +95,13 @@ export const useGlobalStore = create<GlobalState & GlobalActions>((set, get) => 
     try {
       await apiService.login(email, password);
       const current = await apiService.getCurrentUser();
-      set({ user: current, isAuthenticated: true, error: null });
+      set({
+        user: current,
+        tenantId: (current as any).tenant_id ?? null,
+        isAuthenticated: true,
+        error: null,
+      });
+      apiService.setTenantId((current as any).tenant_id ?? null);
     } catch (err: any) {
       set({ user: null, isAuthenticated: false, error: err.message });
       throw err;

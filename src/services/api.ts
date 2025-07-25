@@ -1,7 +1,7 @@
 // API Service for Websets Backend
 // Allow overriding the backend URL via environment variables
 const API_BASE =
-  (typeof process !== 'undefined' && process.env.VITE_API_BASE) ||
+  process.env.VITE_API_BASE ||
   'http://localhost:8001';
 const API_VERSION = 'v1'; // Default to v1
 const VERSIONED_API_BASE = `${API_BASE}/${API_VERSION}`;
@@ -62,18 +62,18 @@ export interface ErrorResponse {
 class ApiService {
   private token: string | (() => Promise<string | null>) | null = null;
   private refreshToken: string | null = null;
+  private tenantId: string | null = null;
   private readonly maxRetries = 3;
   private readonly retryDelay = 1000; // 1 second
   private useVersionedEndpoints = true; // Toggle for versioned vs legacy endpoints
   private baseUrl: string;
 
   constructor() {
-    // Tokens are kept only in memory when using cookie-based sessions
-    this.token = null;
-    this.refreshToken = null;
+    this.token = localStorage.getItem('websets_token');
+    this.refreshToken = localStorage.getItem('websets_refresh_token');
+    this.tenantId = localStorage.getItem('websets_tenant_id');
     this.baseUrl = this.useVersionedEndpoints ? VERSIONED_API_BASE : API_BASE;
   }
-
   private getBaseUrl(endpoint: string): string {
     return this.useVersionedEndpoints ? `${VERSIONED_API_BASE}${endpoint}` : `${API_BASE}${endpoint}`;
   }
@@ -89,6 +89,15 @@ class ApiService {
 
   setTokenProvider(fn: () => Promise<string | null>) {
     this.token = fn;
+  }
+
+  setTenantId(id: string | null) {
+    this.tenantId = id;
+    if (id) {
+      localStorage.setItem('websets_tenant_id', id);
+    } else {
+      localStorage.removeItem('websets_tenant_id');
+    }
   }
 
   private async delay(ms: number): Promise<void> {
@@ -110,6 +119,10 @@ class ApiService {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
+
+    if (this.tenantId) {
+      headers['X-Org-ID'] = this.tenantId;
+    }
 
     if (includeAuth && this.token) {
       let token: string | null = null;
@@ -391,15 +404,21 @@ class ApiService {
   }
 
   async logout(): Promise<void> {
-    // Clear any local authentication flags
+    // Clear any local tokens and authentication flags
     this.token = null;
+    this.tenantId = null;
+    localStorage.removeItem('websets_token');
+    localStorage.removeItem('websets_refresh_token');
     localStorage.removeItem('websets_authenticated');
+    localStorage.removeItem('websets_tenant_id');
     
     // Redirect to backend logout endpoint which will clear the session cookie
     // and redirect to WorkOS logout URL
-    window.location.href = `${API_BASE}/api/auth/logout`;
+    if (typeof window !== 'undefined' && !process.env.JEST_WORKER_ID) {
+      window.location.href = `${API_BASE}/api/auth/logout`;
+    }
   }
-
+  
   // Jobs
   async getJobs(): Promise<Job[]> {
     const response = await this.request('/jobs/');

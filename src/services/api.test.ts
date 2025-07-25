@@ -46,6 +46,18 @@ describe('apiService getHeaders', () => {
     const headers = await anyService.getHeaders();
     expect(headers['Authorization']).toBeUndefined();
   });
+
+  test('includes tenant header when tenantId set', async () => {
+    anyService.tenantId = 'org1';
+    const headers = await anyService.getHeaders();
+    expect(headers['X-Org-ID']).toBe('org1');
+  });
+
+  test('omits tenant header when tenantId null', async () => {
+    anyService.tenantId = null;
+    const headers = await anyService.getHeaders();
+    expect(headers['X-Org-ID']).toBeUndefined();
+  });
 });
 
 describe('apiService login', () => {
