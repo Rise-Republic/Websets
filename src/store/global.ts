@@ -49,44 +49,34 @@ export const useGlobalStore = create<GlobalState & GlobalActions>((set, get) => 
     console.log('Starting checkAuth...');
     set({ isLoading: true });
     try {
-      // Check if authenticated with WorkOS session cookie or token
-      const isAuth = (apiService as any).isAuthenticated?.();
-      console.log('Initial auth check result:', isAuth);
-      
-      if (isAuth) {
-        console.log('Auth check passed, fetching current user...');
-        try {
-          const current = await apiService.getCurrentUser();
-          console.log('User data received:', current);
-          set({
-            user: current,
-            tenantId: (current as any).tenant_id ?? null,
-            isAuthenticated: true,
-            error: null,
-          });
-          apiService.setTenantId((current as any).tenant_id ?? null);
-          console.log('Authentication state updated: true');
-        } catch (err: any) {
-          console.error('Error fetching user:', err);
-          set({ error: err.message });
-          console.log('Logging out due to error...');
-          apiService.logout();
-          get().reset();
-        }
-      } else {
-        // Not authenticated
-        console.log('Not authenticated, setting state...');
-        set({ isAuthenticated: false, tenantId: null });
-        apiService.setTenantId(null);
-      }
-    } catch (error) {
-      console.error('Authentication check failed:', error);
+      const current = await apiService.getCurrentUser();
+      console.log('User data received:', current);
+      set({
+        user: current,
+        tenantId: (current as any).tenant_id ?? null,
+        isAuthenticated: true,
+        error: null,
+      });
+      apiService.setTenantId((current as any).tenant_id ?? null);
+      console.log('Authentication state updated: true');
+    } catch (err: any) {
+      console.error('Error fetching user:', err);
+      set({
+        isAuthenticated: false,
+        user: null,
+        tenantId: null,
+        error: err.message,
+      });
+      console.log('Logging out due to error...');
+      apiService.setTenantId(null);
+      apiService.logout();
+      get().reset();
     } finally {
       set({ isLoading: false });
-      console.log('checkAuth complete, state:', { 
+      console.log('checkAuth complete, state:', {
         isAuthenticated: get().isAuthenticated,
         user: get().user,
-        error: get().error
+        error: get().error,
       });
     }
   },

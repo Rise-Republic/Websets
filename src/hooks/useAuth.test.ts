@@ -13,7 +13,6 @@ const mockDefaultApiService = {
   register: jest.fn(),
   logout: jest.fn(),
   getCurrentUser: jest.fn(),
-  isAuthenticated: jest.fn(),
   passwordResetRequest: jest.fn(),
   passwordResetConfirm: jest.fn(),
   setTenantId: jest.fn(),
@@ -25,7 +24,7 @@ const mockDefaultApiService = {
 describe('useAuthProvider', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockDefaultApiService.isAuthenticated.mockReturnValue(false);
+    mockDefaultApiService.getCurrentUser.mockRejectedValue(new Error('unauthenticated'));
     useGlobalStore.getState().reset();
   });
 
@@ -43,7 +42,6 @@ describe('useAuthProvider', () => {
 
   test('checks for existing authentication on mount', async () => {
   const mockUser = { id: '1', email: 'test@example.com', fullName: 'Test User', tenant_id: 't1' };
-    mockDefaultApiService.isAuthenticated.mockReturnValue(true);
     mockDefaultApiService.getCurrentUser.mockResolvedValue(mockUser);
 
     const { result } = renderHook(() => useAuthProvider());
@@ -58,7 +56,6 @@ describe('useAuthProvider', () => {
   });
 
   test('handles expired token on mount', async () => {
-    mockDefaultApiService.isAuthenticated.mockReturnValue(true);
     mockDefaultApiService.getCurrentUser.mockRejectedValue(new Error('Token expired'));
 
     const { result } = renderHook(() => useAuthProvider());
@@ -168,7 +165,6 @@ describe('useAuthProvider', () => {
     const mockUser = { id: '1', email: 'test@example.com', fullName: 'Test User' };
     
     // Set up initial authenticated state
-    mockDefaultApiService.isAuthenticated.mockReturnValue(true);
     mockDefaultApiService.getCurrentUser.mockResolvedValue(mockUser);
 
     const { result } = renderHook(() => useAuthProvider());
@@ -209,7 +205,6 @@ describe('useAuthProvider', () => {
   });
 
   test('isAuthenticated works correctly', async () => {
-    mockDefaultApiService.isAuthenticated.mockReturnValue(true);
     
     const { result } = renderHook(() => useAuthProvider());
 

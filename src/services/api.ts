@@ -69,9 +69,6 @@ class ApiService {
   private baseUrl: string;
 
   constructor() {
-    this.token = localStorage.getItem('websets_token');
-    this.refreshToken = localStorage.getItem('websets_refresh_token');
-    this.tenantId = localStorage.getItem('websets_tenant_id');
     this.baseUrl = this.useVersionedEndpoints ? VERSIONED_API_BASE : API_BASE;
   }
   private getBaseUrl(endpoint: string): string {
@@ -93,11 +90,6 @@ class ApiService {
 
   setTenantId(id: string | null) {
     this.tenantId = id;
-    if (id) {
-      localStorage.setItem('websets_tenant_id', id);
-    } else {
-      localStorage.removeItem('websets_tenant_id');
-    }
   }
 
   private async delay(ms: number): Promise<void> {
@@ -392,10 +384,6 @@ class ApiService {
       const data = await response.json();
       console.log('User data received:', data);
       
-      // If we successfully get user data, we're authenticated
-      // Set a flag in localStorage to remember authentication state
-      localStorage.setItem('websets_authenticated', 'true');
-      
       return data;
     } catch (error) {
       console.error('Error getting current user:', error);
@@ -404,13 +392,9 @@ class ApiService {
   }
 
   async logout(): Promise<void> {
-    // Clear any local tokens and authentication flags
+    // Clear local auth state
     this.token = null;
     this.tenantId = null;
-    localStorage.removeItem('websets_token');
-    localStorage.removeItem('websets_refresh_token');
-    localStorage.removeItem('websets_authenticated');
-    localStorage.removeItem('websets_tenant_id');
     
     // Redirect to backend logout endpoint which will clear the session cookie
     // and redirect to WorkOS logout URL
@@ -527,22 +511,6 @@ class ApiService {
   }
 
   // Utility methods
-  isAuthenticated(): boolean {
-    // Check token in memory
-    const hasToken = !!this.token;
-
-    // Local storage flag set after successful auth
-    const hasAuthFlag = localStorage.getItem('websets_authenticated') === 'true';
-
-    console.log('Authentication check:', {
-      hasToken,
-      hasAuthFlag,
-      result: hasToken || hasAuthFlag,
-    });
-
-    return hasToken || hasAuthFlag;
-  }
-
   getToken(): string | null {
     return typeof this.token === 'string' ? this.token : null;
   }

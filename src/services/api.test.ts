@@ -71,8 +71,6 @@ describe('apiService login', () => {
       expect.objectContaining({ method: 'POST' })
     );
     expect(apiService.getToken()).toBe('a');
-    expect(apiService.isAuthenticated()).toBe(true);
-    expect(global.localStorage.setItem).not.toHaveBeenCalled();
   });
 
   test('provides helpful message on network failure', async () => {
@@ -83,15 +81,6 @@ describe('apiService login', () => {
   });
 });
 
-describe('authentication helpers', () => {
-  test('isAuthenticated and getToken reflect logout', () => {
-    anyService.token = 'zz';
-    expect(apiService.isAuthenticated()).toBe(true);
-    apiService.logout();
-    expect(apiService.isAuthenticated()).toBe(false);
-    expect(apiService.getToken()).toBeNull();
-  });
-});
 
 describe('apiService internals', () => {
   test('getBaseUrl switches with legacy mode', () => {

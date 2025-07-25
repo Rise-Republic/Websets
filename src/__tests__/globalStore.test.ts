@@ -10,7 +10,6 @@ const mockDefaultApi = {
   register: jest.fn(),
   logout: jest.fn(),
   getCurrentUser: jest.fn(),
-  isAuthenticated: jest.fn(),
   passwordResetRequest: jest.fn(),
   passwordResetConfirm: jest.fn(),
   setTenantId: jest.fn(),
@@ -19,7 +18,7 @@ const mockDefaultApi = {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockDefaultApi.isAuthenticated.mockReturnValue(false);
+  mockDefaultApi.getCurrentUser.mockRejectedValue(new Error('unauthenticated'));
   useGlobalStore.getState().reset();
 });
 
