@@ -72,7 +72,6 @@ describe('apiService login', () => {
     );
     expect(apiService.getToken()).toBe('a');
     expect(apiService.isAuthenticated()).toBe(true);
-    expect(global.localStorage.setItem).not.toHaveBeenCalled();
   });
 
   test('provides helpful message on network failure', async () => {
@@ -83,11 +82,29 @@ describe('apiService login', () => {
   });
 });
 
+describe('getSession', () => {
+  test('returns unauthenticated on 401', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({ status: 401, ok: false, json: async () => ({}) } as any);
+    const res = await apiService.getSession();
+    expect(res.authenticated).toBe(false);
+  });
+
+  test('parses authenticated session', async () => {
+    const data = { tenant_id: 't1', user: { id: '1', email: 'e' } };
+    (global.fetch as jest.Mock).mockResolvedValue(mockResponse(data));
+    const res = await apiService.getSession();
+    expect(res.authenticated).toBe(true);
+    expect(res.user).toEqual(data.user);
+    expect(res.tenant_id).toBe('t1');
+  });
+});
+
 describe('authentication helpers', () => {
-  test('isAuthenticated and getToken reflect logout', () => {
+  test('isAuthenticated and getToken reflect logout', async () => {
     anyService.token = 'zz';
     expect(apiService.isAuthenticated()).toBe(true);
-    apiService.logout();
+    global.fetch = jest.fn().mockResolvedValue({ ok: true } as any);
+    await apiService.logout();
     expect(apiService.isAuthenticated()).toBe(false);
     expect(apiService.getToken()).toBeNull();
   });

@@ -392,10 +392,6 @@ class ApiService {
       const data = await response.json();
       console.log('User data received:', data);
       
-      // If we successfully get user data, we're authenticated
-      // Set a flag in localStorage to remember authentication state
-      localStorage.setItem('websets_authenticated', 'true');
-      
       return data;
     } catch (error) {
       console.error('Error getting current user:', error);
@@ -403,19 +399,45 @@ class ApiService {
     }
   }
 
+  async getSession(): Promise<{ authenticated: boolean; tenant_id: string | null; user?: User }> {
+    const response = await fetch(`${API_BASE}/api/session`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: { 'Accept': 'application/json' },
+    });
+
+    if (response.status === 401) {
+      return { authenticated: false, tenant_id: null };
+    }
+
+    const data = await this.handleResponse(response);
+    return {
+      authenticated: true,
+      tenant_id: data.tenant_id ?? null,
+      user: data.user,
+    };
+  }
+
   async logout(): Promise<void> {
-    // Clear any local tokens and authentication flags
+    // Clear any local tokens
     this.token = null;
     this.tenantId = null;
     localStorage.removeItem('websets_token');
     localStorage.removeItem('websets_refresh_token');
-    localStorage.removeItem('websets_authenticated');
     localStorage.removeItem('websets_tenant_id');
-    
-    // Redirect to backend logout endpoint which will clear the session cookie
-    // and redirect to WorkOS logout URL
-    if (typeof window !== 'undefined' && !process.env.JEST_WORKER_ID) {
-      window.location.href = `${API_BASE}/api/auth/logout`;
+
+    if (typeof window !== 'undefined') {
+      try {
+        await fetch(`${API_BASE}/api/logout`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+      } catch {
+        // ignore network errors during logout
+      }
+      if (!process.env.JEST_WORKER_ID) {
+        window.location.href = '/';
+      }
     }
   }
   
@@ -528,19 +550,7 @@ class ApiService {
 
   // Utility methods
   isAuthenticated(): boolean {
-    // Check token in memory
-    const hasToken = !!this.token;
-
-    // Local storage flag set after successful auth
-    const hasAuthFlag = localStorage.getItem('websets_authenticated') === 'true';
-
-    console.log('Authentication check:', {
-      hasToken,
-      hasAuthFlag,
-      result: hasToken || hasAuthFlag,
-    });
-
-    return hasToken || hasAuthFlag;
+    return !!this.token;
   }
 
   getToken(): string | null {
