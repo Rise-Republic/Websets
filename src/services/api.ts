@@ -499,23 +499,29 @@ class ApiService {
   // Utility methods
   isAuthenticated(): boolean {
     // Since the session cookie is HTTP-only, we can't check it directly
-    // Instead, we'll rely on the token or a previous successful authentication
+    // We'll use multiple strategies to determine authentication state
+    
+    // 1. Check for token in memory
     const hasToken = !!this.token;
     
-    // We'll assume authentication if we have a token or if we're on the dashboard path
-    // after a redirect from the authentication flow
+    // 2. Check if we're on the dashboard after a redirect from auth
     const isAfterAuthRedirect = window.location.pathname === '/dashboard' && 
                                document.referrer.includes('localhost:8001');
     
+    // 3. Check localStorage for authentication flag
+    // This is set by getCurrentUser when it successfully gets user data
+    const hasAuthFlag = localStorage.getItem('websets_authenticated') === 'true';
+    
     console.log('Authentication check:', {
       hasToken,
+      hasAuthFlag,
       isAfterAuthRedirect,
       pathname: window.location.pathname,
       referrer: document.referrer,
-      result: hasToken || isAfterAuthRedirect
+      result: hasToken || isAfterAuthRedirect || hasAuthFlag
     });
     
-    return hasToken || isAfterAuthRedirect;
+    return hasToken || isAfterAuthRedirect || hasAuthFlag;
   }
 
   getToken(): string | null {
