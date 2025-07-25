@@ -1,26 +1,17 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, ConfigDict, validator
+from datetime import datetime
 
 from app.models import User
 from app.auth.dependencies import get_current_active_user
 from app.api.dependencies import get_user_repository
 from app.repositories.user_repository import UserRepository
+from app.utils.password_validation import validate_password
+from app.auth.jwt_handler import verify_password, get_password_hash
 
 
 router = APIRouter(prefix="/users", tags=["v1-users"])
-
-
-class UserProfileResponse(BaseModel):
-    id: str
-    email: EmailStr
-    full_name: Optional[str] = None
-    is_active: bool
-    created_at: str
-    is_verified: bool = False
-
-    class Config:
-        from_attributes = True
 
 
 class UserProfileResponse(BaseModel):
