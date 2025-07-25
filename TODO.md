@@ -41,9 +41,9 @@
 - [x] Add tenant resource limits
 
 ## Testing Coverage
-- [ ] Add E2E tests (Cypress, Playwright)
-- [ ] Add security tests (OWASP ZAP, pytest)
-- [ ] Add load/perf tests (Locust, k6)
+- [x] Add E2E tests (Cypress, Playwright)
+- [x] Add security tests (OWASP ZAP, pytest)
+- [x] Add load/perf tests (Locust, k6)
 
 ## Analytics & Feedback
 - [ ] Add usage analytics (Mixpanel, Segment, or custom)
