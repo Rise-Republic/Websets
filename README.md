@@ -242,8 +242,7 @@ In non-development environments the application will exit on startup if any of
 the required secrets are missing.
 
 Non-secret configuration in `.env`:
-
-```env
+@@ -237,130 +247,134 @@ Non-secret configuration in `.env`:
 MAX_CONCURRENT_CRAWLS=5
 REQUEST_DELAY_MS=1000
 USER_AGENT=WebSetMiner/1.0
@@ -378,8 +377,7 @@ Monitor outdated dependencies periodically:
 pip list --outdated
 npm outdated
 ```
-
-### Adding New Agents
+@@ -369,86 +383,88 @@ npm outdated
 
 1. Create agent class inheriting from `BaseAgent`
 2. Implement the `execute()` method
@@ -468,22 +466,7 @@ terraform plan \
 
 # Apply after validation
 terraform apply \
-  -var="kubeconfig=$HOME/.kube/config" \
-  -var="vpc_id=<vpc-id>" \
-  -var="subnet_ids=[\"subnet-abc\",\"subnet-def\"]"
-```
-
-If an apply introduces issues, re-apply the previous commit's configuration or
-use `kubectl rollout undo deployment/webset-miner` to revert the running
-application without invoking the blue/green script.
-
-## CI/CD Pipeline
-
-Automated builds, tests, and deployments run via **GitHub Actions**.
-
-- The pipeline caches Python and Node dependencies to speed up runs.
-- Tests execute **before** building Docker images.
-- Docker images are then built and pushed to GitHub Container Registry on every push to `main` or a tagged release.
+@@ -471,201 +487,214 @@ Automated builds, tests, and deployments run via **GitHub Actions**.
 - Images are scanned with **Trivy** for critical vulnerabilities.
 - If no issues are found, the workflow deploys the updated containers over SSH using `docker-compose`.
 
