@@ -16,9 +16,12 @@ from app.database import Base  # adjust import as needed
 target_metadata = Base.metadata
 
 # Get database URL from environment variable
-db_url = os.getenv('DATABASE_URL')
+db_url = os.getenv('DB_URL') or os.getenv('DATABASE_URL')
 if db_url is None:
-    raise RuntimeError("DATABASE_URL environment variable not set")
+    # Fallback to a default that works in Docker Compose
+    db_url = "postgresql://postgres:changeme@db:5432/webset_miner"
+    print(f"Using default database URL: {db_url}")
+
 
 # Convert async database URL to sync for Alembic migrations
 if db_url.startswith('postgresql+asyncpg://'):

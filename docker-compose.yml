@@ -16,6 +16,7 @@ x-app-volumes: &app-volumes
   - ./app:/app/app
   - ./data:/app/data
   - ./certs:/certs:ro
+  - ./scripts:/app/scripts
 
 x-service-common: &service-common
   build: .
@@ -164,11 +165,11 @@ services:
       - vault_data:/vault/data
       - ./certs:/certs:ro
     command: >
-      vault server
+      sh -c "mkdir -p /vault/plugins && vault server
       -dev
       -dev-root-token-id=root
       -dev-listen-address=0.0.0.0:8200
-      -dev-plugin-dir=/vault/plugins
+      -dev-plugin-dir=/vault/plugins"
     restart: unless-stopped
     deploy:
       resources:
