@@ -39,11 +39,6 @@ redirect_uri = os.getenv("WORKOS_REDIRECT_URI", "http://localhost:8001/api/auth/
 if not api_key or not client_id:
     raise RuntimeError(f"WorkOS credentials missing for {ENVIRONMENT} environment: API_KEY and/or CLIENT_ID not set")
 
-# Debug logging for WorkOS credentials
-print(f"DEBUG: Environment: {ENVIRONMENT}")
-print(f"DEBUG: Using WorkOS client_id: {client_id}")
-print(f"DEBUG: Using WorkOS API key: {api_key[:10]}...")
-print(f"DEBUG: Using WorkOS redirect URI: {redirect_uri}")
 
 # Initialize WorkOS client with environment-specific credentials
 workos_client = WorkOSClient(
