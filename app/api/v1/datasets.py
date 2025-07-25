@@ -174,7 +174,9 @@ async def get_dataset_records(
             status_code=status.HTTP_404_NOT_FOUND, detail="Dataset not found"
         )
 
-    records, total = dataset_repo.get_dataset_records(dataset_id, page, size)
+    records, total = dataset_repo.get_dataset_records(
+        dataset_id, page, size, current_user.tenant_id
+    )
 
     DataAccessAudit.log_data_access(
         user_id=current_user.id,
@@ -324,7 +326,7 @@ async def export_dataset(
         )
 
     # Get all records
-    records = dataset_repo.get_all_records(dataset_id)
+    records = dataset_repo.get_all_records(dataset_id, current_user.tenant_id)
 
     DataAccessAudit.log_data_access(
         user_id=current_user.id,
