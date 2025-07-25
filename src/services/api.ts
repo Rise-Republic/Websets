@@ -385,6 +385,9 @@ class ApiService {
       console.log('User data received:', data);
       
       // If we successfully get user data, we're authenticated
+      // Set a flag in localStorage to remember authentication state
+      localStorage.setItem('websets_authenticated', 'true');
+      
       return data;
     } catch (error) {
       console.error('Error getting current user:', error);
@@ -392,15 +395,16 @@ class ApiService {
     }
   }
 
-  logout() {
-    // Clear local storage tokens
+  async logout(): Promise<void> {
+    // Clear any local tokens and authentication flags
     this.token = null;
-    this.refreshToken = null;
     localStorage.removeItem('websets_token');
     localStorage.removeItem('websets_refresh_token');
+    localStorage.removeItem('websets_authenticated');
     
-    // Redirect to the backend logout endpoint, which will redirect to WorkOS logout URL
-    window.location.href = `${this.baseUrl}/auth/logout`;
+    // Redirect to backend logout endpoint which will clear the session cookie
+    // and redirect to WorkOS logout URL
+    window.location.href = `${API_BASE}/api/auth/logout`;
   }
 
   // Jobs
