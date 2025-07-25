@@ -65,10 +65,12 @@ class ApiService {
   private readonly maxRetries = 3;
   private readonly retryDelay = 1000; // 1 second
   private useVersionedEndpoints = true; // Toggle for versioned vs legacy endpoints
+  private baseUrl: string;
 
   constructor() {
     this.token = localStorage.getItem('websets_token');
     this.refreshToken = localStorage.getItem('websets_refresh_token');
+    this.baseUrl = this.useVersionedEndpoints ? VERSIONED_API_BASE : API_BASE;
   }
 
   private getBaseUrl(endpoint: string): string {
@@ -354,10 +356,14 @@ class ApiService {
   }
 
   logout() {
+    // Clear local storage tokens
     this.token = null;
     this.refreshToken = null;
     localStorage.removeItem('websets_token');
     localStorage.removeItem('websets_refresh_token');
+    
+    // Redirect to the backend logout endpoint, which will redirect to WorkOS logout URL
+    window.location.href = `${this.baseUrl}/auth/logout`;
   }
 
   // Jobs

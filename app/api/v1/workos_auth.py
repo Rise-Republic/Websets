@@ -201,16 +201,21 @@ async def auth_callback(
         logger.error(f"Authentication error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Authentication failed: {str(e)}")
 
-@router.post("/logout")
+@router.get("/logout")  # Changed from POST to GET to match WorkOS docs
 async def logout(request: Request, session = Depends(require_session)):
     """
-    Handle user logout by clearing session cookie
+    Handle user logout by redirecting to WorkOS logout URL
+    and clearing the session cookie
     """
     try:
-        # Clear session cookie
-        response = JSONResponse(content={"message": "Logged out successfully"})
+        # Get WorkOS logout URL
+        logout_url = session.get_logout_url()
+        
+        # Create response that redirects to WorkOS logout
+        response = RedirectResponse(url=logout_url)
         response.delete_cookie(COOKIE_NAME, path="/")
         
+        logger.info("User logged out successfully")
         return response
     except Exception as e:
         logger.error(f"Logout error: {str(e)}")
