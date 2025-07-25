@@ -177,16 +177,20 @@ async def auth_callback(
         # Create redirect response to frontend Vite server
         response = RedirectResponse(url="http://localhost:5173/dashboard", status_code=302)
         
-        # Set secure session cookie with sealed session (per official docs)
-        # Using SameSite=None for cross-domain cookies between frontend and backend
+        # Set session cookie with sealed session (per official docs)
+        # For local development, use SameSite=Lax and secure=False
+        # In production, should use SameSite=None and secure=True with HTTPS
+        is_prod = os.getenv("ENV", "development").lower() == "production"
+        
         response.set_cookie(
             COOKIE_NAME,
             auth_response.sealed_session,
             httponly=True,
-            secure=True,  # Required for SameSite=None
-            samesite="none",  # Allow cross-domain cookies
+            secure=is_prod,  # Only use secure in production with HTTPS
+            samesite="lax" if not is_prod else "none",  # Use lax for local development
             max_age=COOKIE_MAX_AGE,
-            path="/"
+            path="/",
+            domain=None  # Allow the browser to handle domain matching
         )
         
         # Log successful authentication (without PII)

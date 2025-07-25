@@ -462,7 +462,8 @@ class ApiService {
   // Utility methods
   isAuthenticated(): boolean {
     // Check for WorkOS session cookie or token
-    return document.cookie.includes('wos_session=') || !!this.token;
+    // The cookie name should match what's set in the backend (session)
+    return document.cookie.includes('session=') || !!this.token;
   }
 
   getToken(): string | null {
