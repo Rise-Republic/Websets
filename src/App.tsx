@@ -4,80 +4,58 @@ import { useAuth } from './hooks/useAuth';
 import LoginForm from './components/Auth/LoginForm';
 import Dashboard from './components/Dashboard/Dashboard';
 import AuthCallback from './components/Auth/AuthCallback';
+import LoginRedirect from './components/Auth/LoginRedirect';
 
-function App() {
-  const { isAuthenticated, isLoading, user, error, checkAuth, logout } = useAuth();
-  const [currentPath, setCurrentPath] = useState(window.location.pathname);
-  
-  // Debug authentication and routing
-  console.log('Auth state:', { isAuthenticated, isLoading, currentPath, user, error });
-  
-  // Handle authentication after redirect from backend
-  useEffect(() => {
-    const isRedirectFromAuth =
-      currentPath === '/dashboard' &&
-      document.referrer.includes('localhost:8001');
+const LoadingScreen = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
+      <p className="mt-4 text-gray-600">Loading Websets...</p>
+    </div>
+  </div>
+);
 
-    if (isRedirectFromAuth && !isAuthenticated && !isLoading) {
-      console.log('Detected redirect from auth, running checkAuth');
-      checkAuth();
-    }
-  }, [currentPath, isAuthenticated, isLoading, checkAuth]);
-
-  // Handle routing based on URL path
-  useEffect(() => {
-    const handleRouteChange = () => {
-      setCurrentPath(window.location.pathname);
-    };
-
-    // Listen for popstate events (back/forward navigation)
-    window.addEventListener('popstate', handleRouteChange);
-    
-    return () => {
-      window.removeEventListener('popstate', handleRouteChange);
-    };
-  }, []);
-
-  // Trigger logout when navigating to /logout
-  useEffect(() => {
-    if (currentPath === '/logout') {
-      logout();
-    }
-  }, [currentPath, logout]);
+const ProtectedRoute = ({ children }: { children: ReactElement }) => {
+  const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading Websets...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
-  if (currentPath === '/logout') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-600">Signing out...</p>
-      </div>
-    );
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
   }
 
-  // If user is authenticated and on /dashboard path, show Dashboard
-  if (isAuthenticated && currentPath === '/dashboard') {
-    return <Dashboard />;
-  }
-  
-  // If user is authenticated but on root path, redirect to dashboard
-  if (isAuthenticated && currentPath === '/') {
-    window.history.pushState({}, '', '/dashboard');
-    setCurrentPath('/dashboard');
-    return <Dashboard />;
+  return children;
+};
+
+const PublicRoute = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <LoadingScreen />;
   }
 
-  // Otherwise show login form
-  return <LoginForm />;
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginForm />;
+};
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<PublicRoute />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/auth/workos/callback" element={<AuthCallback />} />
+      <Route path="/login/redirect" element={<LoginRedirect />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
 }
 
 export default App;

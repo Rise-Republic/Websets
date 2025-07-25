@@ -12,7 +12,7 @@ def test_workos_credentials():
     # Get credentials from environment
     api_key = os.getenv('WORKOS_API_KEY_TEST')
     client_id = os.getenv('WORKOS_CLIENT_ID_TEST')
-    redirect_uri = os.getenv('WORKOS_REDIRECT_URI', 'http://localhost:8001/api/auth/callback')
+    redirect_uri = os.getenv('WORKOS_REDIRECT_URI', 'http://localhost:8001/api/auth/workos/callback')
     
     print("=== WorkOS Credentials Test ===")
     print(f"API Key: {api_key[:10] + '...' if api_key else 'NOT SET'}")

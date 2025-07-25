@@ -9,7 +9,7 @@ import './index.css';
 // Get the redirect URI from environment variables or default to the frontend callback route
 const redirectUri =
   import.meta.env.VITE_WORKOS_REDIRECT_URI ||
-  'http://localhost:5173/auth/callback';
+  'http://localhost:5173/auth/workos/callback';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

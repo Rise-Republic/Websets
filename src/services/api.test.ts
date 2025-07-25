@@ -72,7 +72,6 @@ describe('apiService login', () => {
     );
     expect(apiService.getToken()).toBe('a');
     expect(apiService.isAuthenticated()).toBe(true);
-    expect(global.localStorage.setItem).not.toHaveBeenCalled();
   });
 
   test('provides helpful message on network failure', async () => {

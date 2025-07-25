@@ -34,7 +34,10 @@ IS_PRODUCTION = ENVIRONMENT == "production"
 # Use test credentials in development, live in production
 api_key = os.getenv("WORKOS_API_KEY_LIVE" if IS_PRODUCTION else "WORKOS_API_KEY_TEST")
 client_id = os.getenv("WORKOS_CLIENT_ID_LIVE" if IS_PRODUCTION else "WORKOS_CLIENT_ID_TEST")
-redirect_uri = os.getenv("WORKOS_REDIRECT_URI", "http://localhost:8001/api/auth/callback")
+redirect_uri = os.getenv(
+    "WORKOS_REDIRECT_URI",
+    "http://localhost:8001/api/auth/workos/callback",
+)
 
 if not api_key or not client_id:
     raise RuntimeError(f"WorkOS credentials missing for {ENVIRONMENT} environment: API_KEY and/or CLIENT_ID not set")
@@ -149,7 +152,7 @@ async def initiate_login(request: Request):
         logger.error(f"Failed to initiate login: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to initiate login: {str(e)}")
 
-@router.get("/callback")
+@router.get("/workos/callback")
 async def auth_callback(
     request: Request,
     code: Optional[str] = None
@@ -171,8 +174,13 @@ async def auth_callback(
             }
         )
         
-        # Create redirect response to frontend Vite server
-        response = RedirectResponse(url="http://localhost:5173/dashboard", status_code=302)
+        # Build JSON response containing next route for the frontend
+        response = JSONResponse(
+            {
+                "redirect_to": "/login/redirect",
+                "tenant_id": getattr(auth_response.user, "tenant_id", None),
+            }
+        )
         
         # Set session cookie with sealed session (per official docs)
         # For local development, use SameSite=Lax and secure=False
@@ -256,7 +264,7 @@ class SessionMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable):
         # Skip auth for public routes
         if request.url.path.startswith("/api/auth/login") or \
-           request.url.path.startswith("/api/auth/callback") or \
+           request.url.path.startswith("/api/auth/workos/callback") or \
            request.url.path.startswith("/api/health"):
             return await call_next(request)
             

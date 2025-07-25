@@ -17,8 +17,11 @@ const AuthCallback = () => {
 
     apiService
       .processWorkOSCallback(code)
-      .then(() => checkAuth())
-      .then(() => navigate('/dashboard', { replace: true }))
+      .then(async (data) => {
+        await checkAuth();
+        const redirectTo = data?.redirect_to || '/dashboard';
+        navigate(redirectTo, { replace: true });
+      })
       .catch(() => navigate('/', { replace: true }));
   }, [params, navigate, checkAuth]);
 
