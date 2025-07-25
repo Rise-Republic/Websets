@@ -18,12 +18,6 @@ beforeEach(() => {
   jest.clearAllMocks();
   apiService.logout();
   global.fetch = jest.fn();
-  global.localStorage = {
-    getItem: jest.fn(),
-    setItem: jest.fn(),
-    removeItem: jest.fn(),
-    clear: jest.fn(),
-  } as any;
 });
 
 describe('apiService getHeaders', () => {
@@ -90,11 +84,11 @@ describe('getSession', () => {
   });
 
   test('parses authenticated session', async () => {
-    const data = { tenant_id: 't1', user: { id: '1', email: 'e' } };
-    (global.fetch as jest.Mock).mockResolvedValue(mockResponse(data));
+    const user = { id: '1', email: 'e', tenant_id: 't1' };
+    (global.fetch as jest.Mock).mockResolvedValue(mockResponse(user));
     const res = await apiService.getSession();
     expect(res.authenticated).toBe(true);
-    expect(res.user).toEqual(data.user);
+    expect(res.user).toEqual(user);
     expect(res.tenant_id).toBe('t1');
   });
 });

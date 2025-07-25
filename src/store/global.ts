@@ -48,21 +48,16 @@ export const useGlobalStore = create<GlobalState & GlobalActions>((set, get) => 
   checkAuth: async () => {
     set({ isLoading: true });
     try {
-      const session = await apiService.getSession();
-      if (session.authenticated) {
-        set({
-          user: session.user,
-          tenantId: session.tenant_id,
-          isAuthenticated: true,
-          error: null,
-        });
-        apiService.setTenantId(session.tenant_id);
-      } else {
-        set({ user: null, tenantId: null, isAuthenticated: false });
-        apiService.setTenantId(null);
-      }
+      const current = await apiService.getCurrentUser();
+      set({
+        user: current,
+        tenantId: (current as any).tenant_id ?? null,
+        isAuthenticated: true,
+        error: null,
+      });
+      apiService.setTenantId((current as any).tenant_id ?? null);
     } catch (err: any) {
-      set({ isAuthenticated: false, user: null, tenantId: null, error: err.message });
+      set({ isAuthenticated: false, user: null, tenantId: null, error: null });
       apiService.setTenantId(null);
     } finally {
       set({ isLoading: false });

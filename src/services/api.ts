@@ -69,9 +69,6 @@ class ApiService {
   private baseUrl: string;
 
   constructor() {
-    this.token = localStorage.getItem('websets_token');
-    this.refreshToken = localStorage.getItem('websets_refresh_token');
-    this.tenantId = localStorage.getItem('websets_tenant_id');
     this.baseUrl = this.useVersionedEndpoints ? VERSIONED_API_BASE : API_BASE;
   }
   private getBaseUrl(endpoint: string): string {
@@ -93,11 +90,6 @@ class ApiService {
 
   setTenantId(id: string | null) {
     this.tenantId = id;
-    if (id) {
-      localStorage.setItem('websets_tenant_id', id);
-    } else {
-      localStorage.removeItem('websets_tenant_id');
-    }
   }
 
   private ensureTenant() {
@@ -383,11 +375,9 @@ class ApiService {
       if (!response.ok) {
         // If we get a 401, the session is invalid or expired
         if (response.status === 401) {
-          console.log('Session invalid or expired, redirecting to login');
+          console.log('Session invalid or expired');
           // Clear any local tokens
           this.token = null;
-          // Return to login page
-          window.location.href = '/';
           throw new Error('Session expired');
         }
         
@@ -406,31 +396,18 @@ class ApiService {
   }
 
   async getSession(): Promise<{ authenticated: boolean; tenant_id: string | null; user?: User }> {
-    const response = await fetch(`${API_BASE}/api/session`, {
-      method: 'GET',
-      credentials: 'include',
-      headers: { 'Accept': 'application/json' },
-    });
-
-    if (response.status === 401) {
+    try {
+      const user = await this.getCurrentUser();
+      return { authenticated: true, tenant_id: (user as any).tenant_id ?? null, user };
+    } catch {
       return { authenticated: false, tenant_id: null };
     }
-
-    const data = await this.handleResponse(response);
-    return {
-      authenticated: true,
-      tenant_id: data.tenant_id ?? null,
-      user: data.user,
-    };
   }
 
   async logout(): Promise<void> {
     // Clear any local tokens
     this.token = null;
     this.tenantId = null;
-    localStorage.removeItem('websets_token');
-    localStorage.removeItem('websets_refresh_token');
-    localStorage.removeItem('websets_tenant_id');
 
     if (typeof window !== 'undefined') {
       try {
@@ -571,21 +548,17 @@ class ApiService {
     // Check token in memory
     const hasToken = !!this.token;
 
-    // Local storage flag set after successful auth
-    const hasAuthFlag = localStorage.getItem('websets_authenticated') === 'true';
-
     // Check for WorkOS session cookie
     const hasSessionCookie =
       typeof document !== 'undefined' && document.cookie.includes('session=');
 
     console.log('Authentication check:', {
       hasToken,
-      hasAuthFlag,
       hasSessionCookie,
-      result: hasToken || hasAuthFlag || hasSessionCookie,
+      result: hasToken || hasSessionCookie,
     });
 
-    return hasToken || hasAuthFlag || hasSessionCookie;
+    return hasToken || hasSessionCookie;
   }
 
   getToken(): string | null {
