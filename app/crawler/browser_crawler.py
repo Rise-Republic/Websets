@@ -8,6 +8,7 @@ import aiofiles
 import hashlib
 from datetime import datetime
 import time
+import requests
 
 from app.config import settings
 from app.storage.object_storage import get_object_storage
@@ -16,6 +17,10 @@ from app.monitoring import get_metrics_collector
 
 class BrowserCrawler:
     """Headless browser crawler using Playwright."""
+
+
+    REQUEST_TIMEOUT = 10  # seconds
+
 
     def __init__(self):
         self.browser: Optional[Browser] = None
@@ -90,6 +95,7 @@ class BrowserCrawler:
         if not self.context:
             raise RuntimeError("Browser not initialized. Use async context manager.")
 
+
         if not url or not urlparse(url).scheme or not urlparse(url).netloc:
             logger.error(f"Invalid URL provided: {url}")
             return {
@@ -135,13 +141,39 @@ class BrowserCrawler:
             duration = time.time() - start_time
             self.metrics.record_url_crawled("failed", duration)
             logger.error(f"Error crawling {url}: {e}")
-            return {
-                "url": url,
-                "success": False,
-                "error_message": str(e),
-                "status_code": None,
-                "crawled_at": datetime.utcnow().isoformat(),
-            }
+
+            try:
+                response = await asyncio.to_thread(
+                    requests.get, url, timeout=self.REQUEST_TIMEOUT
+                )
+                html_content = response.text
+                status_code = response.status_code
+                fallback_result = {
+                    "url": url,
+                    "title": None,
+                    "meta_description": None,
+                    "html_content": html_content,
+                    "html_file_path": await self._save_html_content(
+                        html_content, url, job_id
+                    ),
+                    "screenshot_path": None,
+                    "structured_hints": {},
+                    "status_code": status_code,
+                    "success": 200 <= status_code < 400,
+                    "content_length": len(html_content),
+                    "crawled_at": datetime.utcnow().isoformat(),
+                }
+                logger.info(f"Fallback requests.get succeeded for {url}")
+                return fallback_result
+            except Exception as fallback_err:  # noqa: BLE001
+                logger.error(f"Fallback HTTP fetch failed for {url}: {fallback_err}")
+                return {
+                    "url": url,
+                    "success": False,
+                    "error_message": str(e),
+                    "status_code": None,
+                    "crawled_at": datetime.utcnow().isoformat(),
+                }
 
         finally:
             if page:
