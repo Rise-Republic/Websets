@@ -1,5 +1,8 @@
+import os
 import dotenv
 dotenv.load_dotenv('.env.test')
+os.environ.setdefault("WORKOS_API_KEY_TEST", "dummy")
+os.environ.setdefault("WORKOS_CLIENT_ID_TEST", "dummy")
 import pytest
 import asyncio
 from fastapi.testclient import TestClient
@@ -61,6 +64,8 @@ def mock_env_vars(monkeypatch, mocker):
     monkeypatch.setenv(
         "JWT_SECRET_KEY", "test-secret-key-that-is-long-enough-for-testing-purposes"
     )
+    monkeypatch.setenv("WORKOS_API_KEY_TEST", "dummy")
+    monkeypatch.setenv("WORKOS_CLIENT_ID_TEST", "dummy")
     monkeypatch.setenv("ENVIRONMENT", "testing")
 
     monkeypatch.setenv("SMTP_HOST", "smtp.test")

@@ -12,20 +12,27 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
+        expire_minutes = (
+            settings.auth.access_token_expire_minutes
+            if settings.auth
+            else 30
+        )
+        expire = datetime.utcnow() + timedelta(minutes=expire_minutes)
     
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
     return encoded_jwt
 
 
-def verify_token(token: str) -> Optional[str]:
+def verify_token(token: str) -> Optional[dict]:
+    """Return the JWT payload if valid."""
     try:
-        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
-        email: str = payload.get("sub")
-        if email is None:
-            return None
-        return email
+        payload = jwt.decode(
+            token,
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
+        )
+        return payload
     except JWTError:
         return None
 

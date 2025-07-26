@@ -9,4 +9,7 @@ def get_email_from_authorization_header(headers: Mapping[str, str]) -> Optional[
     if not authorization or not authorization.startswith("Bearer "):
         return None
     token = authorization.split(" ", 1)[1]
-    return verify_token(token)
+    payload = verify_token(token)
+    if payload:
+        return payload.get("sub")
+    return None

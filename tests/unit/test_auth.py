@@ -19,7 +19,7 @@ class TestJWTHandler:
 
     def test_create_access_token(self, mock_settings):
         """Test creating access token."""
-        data = {"sub": "test@example.com"}
+        data = {"sub": "test@example.com", "tenant_id": "t1"}
         token = self.create_access_token(data)
         
         assert token is not None
@@ -40,14 +40,14 @@ class TestJWTHandler:
         data = {"sub": "test@example.com"}
         token = create_access_token(data)
         
-        email = self.verify_token(token)
-        assert email == "test@example.com"
+        payload = self.verify_token(token)
+        assert payload["sub"] == "test@example.com"
 
     def test_verify_token_invalid(self, mock_settings):
         """Test verifying invalid token."""
         invalid_token = "invalid.jwt.token"
-        email = self.verify_token(invalid_token)
-        assert email is None
+        payload = self.verify_token(invalid_token)
+        assert payload is None
 
     def test_password_hashing(self):
         """Test password hashing and verification."""

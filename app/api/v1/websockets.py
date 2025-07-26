@@ -23,7 +23,8 @@ async def websocket_job_updates(
         # Simple token extraction - in production, verify JWT properly
         try:
             from app.auth.jwt_handler import verify_token
-            email = verify_token(token)
+            payload = verify_token(token)
+            email = payload.get("sub") if payload else None
             if email:
                 from app.database import SessionLocal
                 from app.repositories import UserRepository
@@ -82,7 +83,8 @@ async def websocket_user_updates(
     if token:
         try:
             from app.auth.jwt_handler import verify_token
-            email = verify_token(token)
+            payload = verify_token(token)
+            email = payload.get("sub") if payload else None
             if email:
                 from app.database import SessionLocal
                 from app.repositories import UserRepository
@@ -147,7 +149,8 @@ async def websocket_system_updates(
     if token:
         try:
             from app.auth.jwt_handler import verify_token
-            email = verify_token(token)
+            payload = verify_token(token)
+            email = payload.get("sub") if payload else None
             if email:
                 from app.database import SessionLocal
                 from app.repositories import UserRepository
@@ -198,7 +201,8 @@ async def websocket_general(
     if token:
         try:
             from app.auth.jwt_handler import verify_token
-            email = verify_token(token)
+            payload = verify_token(token)
+            email = payload.get("sub") if payload else None
             if email:
                 from app.database import SessionLocal
                 from app.repositories import UserRepository

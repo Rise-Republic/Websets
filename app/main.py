@@ -21,6 +21,7 @@ from app.middleware import (
     AuditMiddleware,
     RBACMiddleware,
     SecurityMiddleware,
+    JWTAuthMiddleware,
 )
 
 # Configure logging with redaction
@@ -62,6 +63,7 @@ app.add_middleware(CSRFMiddleware)
 
 # Security middleware
 app.add_middleware(SessionMiddleware)  # WorkOS AuthKit session validation
+app.add_middleware(JWTAuthMiddleware)  # JWT bearer token authentication
 
 # Add tenant guard middleware
 from app.middleware.tenant_guard import TenantGuardMiddleware

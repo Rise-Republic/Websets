@@ -194,7 +194,8 @@ async def login(
         minutes=int(get_env_secret("ACCESS_TOKEN_EXPIRE_MINUTES", 15))
     )
     access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+        data={"sub": user.email, "tenant_id": str(user.tenant_id)},
+        expires_delta=access_token_expires,
     )
     refresh_token = secrets.token_urlsafe(32)
     user.refresh_token = hashlib.sha256(refresh_token.encode()).hexdigest()
@@ -331,7 +332,8 @@ async def mfa_verify(
         minutes=int(get_env_secret("ACCESS_TOKEN_EXPIRE_MINUTES", 15))
     )
     access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+        data={"sub": user.email, "tenant_id": str(user.tenant_id)},
+        expires_delta=access_token_expires,
     )
     refresh_token = secrets.token_urlsafe(32)
     user.refresh_token = hashlib.sha256(refresh_token.encode()).hexdigest()
@@ -419,7 +421,8 @@ async def refresh_token(
         minutes=int(get_env_secret("ACCESS_TOKEN_EXPIRE_MINUTES", 15))
     )
     access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+        data={"sub": user.email, "tenant_id": str(user.tenant_id)},
+        expires_delta=access_token_expires,
     )
     # Optionally rotate refresh token
     refresh_token = secrets.token_urlsafe(32)

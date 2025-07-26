@@ -22,9 +22,9 @@ async def decode_token(token: str):
     try:
         header = jwt.get_unverified_header(token)
         if header.get("alg") == "HS256":
-            email = verify_token(token)
-            if email:
-                return {"sub": email}
+            payload = verify_token(token)
+            if payload:
+                return payload
     except Exception:
         # Not a JWT, fall back to WorkOS session handling
         pass
