@@ -106,12 +106,19 @@ async def list_jobs(
                 detail=f"Invalid status: {status}",
             )
 
-    jobs, total = job_repo.list_jobs(
-        tenant_id=current_user.tenant_id,
-        status=status_enum,
-        page=page,
-        size=size,
-    )
+    if status_enum is not None:
+        jobs, total = job_repo.list_jobs(
+            tenant_id=current_user.tenant_id,
+            status=status_enum,
+            page=page,
+            size=size,
+        )
+    else:
+        jobs, total = job_repo.get_jobs(
+            tenant_id=current_user.tenant_id,
+            page=page,
+            size=size,
+        )
 
     # Convert to response format
     job_responses = []
