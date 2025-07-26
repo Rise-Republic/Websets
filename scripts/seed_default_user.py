@@ -37,7 +37,10 @@ class User(Base):
 def main() -> None:
     # Get environment variables with defaults
     email = os.environ.get("SEED_USER_EMAIL", "admin@example.com")
-    password = os.environ.get("SEED_USER_PASSWORD", "admin")
+    password = os.environ.get("SEED_USER_PASSWORD")
+    if not password:
+        logger.error("SEED_USER_PASSWORD environment variable must be set")
+        sys.exit(1)
     
     # HARDCODED database URL for Docker environment
     db_url = "postgresql://postgres:changeme@db:5432/webset_miner"

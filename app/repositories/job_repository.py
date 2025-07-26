@@ -37,6 +37,24 @@ class JobRepository:
         jobs = query.order_by(Job.created_at.desc()).offset(offset).limit(size).all()
         return jobs, total
 
+    def get_jobs(
+        self,
+        tenant_id: uuid.UUID,
+        page: int,
+        size: int,
+    ) -> Tuple[List[Job], int]:
+        """Efficiently fetch paginated jobs for a tenant."""
+        query = self.db.query(Job).filter(Job.tenant_id == tenant_id)
+        total = query.count()
+        offset = (page - 1) * size
+        jobs = (
+            query.order_by(Job.created_at.desc())
+            .offset(offset)
+            .limit(size)
+            .all()
+        )
+        return jobs, total
+
     def get_job(self, job_id: str, tenant_id: uuid.UUID) -> Optional[Job]:
         return (
             self.db.query(Job)

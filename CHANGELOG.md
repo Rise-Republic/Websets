@@ -13,6 +13,7 @@ Breaking changes must be called out under a `Removed` or `Changed` section with 
 - Python-based `generate_mtls_certs.py` with shell wrapper.
 - `VaultClient.fetch_all` helper and accompanying tests.
 - Unit tests for certificate generation script.
+- Dockerfile now uses a lean multi-stage build to reduce final image size.
 
 ### Changed
 - `dev_stack.sh` now calls the Python certificate generator.

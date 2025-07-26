@@ -17,3 +17,6 @@ def test_security_headers_present():
         response = client.get('/')
         assert response.headers['Strict-Transport-Security'].startswith('max-age=')
         assert response.headers['X-Frame-Options'] == 'DENY'
+        csp = response.headers['Content-Security-Policy']
+        assert "default-src 'self'" in csp
+        assert 'unsafe-inline' not in csp

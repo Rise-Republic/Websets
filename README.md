@@ -75,6 +75,7 @@ docker-compose.yml # Local services
 - [Authentication Guide](docs/authentication.md)
 - [Developer Guide](docs/DEVELOPER_GUIDE.md)
 - [API Reference](docs/API_REFERENCE.md)
+- [API Versioning](docs/API_VERSIONING.md)
 - [Configuration](docs/CONFIGURATION.md)
 - [Operational Runbook](docs/OPERATIONAL_RUNBOOK.md)
 - [DDoS Mitigation](docs/DDOS_MITIGATION.md)

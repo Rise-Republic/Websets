@@ -53,7 +53,7 @@ async def create_job(
 ):
     """Create a new mining job."""
     try:
-        sanitize_prompt(job_data.prompt)
+        sanitized_prompt = sanitize_prompt(job_data.prompt)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -61,7 +61,7 @@ async def create_job(
     job = job_repo.create_job(
         user_id=current_user.id,
         tenant_id=current_user.tenant_id,
-        prompt=job_data.prompt,
+        prompt=sanitized_prompt,
     )
 
     # Start background task
@@ -106,12 +106,19 @@ async def list_jobs(
                 detail=f"Invalid status: {status}",
             )
 
-    jobs, total = job_repo.list_jobs(
-        tenant_id=current_user.tenant_id,
-        status=status_enum,
-        page=page,
-        size=size,
-    )
+    if status_enum is not None:
+        jobs, total = job_repo.list_jobs(
+            tenant_id=current_user.tenant_id,
+            status=status_enum,
+            page=page,
+            size=size,
+        )
+    else:
+        jobs, total = job_repo.get_jobs(
+            tenant_id=current_user.tenant_id,
+            page=page,
+            size=size,
+        )
 
     # Convert to response format
     job_responses = []
