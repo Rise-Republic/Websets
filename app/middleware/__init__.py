@@ -8,6 +8,7 @@ from .rate_limiting import (
 from .audit_middleware import AuditMiddleware
 from .rbac import RBACMiddleware, rbac_required
 from .security import SecurityMiddleware
+from .jwt_auth import JWTAuthMiddleware
 
 __all__ = [
     "limiter",
@@ -17,6 +18,7 @@ __all__ = [
     "RateLimits",
     "AuditMiddleware",
     "RBACMiddleware",
+    "JWTAuthMiddleware",
     "rbac_required",
     "SecurityMiddleware",
 ]
