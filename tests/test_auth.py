@@ -14,8 +14,8 @@ async def test_login_and_cookie_flags():
         set_cookie = resp.headers.get("set-cookie")
         assert "HttpOnly" in set_cookie
         assert "Path=/" in set_cookie
-        assert ("Secure" in set_cookie) or ("secure" not in set_cookie)  # depends on env
-        assert ("SameSite=Lax" in set_cookie) or ("SameSite=None" in set_cookie)
+        assert "Secure" in set_cookie
+        assert "SameSite=None" in set_cookie
 
 @pytest.mark.asyncio
 async def test_session_refresh():
@@ -37,8 +37,8 @@ async def test_logout_clears_cookie():
 @pytest.mark.asyncio
 async def test_auth_me_endpoint():
     async with AsyncClient(app=app, base_url="http://test") as ac:
-        resp = await ac.get("/api/auth/me")
+        resp = await ac.get("/api/session")
         assert resp.status_code == 401
         ac.cookies.set("session", "dummy")
-        resp = await ac.get("/api/auth/me")
+        resp = await ac.get("/api/session")
         assert resp.status_code in (200, 401)

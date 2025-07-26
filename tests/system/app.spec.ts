@@ -13,7 +13,7 @@ test("shows login screen when not authenticated", async ({ page }) => {
 
 test("allows creating a new job", async ({ page }) => {
 
-  await page.route("**/auth/me", (route) => {
+  await page.route("**/session", (route) => {
     route.fulfill({
       status: 200,
       contentType: "application/json",

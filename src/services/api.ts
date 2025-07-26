@@ -355,50 +355,26 @@ class ApiService {
   }
 
   async getCurrentUser(): Promise<User> {
-    console.log('Getting current user');
-    
-    try {
-      // For WorkOS with HTTP-only cookies, we need to make a request to the backend
-      // The backend will validate the session cookie and return the user info
-      console.log('Fetching from:', `${API_BASE}/api/auth/me`);
-      
-      const response = await fetch(`${API_BASE}/api/auth/me`, {
-        method: 'GET',
-        credentials: 'include', // Critical: Include cookies in the request
-        headers: {
-          'Accept': 'application/json'
-        }
-      });
-      
-      console.log('Response status:', response.status);
-      
-      if (!response.ok) {
-        // If we get a 401, the session is invalid or expired
-        if (response.status === 401) {
-          console.log('Session invalid or expired');
-          // Clear any local tokens
-          this.token = null;
-          throw new Error('Session expired');
-        }
-        
-        console.error('Failed to get user:', response.status, response.statusText);
-        throw new Error(`Failed to get user: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('User data received:', data);
-      
-      return data;
-    } catch (error) {
-      console.error('Error getting current user:', error);
-      throw error;
+    const session = await this.getSession();
+    if (!session.authenticated || !session.user) {
+      throw new Error('Session expired');
     }
+    return session.user;
   }
 
   async getSession(): Promise<{ authenticated: boolean; tenant_id: string | null; user?: User }> {
     try {
-      const user = await this.getCurrentUser();
-      return { authenticated: true, tenant_id: (user as any).tenant_id ?? null, user };
+      const response = await fetch(`${API_BASE}/api/session`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Accept': 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error('Unauthenticated');
+      }
+
+      return await response.json();
     } catch {
       return { authenticated: false, tenant_id: null };
     }

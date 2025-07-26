@@ -183,21 +183,15 @@ async def auth_callback(
             }
         )
         
-        # Set session cookie with sealed session (per official docs)
-        # For local development, use SameSite=Lax and secure=False
-        # In production, use SameSite=None and secure=True with HTTPS
-        is_prod = IS_PRODUCTION
-        
-        # ASVS 3.4.2, 3.4.3: Secure cookie flags
+        # Set session cookie with sealed session and strict security flags
         response.set_cookie(
             COOKIE_NAME,
             auth_response.sealed_session,
-            httponly=True,  # Always
-            secure=is_prod,  # Only use secure in production with HTTPS
-            samesite="lax" if not is_prod else "none",  # Use lax for local development, none for SSO prod
+            httponly=True,
+            secure=True,
+            samesite="none",
             max_age=COOKIE_MAX_AGE,
             path="/"
-            # Do not set domain unless cross-domain SSO is required
         )
         
         # Log successful authentication (without PII)
@@ -241,21 +235,49 @@ async def logout_api(request: Request):
 
 @router.get("/session")
 async def session_status(request: Request):
-    """Return session info if authenticated."""
+    """Return session info if authenticated and rotate the session cookie."""
     try:
-        await require_session(request)
+        session = await require_session(request)
     except HTTPException:
         raise
+
+    # Attempt to rotate the sealed session cookie
+    sealed_session: Optional[str] = None
+    try:
+        refresh_result = session.refresh()
+        if refresh_result.authenticated:
+            sealed_session = str(refresh_result.sealed_session)
+    except Exception:
+        pass
+
     user = request.state.user
     tenant_id = getattr(user, "tenant_id", getattr(user, "org_id", None))
-    return {"authenticated": True, "user": {
-        "id": user.id,
-        "email": user.email,
-        "first_name": getattr(user, "first_name", None),
-        "last_name": getattr(user, "last_name", None),
-        "org_id": getattr(user, "org_id", None),
-        "tenant_id": tenant_id
-    }, "tenant_id": tenant_id}
+
+    response = JSONResponse({
+        "authenticated": True,
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "first_name": getattr(user, "first_name", None),
+            "last_name": getattr(user, "last_name", None),
+            "org_id": getattr(user, "org_id", None),
+            "tenant_id": tenant_id,
+        },
+        "tenant_id": tenant_id,
+    })
+
+    if sealed_session:
+        response.set_cookie(
+            COOKIE_NAME,
+            sealed_session,
+            httponly=True,
+            secure=True,
+            samesite="none",
+            max_age=COOKIE_MAX_AGE,
+            path="/",
+        )
+
+    return response
 
 # Example protected route
 @router.get("/me")
