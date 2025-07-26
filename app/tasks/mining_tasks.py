@@ -42,11 +42,19 @@ async def _run_mining_job(job_id: str) -> Dict[str, Any]:
         async with ProgressContext(job_id, "discovering", 100) as progress:
             discovered_urls = await execute_discovery_phase(job, plan, db, progress)
 
-        async with ProgressContext(job_id, "crawling", len(discovered_urls)) as progress:
-            crawl_results = await execute_crawling_phase(job, discovered_urls, db, progress)
+        async with ProgressContext(
+            job_id, "crawling", len(discovered_urls)
+        ) as progress:
+            crawl_results = await execute_crawling_phase(
+                job, discovered_urls, db, progress
+            )
 
-        async with ProgressContext(job_id, "extracting", len(crawl_results)) as progress:
-            extracted_data = await execute_extraction_phase(job, crawl_results, db, progress)
+        async with ProgressContext(
+            job_id, "extracting", len(crawl_results)
+        ) as progress:
+            extracted_data = await execute_extraction_phase(
+                job, crawl_results, db, progress
+            )
 
         summary = {
             "total_urls_discovered": len(discovered_urls),
@@ -56,12 +64,16 @@ async def _run_mining_job(job_id: str) -> Dict[str, Any]:
         }
 
         await tracker.complete_job(summary)
-        metrics.record_job_completed(duration=(datetime.utcnow() - job_start).total_seconds())
+        metrics.record_job_completed(
+            duration=(datetime.utcnow() - job_start).total_seconds()
+        )
         return {"job_id": job_id, "status": "completed", "summary": summary}
 
     except Exception as e:
         logger.error(f"Job {job_id} failed: {e}")
-        metrics.record_job_failed(duration=(datetime.utcnow() - job_start).total_seconds())
+        metrics.record_job_failed(
+            duration=(datetime.utcnow() - job_start).total_seconds()
+        )
         tracker = JobProgressTracker(job_id)
         await tracker.report_error(str(e))
         raise
@@ -77,7 +89,11 @@ def start_mining_job(self, job_id: str):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        return loop.run_until_complete(_run_mining_job(job_id))
+        try:
+            return loop.run_until_complete(_run_mining_job(job_id))
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"Unhandled exception for job {job_id}: {exc}")
+            raise
     finally:
         loop.close()
 
