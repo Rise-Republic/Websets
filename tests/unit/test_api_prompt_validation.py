@@ -32,6 +32,27 @@ async def test_create_job_invalid_prompt(db_session, monkeypatch):
 
 @pytest.mark.unit
 @pytest.mark.asyncio
+async def test_create_job_sanitizes_prompt(db_session, monkeypatch):
+    jobs_mod = importlib.import_module("app.api.v1.jobs")
+    monkeypatch.setattr(jobs_mod.user_limiter, "limit", lambda *a, **k: (lambda f: f))
+    monkeypatch.setattr(jobs_mod.tenant_limiter, "limit", lambda *a, **k: (lambda f: f))
+
+    user = User(email="s@example.com", hashed_password=get_password_hash("pw"))
+    user.tenant_id = uuid.uuid4()
+    db_session.add(user)
+    db_session.commit()
+
+    job_data = jobs_mod.JobCreate(prompt="Hello {world}`")
+    response = await jobs_mod.create_job(
+        job_data, BackgroundTasks(), current_user=user, db=db_session
+    )
+
+    job = db_session.query(Job).filter(Job.id == response.id).first()
+    assert job.prompt == "Hello \\{world\\}\\`"
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
 async def test_search_dataset_invalid_query(db_session, monkeypatch):
     datasets_mod = importlib.import_module("app.api.v1.datasets")
     monkeypatch.setattr(
@@ -74,6 +95,7 @@ async def test_search_dataset_invalid_query(db_session, monkeypatch):
         )
     assert exc.value.status_code == 400
 
+
 @pytest.mark.unit
 def test_export_dataset_params():
     import pathlib
@@ -88,4 +110,3 @@ def test_export_dataset_params():
         Query("json", pattern="^(json|csv)$")
 
     assert not any(issubclass(item.category, DeprecationWarning) for item in w)
-

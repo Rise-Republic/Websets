@@ -3,6 +3,7 @@ from typing import Dict, Any, Optional, List
 from playwright.async_api import async_playwright, Browser, BrowserContext, Page
 from loguru import logger
 from pathlib import Path
+from urllib.parse import urlparse
 import aiofiles
 import hashlib
 from datetime import datetime
@@ -17,7 +18,9 @@ from app.monitoring import get_metrics_collector
 class BrowserCrawler:
     """Headless browser crawler using Playwright."""
 
+
     REQUEST_TIMEOUT = 10  # seconds
+
 
     def __init__(self):
         self.browser: Optional[Browser] = None
@@ -92,6 +95,17 @@ class BrowserCrawler:
         if not self.context:
             raise RuntimeError("Browser not initialized. Use async context manager.")
 
+
+        if not url or not urlparse(url).scheme or not urlparse(url).netloc:
+            logger.error(f"Invalid URL provided: {url}")
+            return {
+                "url": url,
+                "success": False,
+                "error_message": "Invalid URL",
+                "status_code": None,
+                "crawled_at": datetime.utcnow().isoformat(),
+            }
+
         page = None
         start_time = time.time()
         try:
@@ -127,6 +141,7 @@ class BrowserCrawler:
             duration = time.time() - start_time
             self.metrics.record_url_crawled("failed", duration)
             logger.error(f"Error crawling {url}: {e}")
+
             try:
                 response = await asyncio.to_thread(
                     requests.get, url, timeout=self.REQUEST_TIMEOUT
