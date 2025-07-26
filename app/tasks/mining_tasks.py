@@ -251,7 +251,6 @@ async def execute_extraction_phase(
             schema={"type": "object", "properties": {}},
         )
         db.add(dataset)
-        db.commit()
 
         # Extract data from each crawl result
         for i, result in enumerate(crawl_results):
@@ -310,7 +309,6 @@ async def execute_extraction_phase(
         # Bulk save all data records
         if records_to_save:
             db.bulk_save_objects(records_to_save)
-            db.commit()
 
         # Update job with final counts
         job.extracted_records = len(extracted_data)
