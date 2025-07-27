@@ -20,7 +20,9 @@ openai==1.3.9
 anthropic==0.59.0
 # WorkOS AuthKit SDK
 workos==5.24.0
-chromadb>=0.5.0
+# chromadb==0.4.24  # Temporarily disabled due to Python 3.13 compatibility
+# Alternative: Use Qdrant or Weaviate for vector database functionality
+qdrant-client==1.7.3
 numpy>=2.1.0
 pandas==2.3.1
 beautifulsoup4==4.12.2
