@@ -1,7 +1,7 @@
 // API Service for Websets Backend
 // Allow overriding the backend URL via environment variables
 const API_BASE =
-  process.env.VITE_API_BASE ||
+  import.meta.env.VITE_API_BASE ||
   'http://localhost:8001';
 const API_VERSION = 'v1'; // Default to v1
 const VERSIONED_API_BASE = `${API_BASE}/${API_VERSION}`;
@@ -394,7 +394,7 @@ class ApiService {
       } catch {
         // ignore network errors during logout
       }
-      if (!process.env.JEST_WORKER_ID) {
+      if (!import.meta.env.JEST_WORKER_ID) {
         window.location.href = '/';
       }
     }

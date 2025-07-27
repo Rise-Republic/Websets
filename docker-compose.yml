@@ -103,7 +103,7 @@ services:
 
   beat:
     <<: *service-common
-    command: celery -A app.tasks.celery_app beat --loglevel=info
+    command: celery -A app.tasks.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule
     environment:
       - VAULT_ADDR=http://vault:8200
       - VAULT_TOKEN=root

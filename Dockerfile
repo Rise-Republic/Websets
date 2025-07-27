@@ -17,8 +17,7 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --upgrade pip \
     && pip install --prefix /install --no-cache-dir -r requirements.txt \
-    && pip install --prefix /install playwright \
-    && playwright install chromium
+    && pip install --prefix /install playwright
 
 ########## Final runtime stage ##########
 FROM python:3.11-slim
