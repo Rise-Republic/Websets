@@ -1,0 +1,20 @@
+# Test file to identify which package is pulling in geventhttpclient
+# Testing packages one by one
+
+# Core web framework packages (likely safe)
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+pydantic>=2.10.4
+pydantic-settings>=2.1.0
+
+# Database packages (likely safe)
+sqlalchemy==2.0.41
+alembic==1.16.4
+psycopg2-binary==2.9.10
+asyncpg==0.30.0
+
+# Basic utility packages (likely safe)
+python-dotenv==1.1.1
+loguru==0.7.3
+tenacity==9.1.2
+httpx>=0.28.1
