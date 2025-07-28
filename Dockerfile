@@ -10,7 +10,7 @@ COPY src ./src
 RUN npm run build
 
 ########## Backend build stage ##########
-FROM python:3.11-slim AS backend-build
+FROM python:3.13-slim AS backend-build
 ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 # Install Python dependencies without system packages to keep the build image small
@@ -20,7 +20,7 @@ RUN pip install --upgrade pip \
     && pip install --prefix /install playwright
 
 ########## Final runtime stage ##########
-FROM python:3.11-slim
+FROM python:3.13-slim
 ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 RUN adduser --system --home /app --disabled-password appuser
@@ -29,7 +29,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=backend-build /install /usr/local
 # Install Playwright system dependencies and browser binaries
-RUN playwright install-deps && playwright install chromium
+# Update package lists and install system dependencies for Playwright
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libnss3 libnspr4 libatk-bridge2.0-0 libdrm2 libxkbcommon0 \
+    libgtk-3-0 libatspi2.0-0 libxrandr2 libasound2 libxdamage1 \
+    libxss1 libgconf-2-4 && \
+    playwright install-deps chromium && \
+    playwright install chromium && \
+    rm -rf /var/lib/apt/lists/*
 COPY app ./app
 COPY migrations ./migrations
 COPY alembic.ini .

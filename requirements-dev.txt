@@ -18,4 +18,8 @@ PyYAML==6.0.2
 
 hvac==2.1.0
 packaging>=22.0
-locust==2.26.0
+# locust==2.26.0  # Disabled due to geventhttpclient dependency issue with Python 3.13
+# Alternative load testing tools compatible with Python 3.13:
+# Option 1: Use pytest-benchmark for performance testing
+pytest-benchmark==4.0.0
+# Option 2: Use artillery or k6 (external tools) for load testing

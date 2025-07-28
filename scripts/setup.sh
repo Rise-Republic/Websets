@@ -43,7 +43,20 @@ fi
 PLAYWRIGHT_DIR="${PLAYWRIGHT_BROWSERS_PATH:-$HOME/.cache/ms-playwright}"
 if [ ! -d "$PLAYWRIGHT_DIR/chromium" ]; then
     echo "Installing Playwright browsers..."
-    ./.venv/bin/playwright install chromium
+    # Try to install system dependencies first, then browsers
+    if ./.venv/bin/playwright install-deps chromium 2>/dev/null; then
+        echo "Playwright system dependencies installed successfully"
+    else
+        echo "Warning: Could not install Playwright system dependencies (may require sudo)"
+    fi
+    
+    # Install Playwright browsers with error handling
+    if ./.venv/bin/playwright install chromium; then
+        echo "Playwright browsers installed successfully"
+    else
+        echo "Warning: Playwright browser installation failed. You may need to install manually or use a different browser."
+        echo "Alternative: You can use Firefox with: playwright install firefox"
+    fi
 fi
 
 echo "Setup completed!"
