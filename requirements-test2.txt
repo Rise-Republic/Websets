@@ -1,7 +1,0 @@
-# Testing packages that might pull in geventhttpclient
-# Adding one by one to identify the culprit
-
-# From the original requirements.txt - testing AI/ML packages first
-openai==1.3.9
-anthropic==0.59.0
-playwright==1.54.0
