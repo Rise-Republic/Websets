@@ -269,19 +269,12 @@ services:
     environment:
       MINIO_SERVER_URL: https://minio:9000
       MINIO_BROWSER_REDIRECT_URL: https://localhost:9001
-      MINIO_ROOT_USER_FILE: /run/secrets/minio_root_user
-      MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio_root_password
-      MINIO_KMS_SECRET_KEY_FILE: /run/secrets/minio_kms_key
-      MINIO_SSE_MASTER_KEY: "sse-key:file:///run/secrets/minio_sse_master_key"
-      MINIO_KMS_AUTO_ENCRYPTION: "on"
+      MINIO_ROOT_USER: "minioadmin"
+      MINIO_ROOT_PASSWORD: "minioadmin123"
     command: server /data --console-address ":9001"
     volumes:
       - ./data/minio:/data
       - ./certs:/certs:ro
-      - ./secrets/minio_root_user:/run/secrets/minio_root_user:ro
-      - ./secrets/minio_root_password:/run/secrets/minio_root_password:ro
-      - ./secrets/minio_kms_key:/run/secrets/minio_kms_key:ro
-      - ./secrets/minio_sse_master_key:/run/secrets/minio_sse_master_key:ro
     healthcheck:
       test: ["CMD", "curl", "--cacert", "/certs/ca.crt", "-f", "https://localhost:9000/minio/health/live"]
       interval: 30s

@@ -22,7 +22,10 @@ class TenantGuardMiddleware(BaseHTTPMiddleware):
                 detail="Tenant isolation enforced",
             )
 
-        if request.url.path.startswith("/v1") and tenant_id is None:
+        # Exclude health check endpoints from tenant context requirement
+        if (request.url.path.startswith("/v1") and 
+            not request.url.path.startswith("/v1/health") and 
+            tenant_id is None):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Tenant context missing",
