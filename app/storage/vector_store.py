@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Optional
 import numpy as np
-from app.storage.chroma_vector_store import ChromaVectorStore
+# from app.storage.chroma_vector_store import ChromaVectorStore  # Temporarily disabled due to dependency issue
 
 class VectorStore:
     """ChromaDB-based vector storage for semantic search capabilities."""

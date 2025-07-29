@@ -25,7 +25,7 @@ anthropic==0.59.0
 workos==5.24.0
 
 # Vector databases - using Python 3.13 compatible alternatives
-# chromadb>=0.5.0  # Disabled due to geventhttpclient dependency issue
+chromadb>=0.5.0
 # qdrant-client==1.15.0  # Disabled due to geventhttpclient dependency issue
 # Using Weaviate and Pinecone as alternatives
 pinecone-client==6.0.0
