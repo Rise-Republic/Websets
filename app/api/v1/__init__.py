@@ -10,7 +10,7 @@ from .users import router as users_router
 # imported without duplicating the module.
 from ..gdpr import router as gdpr_router
 
-v1_router = APIRouter(prefix="/v1")
+v1_router = APIRouter()
 
 # Include all v1 routers
 v1_router.include_router(auth_router)
