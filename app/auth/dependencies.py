@@ -5,6 +5,7 @@ from typing import Optional
 from app.database import get_db
 from app.models.user import User
 from app.models.role import Role
+from app.models.polar_subscription import PolarSubscription
 from jose import jwt
 from app.auth.jwt_handler import verify_token
 from app.api.v1.workos_auth import (
@@ -110,6 +111,27 @@ async def get_current_user_optional(request: Request) -> Optional[User]:
             db.close()
     except Exception:
         return None
+
+
+async def requires_subscription(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> User:
+    """Ensure the current user has an active Polar subscription."""
+    subscription = (
+        db.query(PolarSubscription)
+        .filter(
+            PolarSubscription.user_id == current_user.id,
+            PolarSubscription.is_active == True,
+        )
+        .first()
+    )
+    if not subscription:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="Active subscription required",
+        )
+    return current_user
 
 
 # Example usage for FastAPI endpoints:

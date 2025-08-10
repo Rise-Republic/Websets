@@ -21,6 +21,7 @@ class UserProfileResponse(BaseModel):
     is_active: bool
     created_at: str
     is_verified: bool = False
+    has_active_subscription: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -48,7 +49,11 @@ class EmailChangeRequest(BaseModel):
 
 
 @router.get("/me", response_model=UserProfileResponse)
-async def get_profile(current_user: User = Depends(get_current_active_user)):
+async def get_profile(
+    current_user: User = Depends(get_current_active_user),
+    user_repo: UserRepository = Depends(get_user_repository),
+):
+    has_subscription = user_repo.has_active_subscription(current_user.id)
     return UserProfileResponse(
         id=str(current_user.id),
         email=current_user.email,
@@ -56,6 +61,7 @@ async def get_profile(current_user: User = Depends(get_current_active_user)):
         is_active=current_user.is_active,
         is_verified=current_user.is_verified,
         created_at=current_user.created_at.isoformat(),
+        has_active_subscription=has_subscription,
     )
 
 
@@ -70,6 +76,7 @@ async def update_profile(
     current_user.updated_at = datetime.utcnow()
     user_repo.commit()
     user_repo.refresh(current_user)
+    has_subscription = user_repo.has_active_subscription(current_user.id)
     return UserProfileResponse(
         id=str(current_user.id),
         email=current_user.email,
@@ -77,6 +84,7 @@ async def update_profile(
         is_active=current_user.is_active,
         is_verified=current_user.is_verified,
         created_at=current_user.created_at.isoformat(),
+        has_active_subscription=has_subscription,
     )
 
 

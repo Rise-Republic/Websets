@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, 
 from pydantic import BaseModel, ConfigDict
 
 from app.models import JobStatus, User
-from app.auth.dependencies import get_current_active_user
+from app.auth.dependencies import get_current_active_user, requires_subscription
 from app.tasks.mining_tasks import start_mining_job
 from app.utils import sanitize_prompt
 from app.middleware import rbac_required, user_limiter, tenant_limiter, RateLimits
@@ -38,6 +38,12 @@ class JobListResponse(BaseModel):
     total: int
     page: int
     size: int
+
+
+@router.get("/premium")
+async def premium_jobs(current_user: User = Depends(requires_subscription)):
+    """Example premium endpoint accessible only to subscribed users."""
+    return {"status": "ok", "message": "Premium access granted"}
 
 
 @router.post("/", response_model=JobResponse)

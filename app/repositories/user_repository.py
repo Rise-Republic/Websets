@@ -5,7 +5,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 
-from app.models import User
+from app.models import User, PolarSubscription
 
 
 class UserRepository:
@@ -56,3 +56,15 @@ class UserRepository:
 
     def refresh(self, user: User) -> None:
         self.db.refresh(user)
+
+    def has_active_subscription(self, user_id: uuid.UUID) -> bool:
+        """Return True if user has an active Polar subscription."""
+        sub = (
+            self.db.query(PolarSubscription)
+            .filter(
+                PolarSubscription.user_id == user_id,
+                PolarSubscription.is_active.is_(True),
+            )
+            .first()
+        )
+        return sub is not None
