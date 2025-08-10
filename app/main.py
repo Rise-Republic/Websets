@@ -13,6 +13,7 @@ from app.logging_utils import configure_logging
 from app.database import create_tables
 from app.api.v1 import v1_router
 from app.api.v1.workos_auth import router as workos_auth_router, SessionMiddleware, session_status
+from app.api.v1.polar_webhooks import router as polar_webhook_router
 from app.api.versioning import versioning_router
 from app.middleware import (
     limiter,
@@ -78,6 +79,7 @@ app.add_middleware(MetricsMiddleware, metrics_collector=metrics)
 
 # Include routers
 app.include_router(v1_router, prefix="/v1")
+app.include_router(polar_webhook_router, prefix="/v1")
 app.include_router(workos_auth_router, prefix="/api")  # WorkOS AuthKit routes
 app.add_api_route("/api/session", session_status, methods=["GET"], tags=["workos-auth"])
 app.include_router(versioning_router)
