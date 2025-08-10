@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     # API Keys
     openai_api_key: str
     anthropic_api_key: Optional[str] = None
+    polar_api_key: Optional[str] = None
+    polar_webhook_secret: Optional[str] = None
+    polar_org_id: Optional[str] = None
 
     # Database
     database_url: str

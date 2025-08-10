@@ -18,6 +18,9 @@ SECRET_KEY_MAP = {
     "celery_broker_url": "CELERY_BROKER_URL",
     "celery_result_backend": "CELERY_RESULT_BACKEND",
     "jwt_secret_key": "JWT_SECRET_KEY",
+    "polar_api_key": "POLAR_API_KEY",
+    "polar_webhook_secret": "POLAR_WEBHOOK_SECRET",
+    "polar_org_id": "POLAR_ORG_ID",
 }
 
 
