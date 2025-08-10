@@ -3,6 +3,7 @@ from .dataset_repository import DatasetRepository
 from .user_repository import UserRepository
 from .discovery_repository import DiscoveryRepository
 from .role_repository import RoleRepository
+from .polar_subscriptions import PolarSubscriptionRepository
 
 __all__ = [
     "JobRepository",
@@ -10,4 +11,5 @@ __all__ = [
     "UserRepository",
     "DiscoveryRepository",
     "RoleRepository",
+    "PolarSubscriptionRepository",
 ]
