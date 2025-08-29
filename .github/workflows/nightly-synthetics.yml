@@ -1,0 +1,23 @@
+name: nightly-synthetics
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  probes:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tenant: [tenant-a, tenant-b]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run synthetic probes
+        env:
+          TENANT: ${{ matrix.tenant }}
+          ENVIRONMENT: production
+          PUSHGATEWAY_URL: ${{ secrets.PUSHGATEWAY_URL }}
+          BASE_URL: ${{ secrets.SYNTHETICS_BASE_URL }}
+        run: |
+          bash synthetics/probe.sh

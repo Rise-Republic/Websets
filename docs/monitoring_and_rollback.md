@@ -28,3 +28,22 @@ scripts/blue_green_deploy.sh <previous_color>
 
 The previous color is derived from the current `webset-miner` service selector
 so traffic routes back to the last stable deployment.
+
+## Synthetic Monitoring
+
+Nightly synthetic probes exercise critical tenant endpoints to surface outages
+before real users encounter them. The `synthetics/probe.sh` script issues
+`curl` requests against flows like `/api/health` and `/api/v1/datasets`, tags
+each request with the tenant and environment, and pushes status and latency
+metrics to a Prometheus Pushgateway.
+
+Run locally with:
+
+```bash
+TENANT=demo ENVIRONMENT=staging PUSHGATEWAY_URL=http://pushgateway:9091 \
+  BASE_URL=https://staging.example.com synthetics/probe.sh
+```
+
+The scheduled workflow `.github/workflows/nightly-synthetics.yml` runs these
+probes nightly for a matrix of tenants. Set the `PUSHGATEWAY_URL` and
+`SYNTHETICS_BASE_URL` secrets to match your deployment environment.
