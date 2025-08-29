@@ -66,6 +66,14 @@ jobs:
       - name: Run npm audit
         run: npm audit --audit-level=high
 
+      - name: Start test instance
+        run: docker compose up -d app
+
+      - name: OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: 'http://localhost:8001'
+
 
    validate-vault-secrets:
     runs-on: ubuntu-latest
