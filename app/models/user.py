@@ -6,23 +6,24 @@ import uuid
 
 from app.database import Base
 from app.models.role import user_roles
+from app.utils.encryption import EncryptedString, EncryptedText
 
 
 class User(Base):
     __tablename__ = "users"
 
     id = Column(UUID, primary_key=True, default=uuid.uuid4)
-    email = Column(String, unique=True, index=True, nullable=False)
+    email = Column(EncryptedString(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
 
     # Profile
-    full_name = Column(String, nullable=True)
+    full_name = Column(EncryptedString(255), nullable=True)
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
     is_verified = Column(Boolean, default=False)
 
     # Verification token fields
-    verification_token = Column(String, nullable=True)
+    verification_token = Column(EncryptedString(255), nullable=True)
     verification_token_expiry = Column(DateTime, nullable=True)
 
     # Security fields
@@ -32,17 +33,17 @@ class User(Base):
     last_password_change = Column(DateTime, default=datetime.utcnow)
 
     # MFA fields
-    mfa_secret = Column(String, nullable=True)
+    mfa_secret = Column(EncryptedString(255), nullable=True)
     mfa_enabled = Column(Boolean, default=False)
     mfa_method = Column(String, nullable=True)  # "totp", "email", "sms"
-    backup_codes = Column(Text, nullable=True)  # JSON encrypted backup codes
+    backup_codes = Column(EncryptedText, nullable=True)  # JSON encrypted backup codes
 
     # Password reset fields
-    password_reset_token = Column(String, nullable=True)
+    password_reset_token = Column(EncryptedString(255), nullable=True)
     password_reset_expiry = Column(DateTime, nullable=True)
 
     # Refresh token fields
-    refresh_token = Column(String, nullable=True)
+    refresh_token = Column(EncryptedString(255), nullable=True)
     refresh_token_expiry = Column(DateTime, nullable=True)
 
     # Tenant information (for multi-tenancy)

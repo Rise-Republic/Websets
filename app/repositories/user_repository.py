@@ -6,6 +6,7 @@ import uuid
 from sqlalchemy.orm import Session
 
 from app.models import User
+from app.utils.encryption import encrypt
 
 
 class UserRepository:
@@ -18,26 +19,26 @@ class UserRepository:
         return self.db.query(User).filter(User.id == user_id).first()
 
     def get_by_email(self, email: str) -> Optional[User]:
-        return self.db.query(User).filter(User.email == email).first()
+        return self.db.query(User).filter(User.email == encrypt(email)).first()
 
     def get_by_verification_token(self, token_hash: str) -> Optional[User]:
         return (
             self.db.query(User)
-            .filter(User.verification_token == token_hash)
+            .filter(User.verification_token == encrypt(token_hash))
             .first()
         )
 
     def get_by_password_reset_token(self, token_hash: str) -> Optional[User]:
         return (
             self.db.query(User)
-            .filter(User.password_reset_token == token_hash)
+            .filter(User.password_reset_token == encrypt(token_hash))
             .first()
         )
 
     def get_by_refresh_token(self, token_hash: str) -> Optional[User]:
         return (
             self.db.query(User)
-            .filter(User.refresh_token == token_hash)
+            .filter(User.refresh_token == encrypt(token_hash))
             .first()
         )
 
