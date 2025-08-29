@@ -5,7 +5,7 @@ on:
     - cron: '0 3 * * 0' # Weekly rotation
 
 jobs:
-  rotate-minio-secrets:
+  rotate-secrets:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,7 +25,30 @@ jobs:
         env:
           VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
           VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
-      - name: Notify Services
+      - name: Notify MinIO Services
         run: |
-          # Example webhook notification
-          curl -X POST ${{ secrets.NOTIFY_WEBHOOK }} -d '{"event":"minio-secrets-rotated"}'
+          curl -X POST ${{ secrets.MINIO_NOTIFY_WEBHOOK }} -d '{"event":"minio-secrets-rotated"}'
+      - name: Rotate Database Password
+        run: bash scripts/rotate_database_password.sh
+        env:
+          VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+          VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
+      - name: Notify Database Service
+        run: |
+          curl -X POST ${{ secrets.DB_NOTIFY_WEBHOOK }} -d '{"event":"db-password-rotated"}'
+      - name: Rotate JWT Secret
+        run: bash scripts/rotate_jwt_secret.sh
+        env:
+          VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+          VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
+      - name: Notify Auth Service
+        run: |
+          curl -X POST ${{ secrets.JWT_NOTIFY_WEBHOOK }} -d '{"event":"jwt-secret-rotated"}'
+      - name: Rotate API Keys
+        run: bash scripts/rotate_api_keys.sh
+        env:
+          VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+          VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
+      - name: Notify API Clients
+        run: |
+          curl -X POST ${{ secrets.API_NOTIFY_WEBHOOK }} -d '{"event":"api-keys-rotated"}'
