@@ -1,0 +1,234 @@
+name: API Contract Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 6 * * *' # Daily at 6 AM
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  pact-consumer-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pact-python pytest-pact
+
+      - name: Run Pact consumer tests
+        run: |
+          pytest tests/contract/pact_tests.py -v --tb=short
+        env:
+          PACT_BROKER_URL: ${{ secrets.PACT_BROKER_URL }}
+          PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
+
+      - name: Publish Pact contracts
+        if: github.ref == 'refs/heads/main'
+        run: |
+          pact-broker publish pacts/ \
+            --broker-base-url ${{ secrets.PACT_BROKER_URL }} \
+            --broker-token ${{ secrets.PACT_BROKER_TOKEN }} \
+            --consumer-app-version ${{ github.sha }} \
+            --branch ${{ github.ref_name }}
+
+      - name: Upload Pact files
+        uses: actions/upload-artifact@v4
+        with:
+          name: pact-contracts
+          path: pacts/
+          retention-days: 30
+
+  openapi-validation:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install openapi-spec-validator schemathesis
+
+      - name: Start API server
+        run: |
+          export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/testdb
+          export ENVIRONMENT=test
+          python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 10
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
+
+      - name: Wait for API to be ready
+        run: |
+          timeout 30 bash -c 'until curl -f http://localhost:8000/health; do sleep 1; done'
+
+      - name: Generate OpenAPI spec
+        run: |
+          curl -o openapi.json http://localhost:8000/openapi.json
+
+      - name: Validate OpenAPI specification
+        run: |
+          openapi-spec-validator openapi.json
+
+      - name: Run Schemathesis API tests
+        run: |
+          schemathesis run http://localhost:8000/openapi.json \
+            --base-url http://localhost:8000 \
+            --checks all \
+            --hypothesis-max-examples 50 \
+            --hypothesis-deadline 5000 \
+            --exitfirst
+
+      - name: Upload OpenAPI spec
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-spec
+          path: openapi.json
+
+  frontend-contract-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm install @pact-foundation/pact msw
+
+      - name: Run frontend integration tests
+        run: |
+          npm test -- --testPathPattern=integration --coverage --watchAll=false
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-test-results
+          path: |
+            coverage/
+            test-results/
+
+  pact-provider-verification:
+    runs-on: ubuntu-latest
+    needs: pact-consumer-tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pact-python
+
+      - name: Start API server
+        run: |
+          export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/testdb
+          export ENVIRONMENT=test
+          python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 10
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
+
+      - name: Download Pact contracts
+        uses: actions/download-artifact@v4
+        with:
+          name: pact-contracts
+          path: pacts/
+
+      - name: Verify Pact contracts
+        run: |
+          pact-verifier \
+            --provider-base-url http://localhost:8000 \
+            --pact-url pacts/webset-miner-frontend-webset-miner-api.json \
+            --provider-states-setup-url http://localhost:8000/pact/setup \
+            --verbose
+        env:
+          PACT_BROKER_URL: ${{ secrets.PACT_BROKER_URL }}
+          PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
+
+      - name: Publish verification results
+        if: always()
+        run: |
+          pact-broker publish-verification-results \
+            --broker-base-url ${{ secrets.PACT_BROKER_URL }} \
+            --broker-token ${{ secrets.PACT_BROKER_TOKEN }} \
+            --provider-app-version ${{ github.sha }} \
+            --provider webset-miner-api
+
+  contract-test-summary:
+    needs: [pact-consumer-tests, openapi-validation, frontend-contract-tests]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Contract test summary
+        run: |
+          echo "## Contract Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Pact Consumer Tests: ${{ needs.pact-consumer-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- OpenAPI Validation: ${{ needs.openapi-validation.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend Integration: ${{ needs.frontend-contract-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.pact-consumer-tests.result }}" == "success" && 
+                "${{ needs.openapi-validation.result }}" == "success" && 
+                "${{ needs.frontend-contract-tests.result }}" == "success" ]]; then
+            echo "✅ All contract tests passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Some contract tests failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi

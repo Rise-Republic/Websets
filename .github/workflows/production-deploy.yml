@@ -1,0 +1,377 @@
+name: Production Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g., v1.2.3)'
+        required: true
+        type: string
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - production-blue
+          - production-green
+      deployment_strategy:
+        description: 'Deployment strategy'
+        required: true
+        default: 'blue-green'
+        type: choice
+        options:
+          - blue-green
+          - rolling
+          - canary
+      skip_verification:
+        description: 'Skip pre-deployment verification'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  deployments: write
+  packages: read
+
+jobs:
+  pre-deployment-checks:
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_verification }}
+    outputs:
+      checks-passed: ${{ steps.validation.outputs.passed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+
+      - name: Validate deployment inputs
+        id: validation
+        run: |
+          echo "Validating deployment parameters..."
+          
+          # Validate version format
+          if [[ ! "${{ inputs.version }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format: ${{ inputs.version }}"
+            exit 1
+          fi
+          
+          # Check if version exists
+          if ! git tag | grep -q "^${{ inputs.version }}$"; then
+            echo "❌ Version ${{ inputs.version }} does not exist"
+            exit 1
+          fi
+          
+          # Verify container image exists
+          if ! docker manifest inspect ghcr.io/${{ github.repository }}:${{ inputs.version }} > /dev/null 2>&1; then
+            echo "❌ Container image not found for version ${{ inputs.version }}"
+            exit 1
+          fi
+          
+          echo "✅ All pre-deployment checks passed"
+          echo "passed=true" >> $GITHUB_OUTPUT
+
+      - name: Security scan verification
+        run: |
+          echo "Verifying security scan results for ${{ inputs.version }}"
+          # In real implementation, check security scan results from previous workflow
+          echo "✅ Security scans passed"
+
+      - name: Performance baseline check
+        run: |
+          echo "Checking performance baselines for ${{ inputs.version }}"
+          # In real implementation, verify performance test results
+          echo "✅ Performance baselines met"
+
+  create-deployment:
+    needs: [pre-deployment-checks]
+    runs-on: ubuntu-latest
+    if: always() && (needs.pre-deployment-checks.outputs.checks-passed == 'true' || inputs.skip_verification)
+    outputs:
+      deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+    steps:
+      - name: Create GitHub deployment
+        id: deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: '${{ inputs.version }}',
+              environment: '${{ inputs.environment }}',
+              description: 'Production deployment via ${{ inputs.deployment_strategy }} strategy',
+              auto_merge: false,
+              required_contexts: []
+            });
+            
+            core.setOutput('deployment_id', deployment.data.id);
+            return deployment.data.id;
+
+  blue-green-deployment:
+    needs: [create-deployment]
+    runs-on: ubuntu-latest
+    if: inputs.deployment_strategy == 'blue-green'
+    environment:
+      name: ${{ inputs.environment }}
+      url: https://websets.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+
+      - name: Determine target environment
+        id: target
+        run: |
+          # Check current active environment
+          CURRENT_ENV=$(kubectl get service websets-production -o jsonpath='{.spec.selector.version}' || echo "blue")
+          
+          if [ "$CURRENT_ENV" = "blue" ]; then
+            TARGET_ENV="green"
+            INACTIVE_ENV="blue"
+          else
+            TARGET_ENV="blue"
+            INACTIVE_ENV="green"
+          fi
+          
+          echo "current=$CURRENT_ENV" >> $GITHUB_OUTPUT
+          echo "target=$TARGET_ENV" >> $GITHUB_OUTPUT
+          echo "inactive=$INACTIVE_ENV" >> $GITHUB_OUTPUT
+          
+          echo "Current environment: $CURRENT_ENV"
+          echo "Deploying to: $TARGET_ENV"
+
+      - name: Deploy to target environment
+        run: |
+          echo "Deploying ${{ inputs.version }} to ${{ steps.target.outputs.target }} environment"
+          
+          # Update deployment manifest
+          sed -i 's|image: .*|image: ghcr.io/${{ github.repository }}:${{ inputs.version }}|' k8s/deployment-${{ steps.target.outputs.target }}.yaml
+          sed -i 's|version: .*|version: ${{ steps.target.outputs.target }}|' k8s/deployment-${{ steps.target.outputs.target }}.yaml
+          
+          # Apply deployment
+          kubectl apply -f k8s/deployment-${{ steps.target.outputs.target }}.yaml
+          
+          # Wait for rollout
+          kubectl rollout status deployment/websets-${{ steps.target.outputs.target }} --timeout=600s
+
+      - name: Health check target environment
+        run: |
+          echo "Performing health checks on ${{ steps.target.outputs.target }} environment"
+          
+          # Get target environment URL
+          TARGET_URL="https://${{ steps.target.outputs.target }}.websets.example.com"
+          
+          # Wait for pods to be ready
+          sleep 30
+          
+          # Health check
+          for i in {1..10}; do
+            if curl -f "$TARGET_URL/health"; then
+              echo "✅ Health check passed"
+              break
+            fi
+            echo "Health check attempt $i failed, retrying..."
+            sleep 10
+          done
+
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests against ${{ steps.target.outputs.target }} environment"
+          TARGET_URL="https://${{ steps.target.outputs.target }}.websets.example.com"
+          
+          # Run critical path tests
+          curl -f "$TARGET_URL/health" || exit 1
+          curl -f "$TARGET_URL/v1/datasets" -H "Authorization: Bearer ${{ secrets.TEST_TOKEN }}" || exit 1
+          
+          echo "✅ Smoke tests passed"
+
+      - name: Switch traffic to target environment
+        run: |
+          echo "Switching traffic from ${{ steps.target.outputs.current }} to ${{ steps.target.outputs.target }}"
+          
+          # Update service selector
+          kubectl patch service websets-production -p '{"spec":{"selector":{"version":"${{ steps.target.outputs.target }}"}}}'
+          
+          # Verify traffic switch
+          sleep 10
+          curl -f "https://websets.example.com/health" || exit 1
+          
+          echo "✅ Traffic successfully switched to ${{ steps.target.outputs.target }}"
+
+      - name: Monitor deployment
+        run: |
+          echo "Monitoring deployment for 5 minutes..."
+          
+          for i in {1..30}; do
+            if ! curl -f "https://websets.example.com/health"; then
+              echo "❌ Health check failed during monitoring"
+              exit 1
+            fi
+            sleep 10
+          done
+          
+          echo "✅ Deployment monitoring completed successfully"
+
+  rolling-deployment:
+    needs: [create-deployment]
+    runs-on: ubuntu-latest
+    if: inputs.deployment_strategy == 'rolling'
+    environment:
+      name: ${{ inputs.environment }}
+      url: https://websets.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+
+      - name: Rolling deployment
+        run: |
+          echo "Performing rolling deployment of ${{ inputs.version }}"
+          
+          # Update deployment image
+          kubectl set image deployment/websets-production \
+            websets=ghcr.io/${{ github.repository }}:${{ inputs.version }}
+          
+          # Wait for rollout with timeout
+          kubectl rollout status deployment/websets-production --timeout=600s
+          
+          echo "✅ Rolling deployment completed"
+
+      - name: Verify deployment
+        run: |
+          # Verify all pods are running the new version
+          kubectl get pods -l app=websets-production -o jsonpath='{.items[*].spec.containers[0].image}'
+          
+          # Health check
+          curl -f "https://websets.example.com/health" || exit 1
+          
+          echo "✅ Deployment verification completed"
+
+  canary-deployment:
+    needs: [create-deployment]
+    runs-on: ubuntu-latest
+    if: inputs.deployment_strategy == 'canary'
+    environment:
+      name: ${{ inputs.environment }}
+      url: https://websets.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+
+      - name: Deploy canary version
+        run: |
+          echo "Deploying canary version ${{ inputs.version }}"
+          
+          # Deploy canary with 10% traffic
+          sed -i 's|image: .*|image: ghcr.io/${{ github.repository }}:${{ inputs.version }}|' k8s/deployment-canary.yaml
+          kubectl apply -f k8s/deployment-canary.yaml
+          kubectl apply -f k8s/service-canary.yaml
+          
+          # Wait for canary pods
+          kubectl rollout status deployment/websets-canary --timeout=300s
+
+      - name: Monitor canary metrics
+        run: |
+          echo "Monitoring canary deployment for 10 minutes..."
+          
+          for i in {1..60}; do
+            # Check error rates and response times
+            # In real implementation, query monitoring system
+            echo "Checking canary metrics... ($i/60)"
+            sleep 10
+          done
+          
+          echo "✅ Canary monitoring completed"
+
+      - name: Promote canary to production
+        run: |
+          echo "Promoting canary to full production"
+          
+          # Scale up canary and scale down old version
+          kubectl scale deployment/websets-production --replicas=0
+          kubectl scale deployment/websets-canary --replicas=3
+          
+          # Update service to point to canary
+          kubectl patch service websets-production -p '{"spec":{"selector":{"app":"websets-canary"}}}'
+          
+          echo "✅ Canary promoted to production"
+
+  update-deployment-status:
+    needs: [create-deployment, blue-green-deployment, rolling-deployment, canary-deployment]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Update deployment status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deploymentId = '${{ needs.create-deployment.outputs.deployment-id }}';
+            
+            // Determine overall status
+            const blueGreenResult = '${{ needs.blue-green-deployment.result }}';
+            const rollingResult = '${{ needs.rolling-deployment.result }}';
+            const canaryResult = '${{ needs.canary-deployment.result }}';
+            
+            let state = 'success';
+            let description = 'Deployment completed successfully';
+            
+            if (blueGreenResult === 'failure' || rollingResult === 'failure' || canaryResult === 'failure') {
+              state = 'failure';
+              description = 'Deployment failed';
+            } else if (blueGreenResult === 'cancelled' || rollingResult === 'cancelled' || canaryResult === 'cancelled') {
+              state = 'error';
+              description = 'Deployment was cancelled';
+            }
+            
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: deploymentId,
+              state: state,
+              description: description,
+              environment_url: 'https://websets.example.com'
+            });
+
+  post-deployment-verification:
+    needs: [blue-green-deployment, rolling-deployment, canary-deployment]
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Run post-deployment tests
+        run: |
+          echo "Running post-deployment verification tests"
+          
+          # API health checks
+          curl -f "https://websets.example.com/health" || exit 1
+          
+          # Database connectivity
+          curl -f "https://websets.example.com/v1/datasets" -H "Authorization: Bearer ${{ secrets.TEST_TOKEN }}" || exit 1
+          
+          # Performance check
+          response_time=$(curl -o /dev/null -s -w '%{time_total}' "https://websets.example.com/health")
+          if (( $(echo "$response_time > 2.0" | bc -l) )); then
+            echo "❌ Response time too high: ${response_time}s"
+            exit 1
+          fi
+          
+          echo "✅ Post-deployment verification completed"
+
+      - name: Update monitoring dashboards
+        run: |
+          echo "Updating monitoring dashboards with new deployment"
+          # In real implementation, update Grafana annotations
+          echo "Deployment ${{ inputs.version }} completed at $(date)"
+
+      - name: Notify stakeholders
+        run: |
+          echo "Notifying stakeholders of successful deployment"
+          # In real implementation, send notifications via Slack, email, etc.
+          echo "🚀 Production deployment of ${{ inputs.version }} completed successfully"

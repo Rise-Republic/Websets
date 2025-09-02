@@ -1,0 +1,342 @@
+groups:
+  - name: websets.critical
+    rules:
+      - alert: WebSetsServiceDown
+        expr: up{job="websets"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: websets
+          team: platform
+        annotations:
+          summary: "WebSets service is down"
+          description: "WebSets service {{ $labels.instance }} has been down for more than 1 minute"
+          runbook_url: "https://docs.websets.com/runbooks/service-down"
+
+      - alert: WebSetsHighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{job="websets",status=~"5.."}[5m])) /
+            sum(rate(http_requests_total{job="websets"}[5m]))
+          ) * 100 > 5
+        for: 2m
+        labels:
+          severity: critical
+          service: websets
+          team: platform
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} for the last 5 minutes"
+          runbook_url: "https://docs.websets.com/runbooks/high-error-rate"
+
+      - alert: WebSetsDatabaseDown
+        expr: db_connections_active{job="websets"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: websets
+          team: platform
+        annotations:
+          summary: "Database connection lost"
+          description: "No active database connections for WebSets service"
+          runbook_url: "https://docs.websets.com/runbooks/database-down"
+
+      - alert: WebSetsVeryHighResponseTime
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(http_request_duration_seconds_bucket{job="websets"}[5m])) by (le)
+          ) > 5
+        for: 2m
+        labels:
+          severity: critical
+          service: websets
+          team: platform
+        annotations:
+          summary: "Very high response time"
+          description: "95th percentile response time is {{ $value }}s"
+          runbook_url: "https://docs.websets.com/runbooks/high-response-time"
+
+  - name: websets.warning
+    rules:
+      - alert: WebSetsHighResponseTime
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(http_request_duration_seconds_bucket{job="websets"}[5m])) by (le)
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: websets
+          team: platform
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is {{ $value }}s"
+          runbook_url: "https://docs.websets.com/runbooks/high-response-time"
+
+      - alert: WebSetsModerateErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{job="websets",status=~"5.."}[5m])) /
+            sum(rate(http_requests_total{job="websets"}[5m]))
+          ) * 100 > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: websets
+          team: platform
+        annotations:
+          summary: "Moderate error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} for the last 5 minutes"
+          runbook_url: "https://docs.websets.com/runbooks/moderate-error-rate"
+
+      - alert: WebSetsHighCPUUsage
+        expr: |
+          avg(rate(container_cpu_usage_seconds_total{namespace="websets",container="websets"}[5m])) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          service: websets
+          team: platform
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}% for WebSets containers"
+          runbook_url: "https://docs.websets.com/runbooks/high-cpu-usage"
+
+      - alert: WebSetsHighMemoryUsage
+        expr: |
+          avg(container_memory_working_set_bytes{namespace="websets",container="websets"}) / 
+          avg(container_spec_memory_limit_bytes{namespace="websets",container="websets"}) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+          service: websets
+          team: platform
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value }}% of limit for WebSets containers"
+          runbook_url: "https://docs.websets.com/runbooks/high-memory-usage"
+
+      - alert: WebSetsDatabaseConnectionsHigh
+        expr: db_connections_active{job="websets"} / db_connections_total{job="websets"} * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: websets
+          team: platform
+        annotations:
+          summary: "High database connection usage"
+          description: "Database connection pool is {{ $value }}% utilized"
+          runbook_url: "https://docs.websets.com/runbooks/high-db-connections"
+
+      - alert: WebSetsLowCacheHitRate
+        expr: |
+          sum(rate(cache_hits_total{job="websets"}[5m])) / 
+          sum(rate(cache_requests_total{job="websets"}[5m])) * 100 < 70
+        for: 10m
+        labels:
+          severity: warning
+          service: websets
+          team: platform
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value }}%"
+          runbook_url: "https://docs.websets.com/runbooks/low-cache-hit-rate"
+
+      - alert: WebSetsHighQueueDepth
+        expr: celery_queue_length{job="websets"} > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: websets
+          team: platform
+        annotations:
+          summary: "High queue depth"
+          description: "Queue {{ $labels.queue }} has {{ $value }} pending tasks"
+          runbook_url: "https://docs.websets.com/runbooks/high-queue-depth"
+
+  - name: websets.infrastructure
+    rules:
+      - alert: NodeHighCPUUsage
+        expr: |
+          100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 10m
+        labels:
+          severity: warning
+          service: infrastructure
+          team: platform
+        annotations:
+          summary: "High CPU usage on node"
+          description: "CPU usage is {{ $value }}% on node {{ $labels.instance }}"
+          runbook_url: "https://docs.websets.com/runbooks/node-high-cpu"
+
+      - alert: NodeHighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 95
+        for: 10m
+        labels:
+          severity: critical
+          service: infrastructure
+          team: platform
+        annotations:
+          summary: "High memory usage on node"
+          description: "Memory usage is {{ $value }}% on node {{ $labels.instance }}"
+          runbook_url: "https://docs.websets.com/runbooks/node-high-memory"
+
+      - alert: NodeHighDiskUsage
+        expr: |
+          100 - ((node_filesystem_avail_bytes{mountpoint="/"} * 100) / 
+          node_filesystem_size_bytes{mountpoint="/"}) > 90
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+          team: platform
+        annotations:
+          summary: "High disk usage on node"
+          description: "Disk usage is {{ $value }}% on node {{ $labels.instance }}"
+          runbook_url: "https://docs.websets.com/runbooks/node-high-disk"
+
+      - alert: NodeDown
+        expr: up{job="node-exporter"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: infrastructure
+          team: platform
+        annotations:
+          summary: "Node is down"
+          description: "Node {{ $labels.instance }} has been down for more than 2 minutes"
+          runbook_url: "https://docs.websets.com/runbooks/node-down"
+
+  - name: websets.kubernetes
+    rules:
+      - alert: PodCrashLooping
+        expr: |
+          rate(kube_pod_container_status_restarts_total{namespace="websets"}[15m]) * 60 * 15 > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: websets
+          team: platform
+        annotations:
+          summary: "Pod is crash looping"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is crash looping"
+          runbook_url: "https://docs.websets.com/runbooks/pod-crash-looping"
+
+      - alert: PodNotReady
+        expr: |
+          kube_pod_status_ready{namespace="websets",condition="false"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          service: websets
+          team: platform
+        annotations:
+          summary: "Pod not ready"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is not ready"
+          runbook_url: "https://docs.websets.com/runbooks/pod-not-ready"
+
+      - alert: DeploymentReplicasMismatch
+        expr: |
+          kube_deployment_status_replicas{namespace="websets"} != 
+          kube_deployment_status_replicas_available{namespace="websets"}
+        for: 10m
+        labels:
+          severity: warning
+          service: websets
+          team: platform
+        annotations:
+          summary: "Deployment replicas mismatch"
+          description: "Deployment {{ $labels.deployment }} has {{ $value }} replicas but should have {{ $labels.spec_replicas }}"
+          runbook_url: "https://docs.websets.com/runbooks/deployment-replicas-mismatch"
+
+      - alert: HorizontalPodAutoscalerMaxReplicas
+        expr: |
+          kube_horizontalpodautoscaler_status_current_replicas{namespace="websets"} >= 
+          kube_horizontalpodautoscaler_spec_max_replicas{namespace="websets"}
+        for: 5m
+        labels:
+          severity: warning
+          service: websets
+          team: platform
+        annotations:
+          summary: "HPA at maximum replicas"
+          description: "HPA {{ $labels.horizontalpodautoscaler }} is at maximum replicas ({{ $value }})"
+          runbook_url: "https://docs.websets.com/runbooks/hpa-max-replicas"
+
+  - name: websets.business
+    rules:
+      - alert: WebSetsLowSearchRate
+        expr: |
+          sum(rate(search_queries_total{job="websets"}[5m])) < 0.1
+        for: 15m
+        labels:
+          severity: info
+          service: websets
+          team: product
+        annotations:
+          summary: "Low search query rate"
+          description: "Search query rate is {{ $value }} queries/second"
+          runbook_url: "https://docs.websets.com/runbooks/low-search-rate"
+
+      - alert: WebSetsLowDatasetProcessingRate
+        expr: |
+          sum(rate(datasets_processed_total{job="websets"}[5m])) < 0.01
+        for: 30m
+        labels:
+          severity: info
+          service: websets
+          team: product
+        annotations:
+          summary: "Low dataset processing rate"
+          description: "Dataset processing rate is {{ $value }} datasets/second"
+          runbook_url: "https://docs.websets.com/runbooks/low-dataset-processing"
+
+      - alert: WebSetsHighUserErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{job="websets",status=~"4.."}[5m])) /
+            sum(rate(http_requests_total{job="websets"}[5m]))
+          ) * 100 > 10
+        for: 10m
+        labels:
+          severity: warning
+          service: websets
+          team: product
+        annotations:
+          summary: "High user error rate"
+          description: "4xx error rate is {{ $value | humanizePercentage }}"
+          runbook_url: "https://docs.websets.com/runbooks/high-user-error-rate"
+
+  - name: websets.sla
+    rules:
+      - alert: WebSetsSLAViolation
+        expr: |
+          (
+            sum(rate(http_requests_total{job="websets",status!~"5.."}[5m])) /
+            sum(rate(http_requests_total{job="websets"}[5m]))
+          ) * 100 < 99.9
+        for: 5m
+        labels:
+          severity: critical
+          service: websets
+          team: platform
+        annotations:
+          summary: "SLA violation - availability below 99.9%"
+          description: "Availability is {{ $value | humanizePercentage }} over the last 5 minutes"
+          runbook_url: "https://docs.websets.com/runbooks/sla-violation"
+
+      - alert: WebSetsResponseTimeSLAViolation
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(http_request_duration_seconds_bucket{job="websets"}[5m])) by (le)
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          service: websets
+          team: platform
+        annotations:
+          summary: "Response time SLA violation"
+          description: "95th percentile response time ({{ $value }}s) exceeds SLA target of 500ms"
+          runbook_url: "https://docs.websets.com/runbooks/response-time-sla-violation"

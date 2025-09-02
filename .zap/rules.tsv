@@ -1,0 +1,17 @@
+# ZAP Scanning Rules Configuration
+# Format: IGNORE/WARN/FAIL	RULE_ID	URL_REGEX	PARAMETER	EVIDENCE
+
+# Ignore false positives for development endpoints
+IGNORE	10021	http://localhost:8000/docs.*	.*	.*
+IGNORE	10021	http://localhost:8000/redoc.*	.*	.*
+
+# Warn on medium severity issues
+WARN	10020	.*	.*	.*
+WARN	10017	.*	.*	.*
+
+# Fail on high severity security issues
+FAIL	40018	.*	.*	.*
+FAIL	40019	.*	.*	.*
+FAIL	40020	.*	.*	.*
+FAIL	40021	.*	.*	.*
+FAIL	40022	.*	.*	.*

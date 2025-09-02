@@ -1,0 +1,109 @@
+name: SBOM Generation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  attestations: write
+
+jobs:
+  generate-sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate Node.js SBOM
+        run: |
+          npx @cyclonedx/cyclonedx-npm --output-file sbom-npm.json --output-format json
+          npx @cyclonedx/cyclonedx-npm --output-file sbom-npm.xml --output-format xml
+
+      - name: Generate Python SBOM
+        run: |
+          pip install cyclonedx-bom
+          cyclonedx-py -o sbom-python.json --format json
+          cyclonedx-py -o sbom-python.xml --format xml
+
+      - name: Build Docker image
+        run: |
+          docker build -t webset-miner:latest .
+
+      - name: Install Syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Generate Container SBOM
+        run: |
+          syft webset-miner:latest -o json=sbom-container.json
+          syft webset-miner:latest -o spdx-json=sbom-container-spdx.json
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign SBOMs with Cosign
+        run: |
+          cosign sign-blob --yes sbom-npm.json --output-signature sbom-npm.json.sig
+          cosign sign-blob --yes sbom-python.json --output-signature sbom-python.json.sig
+          cosign sign-blob --yes sbom-container.json --output-signature sbom-container.json.sig
+
+      - name: Generate SLSA Provenance
+        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.9.0
+        with:
+          base64-subjects: |
+            ${{ hashFiles('sbom-npm.json') }}:sbom-npm.json
+            ${{ hashFiles('sbom-python.json') }}:sbom-python.json
+            ${{ hashFiles('sbom-container.json') }}:sbom-container.json
+
+      - name: Upload SBOMs as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sboms
+          path: |
+            sbom-*.json
+            sbom-*.xml
+            sbom-*.sig
+          retention-days: 90
+
+      - name: Upload to release (on release)
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./sbom-npm.json
+          asset_name: sbom-npm.json
+          asset_content_type: application/json
+
+      - name: Attest SBOMs
+        if: github.event_name == 'release'
+        uses: actions/attest-sbom@v1
+        with:
+          subject-path: |
+            sbom-npm.json
+            sbom-python.json
+            sbom-container.json

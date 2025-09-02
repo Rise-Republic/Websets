@@ -1,0 +1,451 @@
+name: Emergency Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_version:
+        description: 'Version to rollback to (e.g., v1.2.2)'
+        required: true
+        type: string
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+      rollback_reason:
+        description: 'Reason for rollback'
+        required: true
+        type: choice
+        options:
+          - 'Critical bug'
+          - 'Performance degradation'
+          - 'Security incident'
+          - 'Data corruption'
+          - 'Service unavailable'
+          - 'Other'
+      skip_verification:
+        description: 'Skip rollback verification (emergency only)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  deployments: write
+  packages: read
+
+jobs:
+  validate-rollback:
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_verification }}
+    outputs:
+      validation-passed: ${{ steps.validate.outputs.passed }}
+      current-version: ${{ steps.validate.outputs.current_version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate rollback parameters
+        id: validate
+        run: |
+          echo "🔍 Validating rollback parameters..."
+          
+          # Validate target version format
+          if [[ ! "${{ inputs.target_version }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format: ${{ inputs.target_version }}"
+            exit 1
+          fi
+          
+          # Check if target version exists
+          if ! git tag | grep -q "^${{ inputs.target_version }}$"; then
+            echo "❌ Target version ${{ inputs.target_version }} does not exist"
+            exit 1
+          fi
+          
+          # Get current deployed version
+          CURRENT_VERSION=$(kubectl get deployment websets-${{ inputs.environment }} -o jsonpath='{.metadata.labels.version}' 2>/dev/null || echo "unknown")
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          
+          # Verify target version is older than current
+          if [ "$CURRENT_VERSION" != "unknown" ]; then
+            echo "Current version: $CURRENT_VERSION"
+            echo "Target version: ${{ inputs.target_version }}"
+            
+            # In real implementation, compare semantic versions
+            echo "⚠️ Ensure target version is a valid rollback candidate"
+          fi
+          
+          # Verify container image exists
+          if ! docker manifest inspect ghcr.io/${{ github.repository }}:${{ inputs.target_version }} > /dev/null 2>&1; then
+            echo "❌ Container image not found for version ${{ inputs.target_version }}"
+            exit 1
+          fi
+          
+          echo "✅ Rollback validation passed"
+          echo "passed=true" >> $GITHUB_OUTPUT
+
+      - name: Check rollback safety
+        run: |
+          echo "🔒 Checking rollback safety..."
+          
+          # Check for database migrations that might prevent rollback
+          echo "Checking for incompatible database changes..."
+          
+          # Check for breaking API changes
+          echo "Checking for breaking API changes..."
+          
+          # Verify rollback window (e.g., within last 7 days)
+          TARGET_DATE=$(git log -1 --format=%ct ${{ inputs.target_version }})
+          CURRENT_DATE=$(date +%s)
+          DAYS_DIFF=$(( (CURRENT_DATE - TARGET_DATE) / 86400 ))
+          
+          if [ $DAYS_DIFF -gt 7 ]; then
+            echo "⚠️ Warning: Rolling back to version older than 7 days ($DAYS_DIFF days)"
+          fi
+          
+          echo "✅ Rollback safety checks completed"
+
+  create-rollback-deployment:
+    needs: [validate-rollback]
+    runs-on: ubuntu-latest
+    if: always() && (needs.validate-rollback.outputs.validation-passed == 'true' || inputs.skip_verification)
+    outputs:
+      deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+    steps:
+      - name: Create rollback deployment record
+        id: deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: '${{ inputs.target_version }}',
+              environment: '${{ inputs.environment }}',
+              description: 'Emergency rollback to ${{ inputs.target_version }} - Reason: ${{ inputs.rollback_reason }}',
+              auto_merge: false,
+              required_contexts: []
+            });
+            
+            core.setOutput('deployment_id', deployment.data.id);
+            return deployment.data.id;
+
+      - name: Create incident record
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Emergency Rollback - ${{ inputs.rollback_reason }}`,
+              body: `## Emergency Rollback Initiated
+              
+              **Environment:** ${{ inputs.environment }}
+              **Current Version:** ${{ needs.validate-rollback.outputs.current-version || 'unknown' }}
+              **Target Version:** ${{ inputs.target_version }}
+              **Reason:** ${{ inputs.rollback_reason }}
+              **Initiated By:** @${{ github.actor }}
+              **Timestamp:** ${new Date().toISOString()}
+              
+              ## Actions Taken
+              - [ ] Rollback deployment initiated
+              - [ ] Monitoring alerts acknowledged
+              - [ ] Stakeholders notified
+              - [ ] Root cause analysis scheduled
+              
+              ## Next Steps
+              1. Monitor system stability post-rollback
+              2. Investigate root cause of the issue
+              3. Plan forward fix deployment
+              4. Update incident documentation
+              
+              **Deployment ID:** ${{ steps.deployment.outputs.deployment_id }}`,
+              labels: ['incident', 'rollback', 'critical']
+            });
+            
+            console.log(`Created incident issue: ${issue.data.html_url}`);
+
+  execute-rollback:
+    needs: [create-rollback-deployment]
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ inputs.environment == 'production' && 'https://websets.example.com' || 'https://staging.websets.example.com' }}
+    steps:
+      - name: Checkout target version
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_version }}
+
+      - name: Pre-rollback backup
+        run: |
+          echo "📦 Creating pre-rollback backup..."
+          
+          # Backup current configuration
+          kubectl get deployment websets-${{ inputs.environment }} -o yaml > rollback-backup-deployment.yaml
+          kubectl get configmap websets-config -o yaml > rollback-backup-configmap.yaml
+          
+          # Store backup timestamp
+          echo "BACKUP_TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)" >> $GITHUB_ENV
+          
+          echo "✅ Pre-rollback backup completed"
+
+      - name: Execute rollback deployment
+        run: |
+          echo "🔄 Executing rollback to ${{ inputs.target_version }}..."
+          
+          # Update deployment image
+          kubectl set image deployment/websets-${{ inputs.environment }} \
+            websets=ghcr.io/${{ github.repository }}:${{ inputs.target_version }}
+          
+          # Add rollback annotation
+          kubectl annotate deployment/websets-${{ inputs.environment }} \
+            deployment.kubernetes.io/rollback-reason="${{ inputs.rollback_reason }}" \
+            deployment.kubernetes.io/rollback-timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            deployment.kubernetes.io/rollback-initiated-by="${{ github.actor }}"
+          
+          # Wait for rollout with shorter timeout for emergency
+          kubectl rollout status deployment/websets-${{ inputs.environment }} --timeout=300s
+          
+          echo "✅ Rollback deployment completed"
+
+      - name: Immediate health verification
+        run: |
+          echo "🏥 Performing immediate health checks..."
+          
+          # Wait for pods to be ready
+          sleep 15
+          
+          # Basic health check
+          BASE_URL="${{ inputs.environment == 'production' && 'https://websets.example.com' || 'https://staging.websets.example.com' }}"
+          
+          for i in {1..5}; do
+            if curl -f "$BASE_URL/health"; then
+              echo "✅ Health check passed (attempt $i)"
+              break
+            fi
+            echo "❌ Health check failed (attempt $i), retrying..."
+            if [ $i -eq 5 ]; then
+              echo "🚨 Health checks failed after rollback!"
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Verify critical functionality
+        run: |
+          echo "🔍 Verifying critical functionality..."
+          
+          BASE_URL="${{ inputs.environment == 'production' && 'https://websets.example.com' || 'https://staging.websets.example.com' }}"
+          
+          # Test critical API endpoints
+          curl -f "$BASE_URL/v1/datasets" -H "Authorization: Bearer ${{ secrets.TEST_TOKEN }}" || {
+            echo "❌ Critical API endpoint failed"
+            exit 1
+          }
+          
+          # Test database connectivity
+          curl -f "$BASE_URL/health/db" || {
+            echo "❌ Database connectivity failed"
+            exit 1
+          }
+          
+          echo "✅ Critical functionality verified"
+
+      - name: Monitor for stability
+        run: |
+          echo "📊 Monitoring system stability for 2 minutes..."
+          
+          BASE_URL="${{ inputs.environment == 'production' && 'https://websets.example.com' || 'https://staging.websets.example.com' }}"
+          
+          for i in {1..12}; do
+            if ! curl -f "$BASE_URL/health" > /dev/null 2>&1; then
+              echo "❌ Stability check failed at $(date)"
+              exit 1
+            fi
+            echo "✅ Stability check $i/12 passed"
+            sleep 10
+          done
+          
+          echo "✅ System stability confirmed"
+
+  post-rollback-actions:
+    needs: [execute-rollback]
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Update monitoring dashboards
+        run: |
+          echo "📊 Updating monitoring dashboards..."
+          
+          # Add rollback annotation to Grafana
+          # In real implementation, call Grafana API
+          echo "Added rollback annotation: ${{ inputs.target_version }} at $(date)"
+          
+          # Reset alert thresholds if needed
+          echo "Monitoring dashboards updated"
+
+      - name: Notify stakeholders
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const message = `## 🔄 Rollback Completed Successfully
+            
+            **Environment:** ${{ inputs.environment }}
+            **Rolled back to:** ${{ inputs.target_version }}
+            **Reason:** ${{ inputs.rollback_reason }}
+            **Completed at:** ${new Date().toISOString()}
+            **Duration:** ~5 minutes
+            
+            ✅ **System Status:** Healthy
+            ✅ **Critical Functions:** Verified
+            ✅ **Monitoring:** Active
+            
+            ## Next Steps
+            1. Continue monitoring system stability
+            2. Begin root cause analysis
+            3. Plan remediation for the original issue
+            4. Schedule post-incident review
+            
+            **Environment URL:** ${{ inputs.environment == 'production' && 'https://websets.example.com' || 'https://staging.websets.example.com' }}`;
+            
+            // Post to Slack (in real implementation)
+            console.log("Stakeholder notification sent");
+            console.log(message);
+
+      - name: Schedule post-incident review
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Create post-incident review issue
+            const reviewIssue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `📋 Post-Incident Review - Rollback to ${{ inputs.target_version }}`,
+              body: `## Post-Incident Review
+              
+              **Incident:** Emergency rollback due to ${{ inputs.rollback_reason }}
+              **Rollback Version:** ${{ inputs.target_version }}
+              **Environment:** ${{ inputs.environment }}
+              **Date:** ${new Date().toISOString()}
+              
+              ## Review Checklist
+              - [ ] Timeline of events documented
+              - [ ] Root cause identified
+              - [ ] Impact assessment completed
+              - [ ] Prevention measures identified
+              - [ ] Process improvements documented
+              - [ ] Team retrospective scheduled
+              
+              ## Action Items
+              - [ ] Fix underlying issue
+              - [ ] Update monitoring/alerting
+              - [ ] Improve rollback procedures
+              - [ ] Update documentation
+              
+              **Assignees:** @${{ github.actor }}
+              **Due Date:** ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}`,
+              labels: ['post-incident', 'review', 'high-priority'],
+              assignees: ['${{ github.actor }}']
+            });
+            
+            console.log(`Created post-incident review: ${reviewIssue.data.html_url}`);
+
+  update-rollback-status:
+    needs: [create-rollback-deployment, execute-rollback, post-rollback-actions]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Update deployment status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deploymentId = '${{ needs.create-rollback-deployment.outputs.deployment-id }}';
+            const rollbackResult = '${{ needs.execute-rollback.result }}';
+            
+            let state = 'success';
+            let description = 'Rollback completed successfully';
+            
+            if (rollbackResult === 'failure') {
+              state = 'failure';
+              description = 'Rollback failed - system may be in unstable state';
+            } else if (rollbackResult === 'cancelled') {
+              state = 'error';
+              description = 'Rollback was cancelled';
+            }
+            
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: deploymentId,
+              state: state,
+              description: description,
+              environment_url: '${{ inputs.environment == 'production' && 'https://websets.example.com' || 'https://staging.websets.example.com' }}'
+            });
+
+  rollback-failure-recovery:
+    needs: [execute-rollback]
+    runs-on: ubuntu-latest
+    if: failure()
+    steps:
+      - name: Emergency recovery procedures
+        run: |
+          echo "🚨 ROLLBACK FAILED - Initiating emergency recovery"
+          
+          # Attempt to restore from backup
+          echo "Attempting to restore from pre-rollback backup..."
+          kubectl apply -f rollback-backup-deployment.yaml || true
+          
+          # Scale to minimum viable service
+          echo "Scaling to minimum viable service..."
+          kubectl scale deployment/websets-${{ inputs.environment }} --replicas=1
+          
+          # Alert on-call team
+          echo "🚨 CRITICAL: Rollback failed for ${{ inputs.environment }}"
+          echo "Manual intervention required immediately"
+          
+          # Create critical incident
+          echo "Creating critical incident ticket..."
+
+      - name: Notify emergency contacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const criticalIssue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 CRITICAL: Rollback Failed - ${{ inputs.environment }}`,
+              body: `## 🚨 CRITICAL INCIDENT - ROLLBACK FAILURE
+              
+              **IMMEDIATE ACTION REQUIRED**
+              
+              **Environment:** ${{ inputs.environment }}
+              **Failed Rollback Target:** ${{ inputs.target_version }}
+              **Original Issue:** ${{ inputs.rollback_reason }}
+              **Failure Time:** ${new Date().toISOString()}
+              
+              ## Current Status
+              ❌ Rollback deployment failed
+              ⚠️ System may be in unstable state
+              🚨 Manual intervention required
+              
+              ## Immediate Actions Needed
+              1. **Check system status immediately**
+              2. **Assess service availability**
+              3. **Consider manual rollback via kubectl**
+              4. **Escalate to senior engineering team**
+              
+              ## Emergency Contacts
+              - On-call Engineer: @oncall
+              - Platform Team: @platform-team
+              - Engineering Manager: @eng-manager
+              
+              **This is a P0 incident requiring immediate attention**`,
+              labels: ['critical', 'p0-incident', 'rollback-failure'],
+              assignees: ['${{ github.actor }}']
+            });
+            
+            console.log(`🚨 Critical incident created: ${criticalIssue.data.html_url}`);

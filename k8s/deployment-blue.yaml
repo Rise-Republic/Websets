@@ -1,27 +1,31 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: webset-miner-blue
+  name: websets-blue
   labels:
-    app: webset-miner-blue
+    app: websets
+    version: blue
+    environment: production
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: webset-miner-blue
+      app: websets
+      version: blue
   template:
     metadata:
       labels:
-        app: webset-miner-blue
+        app: websets
+        version: blue
     spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
         fsGroup: 1000
       containers:
-      - name: webset-miner
-        image: webset-miner:latest
-        imagePullPolicy: IfNotPresent
+      - name: websets
+        image: ghcr.io/websets/websets:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8000
         resources:

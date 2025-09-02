@@ -1,0 +1,230 @@
+name: Monitoring Setup
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'monitoring/**'
+      - '.github/workflows/monitoring-setup.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'monitoring/**'
+  workflow_dispatch:
+
+env:
+  GRAFANA_VERSION: "10.2.0"
+  PROMETHEUS_VERSION: "2.47.0"
+  ALERTMANAGER_VERSION: "0.26.0"
+
+jobs:
+  validate-monitoring-config:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Prometheus
+        run: |
+          wget https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz
+          tar xvfz prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz
+          sudo mv prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool /usr/local/bin/
+
+      - name: Validate Prometheus configuration
+        run: |
+          promtool check config monitoring/prometheus/prometheus.yml
+
+      - name: Validate alert rules
+        run: |
+          promtool check rules monitoring/prometheus/rules/*.yml
+
+      - name: Validate Grafana dashboards
+        run: |
+          for dashboard in monitoring/grafana/dashboards/*.json; do
+            echo "Validating $dashboard"
+            python -m json.tool "$dashboard" > /dev/null
+          done
+
+      - name: Setup Python for validation scripts
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install validation dependencies
+        run: |
+          pip install jsonschema requests pyyaml
+
+      - name: Validate monitoring stack
+        run: |
+          python scripts/validate_monitoring_config.py
+
+  deploy-monitoring-staging:
+    needs: validate-monitoring-config
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > ~/.kube/config
+
+      - name: Deploy Prometheus
+        run: |
+          kubectl apply -f monitoring/prometheus/ -n monitoring
+          kubectl rollout status deployment/prometheus -n monitoring --timeout=300s
+
+      - name: Deploy Grafana
+        run: |
+          kubectl create configmap grafana-dashboards \
+            --from-file=monitoring/grafana/dashboards/ \
+            -n monitoring --dry-run=client -o yaml | kubectl apply -f -
+          
+          kubectl apply -f monitoring/grafana/ -n monitoring
+          kubectl rollout status deployment/grafana -n monitoring --timeout=300s
+
+      - name: Deploy AlertManager
+        run: |
+          kubectl apply -f monitoring/alertmanager/ -n monitoring
+          kubectl rollout status deployment/alertmanager -n monitoring --timeout=300s
+
+      - name: Verify monitoring stack
+        run: |
+          # Wait for services to be ready
+          sleep 30
+          
+          # Check Prometheus
+          kubectl port-forward svc/prometheus 9090:9090 -n monitoring &
+          sleep 10
+          curl -f http://localhost:9090/-/healthy || exit 1
+          
+          # Check Grafana
+          kubectl port-forward svc/grafana 3000:3000 -n monitoring &
+          sleep 10
+          curl -f http://localhost:3000/api/health || exit 1
+          
+          # Check AlertManager
+          kubectl port-forward svc/alertmanager 9093:9093 -n monitoring &
+          sleep 10
+          curl -f http://localhost:9093/-/healthy || exit 1
+
+      - name: Run monitoring smoke tests
+        run: |
+          python scripts/monitoring_smoke_tests.py --environment=staging
+
+  deploy-monitoring-production:
+    needs: deploy-monitoring-staging
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > ~/.kube/config
+
+      - name: Backup existing monitoring config
+        run: |
+          kubectl get configmap prometheus-config -n monitoring -o yaml > prometheus-config-backup.yaml || true
+          kubectl get configmap grafana-dashboards -n monitoring -o yaml > grafana-dashboards-backup.yaml || true
+
+      - name: Deploy Prometheus with blue-green
+        run: |
+          # Deploy new Prometheus instance
+          sed 's/prometheus/prometheus-new/g' monitoring/prometheus/deployment.yaml | kubectl apply -f -
+          kubectl rollout status deployment/prometheus-new -n monitoring --timeout=300s
+          
+          # Verify new instance
+          kubectl port-forward svc/prometheus-new 9090:9090 -n monitoring &
+          sleep 10
+          curl -f http://localhost:9090/-/healthy
+          
+          # Switch traffic
+          kubectl patch service prometheus -n monitoring -p '{"spec":{"selector":{"app":"prometheus-new"}}}'
+          
+          # Clean up old instance
+          kubectl delete deployment prometheus -n monitoring || true
+
+      - name: Deploy Grafana dashboards
+        run: |
+          kubectl create configmap grafana-dashboards \
+            --from-file=monitoring/grafana/dashboards/ \
+            -n monitoring --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Restart Grafana to pick up new dashboards
+          kubectl rollout restart deployment/grafana -n monitoring
+          kubectl rollout status deployment/grafana -n monitoring --timeout=300s
+
+      - name: Update alert rules
+        run: |
+          kubectl create configmap prometheus-rules \
+            --from-file=monitoring/prometheus/rules/ \
+            -n monitoring --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Reload Prometheus configuration
+          kubectl exec deployment/prometheus -n monitoring -- kill -HUP 1
+
+      - name: Verify production monitoring
+        run: |
+          # Comprehensive health checks
+          python scripts/monitoring_health_check.py --environment=production
+          
+          # Verify all dashboards load
+          python scripts/verify_grafana_dashboards.py --environment=production
+          
+          # Test alert rules
+          python scripts/test_alert_rules.py --environment=production
+
+      - name: Send deployment notification
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+              -H 'Content-type: application/json' \
+              --data '{"text":"✅ Monitoring stack deployed successfully to production"}'
+          else
+            curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+              -H 'Content-type: application/json' \
+              --data '{"text":"❌ Monitoring stack deployment to production failed"}'
+          fi
+
+  setup-alerting:
+    needs: deploy-monitoring-production
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AlertManager routes
+        run: |
+          kubectl create configmap alertmanager-config \
+            --from-file=monitoring/alertmanager/alertmanager.yml \
+            -n monitoring --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Setup PagerDuty integration
+        run: |
+          kubectl create secret generic pagerduty-config \
+            --from-literal=service-key="${{ secrets.PAGERDUTY_SERVICE_KEY }}" \
+            -n monitoring --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Setup Slack integration
+        run: |
+          kubectl create secret generic slack-config \
+            --from-literal=webhook-url="${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -n monitoring --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Restart AlertManager
+        run: |
+          kubectl rollout restart deployment/alertmanager -n monitoring
+          kubectl rollout status deployment/alertmanager -n monitoring --timeout=300s
+
+      - name: Test alert routing
+        run: |
+          python scripts/test_alert_routing.py --environment=production

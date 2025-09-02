@@ -1,0 +1,197 @@
+name: Accessibility Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 8 * * *' # Daily at 8 AM
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  accessibility-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm install -g @axe-core/cli lighthouse-ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start application
+        run: |
+          npm run preview &
+          sleep 10
+        env:
+          PORT: 4173
+
+      - name: Wait for application to be ready
+        run: |
+          timeout 30 bash -c 'until curl -f http://localhost:4173; do sleep 1; done'
+
+      - name: Run axe accessibility tests
+        run: |
+          axe http://localhost:4173 \
+            --tags wcag2a,wcag2aa,wcag21aa \
+            --reporter json \
+            --output-dir accessibility-results \
+            --output-file axe-results.json
+
+      - name: Run Lighthouse accessibility audit
+        run: |
+          lighthouse-ci autorun
+        env:
+          LHCI_BUILD_CONTEXT__CURRENT_HASH: ${{ github.sha }}
+          LHCI_BUILD_CONTEXT__CURRENT_BRANCH: ${{ github.ref_name }}
+
+      - name: Run Jest accessibility tests
+        run: |
+          npm test -- --testPathPattern=accessibility --coverage=false --watchAll=false
+
+      - name: Upload accessibility results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: accessibility-results
+          path: |
+            accessibility-results/
+            .lighthouseci/
+            lhci_reports/
+
+      - name: Comment PR with accessibility results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            try {
+              const axeResults = JSON.parse(fs.readFileSync('accessibility-results/axe-results.json', 'utf8'));
+              const violations = axeResults.violations || [];
+              
+              let comment = '## 🔍 Accessibility Test Results\n\n';
+              
+              if (violations.length === 0) {
+                comment += '✅ **No accessibility violations found!**\n\n';
+              } else {
+                comment += `❌ **Found ${violations.length} accessibility violation(s):**\n\n`;
+                
+                violations.forEach((violation, index) => {
+                  comment += `### ${index + 1}. ${violation.id}\n`;
+                  comment += `**Impact:** ${violation.impact}\n`;
+                  comment += `**Description:** ${violation.description}\n`;
+                  comment += `**Help:** ${violation.help}\n`;
+                  comment += `**Affected elements:** ${violation.nodes.length}\n\n`;
+                });
+              }
+              
+              comment += '\n---\n*Automated accessibility testing powered by axe-core*';
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } catch (error) {
+              console.error('Failed to read accessibility results:', error);
+            }
+
+  pa11y-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm install -g pa11y pa11y-ci
+
+      - name: Build and start application
+        run: |
+          npm run build
+          npm run preview &
+          sleep 10
+        env:
+          PORT: 4174
+
+      - name: Run Pa11y accessibility tests
+        run: |
+          pa11y-ci \
+            --sitemap http://localhost:4174/sitemap.xml \
+            --standard WCAG2AA \
+            --reporter json \
+            --output pa11y-results.json \
+            --ignore "color-contrast" \
+            --threshold 5
+
+      - name: Upload Pa11y results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pa11y-results
+          path: pa11y-results.json
+
+  accessibility-summary:
+    needs: [accessibility-audit, pa11y-tests]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Download accessibility results
+        uses: actions/download-artifact@v4
+        with:
+          path: results/
+
+      - name: Generate accessibility summary
+        run: |
+          echo "## 🔍 Accessibility Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.accessibility-audit.result }}" == "success" ]]; then
+            echo "✅ **Axe Core Tests:** Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Axe Core Tests:** Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ needs.pa11y-tests.result }}" == "success" ]]; then
+            echo "✅ **Pa11y Tests:** Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Pa11y Tests:** Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Standards Tested" >> $GITHUB_STEP_SUMMARY
+          echo "- WCAG 2.1 Level A" >> $GITHUB_STEP_SUMMARY
+          echo "- WCAG 2.1 Level AA" >> $GITHUB_STEP_SUMMARY
+          echo "- Section 508" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.accessibility-audit.result }}" == "success" && "${{ needs.pa11y-tests.result }}" == "success" ]]; then
+            echo "🎉 **All accessibility tests passed!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Some accessibility tests failed. Please review the results.**" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi

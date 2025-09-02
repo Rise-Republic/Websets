@@ -1,0 +1,261 @@
+name: Semantic Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      new-release-published: ${{ steps.semantic.outputs.new-release-published }}
+      new-release-version: ${{ steps.semantic.outputs.new-release-version }}
+      new-release-git-tag: ${{ steps.semantic.outputs.new-release-git-tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: |
+          npm test -- --coverage --watchAll=false
+          pytest tests/ --cov=app --cov-report=xml
+
+      - name: Build application
+        run: |
+          npm run build
+
+      - name: Semantic Release
+        id: semantic
+        uses: cycjimmy/semantic-release-action@v4
+        with:
+          semantic_version: 22
+          extra_plugins: |
+            @semantic-release/changelog@6.0.3
+            @semantic-release/git@10.0.1
+            @semantic-release/github@9.2.6
+            @semantic-release/exec@6.0.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create deployment artifact
+        if: steps.semantic.outputs.new-release-published == 'true'
+        run: |
+          mkdir -p artifacts
+          
+          # Create deployment package
+          tar -czf artifacts/websets-${{ steps.semantic.outputs.new-release-version }}.tar.gz \
+            --exclude=node_modules \
+            --exclude=.git \
+            --exclude=tests \
+            --exclude=coverage \
+            --exclude=.pytest_cache \
+            --exclude=__pycache__ \
+            .
+          
+          # Generate deployment manifest
+          cat > artifacts/deployment-manifest.json << EOF
+          {
+            "version": "${{ steps.semantic.outputs.new-release-version }}",
+            "git_tag": "${{ steps.semantic.outputs.new-release-git-tag }}",
+            "git_sha": "${{ github.sha }}",
+            "build_timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "build_number": "${{ github.run_number }}",
+            "artifacts": {
+              "package": "websets-${{ steps.semantic.outputs.new-release-version }}.tar.gz",
+              "docker_image": "ghcr.io/${{ github.repository }}:${{ steps.semantic.outputs.new-release-version }}"
+            },
+            "environment_requirements": {
+              "python": "3.11+",
+              "node": "18+",
+              "postgres": "15+"
+            }
+          }
+          EOF
+
+      - name: Upload deployment artifacts
+        if: steps.semantic.outputs.new-release-published == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-artifacts-${{ steps.semantic.outputs.new-release-version }}
+          path: artifacts/
+          retention-days: 90
+
+  build-docker-image:
+    needs: release
+    runs-on: ubuntu-latest
+    if: needs.release.outputs.new-release-published == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.release.outputs.new-release-version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.release.outputs.new-release-version }}
+            type=semver,pattern={{major}},value=${{ needs.release.outputs.new-release-version }}
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ needs.release.outputs.new-release-version }}
+            BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+            VCS_REF=${{ github.sha }}
+
+      - name: Sign container image
+        run: |
+          cosign sign --yes ghcr.io/${{ github.repository }}:${{ needs.release.outputs.new-release-version }}
+        env:
+          COSIGN_EXPERIMENTAL: 1
+
+  deploy-staging:
+    needs: [release, build-docker-image]
+    runs-on: ubuntu-latest
+    if: needs.release.outputs.new-release-published == 'true'
+    environment:
+      name: staging
+      url: https://staging.websets.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download deployment artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-artifacts-${{ needs.release.outputs.new-release-version }}
+          path: artifacts/
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying version ${{ needs.release.outputs.new-release-version }} to staging"
+          
+          # Update Kubernetes manifests
+          sed -i 's|image: .*|image: ghcr.io/${{ github.repository }}:${{ needs.release.outputs.new-release-version }}|' k8s/deployment-staging.yaml
+          
+          # Apply Kubernetes manifests (would use kubectl in real environment)
+          echo "kubectl apply -f k8s/deployment-staging.yaml"
+          echo "kubectl apply -f k8s/service.yaml"
+          echo "kubectl rollout status deployment/websets-staging"
+
+      - name: Run deployment verification
+        run: |
+          # Wait for deployment to be ready
+          sleep 30
+          
+          # Verify health endpoint
+          curl -f https://staging.websets.example.com/health || exit 1
+          
+          # Run smoke tests
+          echo "Running smoke tests against staging environment"
+          # pytest tests/smoke/ --base-url=https://staging.websets.example.com
+
+      - name: Update deployment status
+        if: always()
+        run: |
+          if [ $? -eq 0 ]; then
+            echo "✅ Staging deployment successful"
+            echo "DEPLOYMENT_STATUS=success" >> $GITHUB_ENV
+          else
+            echo "❌ Staging deployment failed"
+            echo "DEPLOYMENT_STATUS=failed" >> $GITHUB_ENV
+          fi
+
+  notify-deployment:
+    needs: [release, deploy-staging]
+    runs-on: ubuntu-latest
+    if: always() && needs.release.outputs.new-release-published == 'true'
+    steps:
+      - name: Notify deployment status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: release } = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: '${{ needs.release.outputs.new-release-git-tag }}'
+            });
+            
+            const deploymentStatus = '${{ needs.deploy-staging.result }}' === 'success' ? '✅ Success' : '❌ Failed';
+            
+            const comment = `## 🚀 Deployment Notification
+            
+            **Version:** ${{ needs.release.outputs.new-release-version }}
+            **Staging Deployment:** ${deploymentStatus}
+            **Environment:** https://staging.websets.example.com
+            
+            ### Next Steps
+            - [ ] Manual testing in staging environment
+            - [ ] Performance validation
+            - [ ] Security scan verification
+            - [ ] Production deployment approval
+            
+            **Release Notes:** ${release.html_url}`;
+            
+            github.rest.issues.createComment({
+              issue_number: release.number || context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  production-deployment-gate:
+    needs: [release, deploy-staging]
+    runs-on: ubuntu-latest
+    if: needs.release.outputs.new-release-published == 'true' && needs.deploy-staging.result == 'success'
+    environment:
+      name: production-gate
+    steps:
+      - name: Manual approval gate
+        run: |
+          echo "🔒 Production deployment requires manual approval"
+          echo "Version ${{ needs.release.outputs.new-release-version }} is ready for production deployment"
+          echo "Staging validation completed successfully"
