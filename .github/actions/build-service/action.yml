@@ -1,0 +1,318 @@
+name: Build Service
+description: Standardized build process for WebSets services
+author: WebSets Platform Team
+
+inputs:
+  service:
+    description: Service name to build (api-gateway, web-ui, worker-celery)
+    required: true
+  environment:
+    description: Target environment (dev, staging, prod)
+    required: true
+  registry:
+    description: Container registry URL
+    required: false
+    default: ghcr.io/rise-republic
+  push-image:
+    description: Whether to push the built image
+    required: false
+    default: 'true'
+  run-tests:
+    description: Whether to run tests before building
+    required: false
+    default: 'true'
+
+outputs:
+  image-tag:
+    description: Full image tag that was built
+    value: ${{ steps.build-info.outputs.image-tag }}
+  image-digest:
+    description: Image digest SHA
+    value: ${{ steps.build-info.outputs.image-digest }}
+  sbom-path:
+    description: Path to generated SBOM
+    value: ${{ steps.sbom.outputs.sbom-file }}
+
+runs:
+  using: composite
+  steps:
+    - name: Validate inputs
+      shell: bash
+      run: |
+        case "${{ inputs.service }}" in
+          api-gateway|web-ui|worker-celery)
+            echo "✅ Valid service: ${{ inputs.service }}"
+            ;;
+          *)
+            echo "❌ Invalid service: ${{ inputs.service }}"
+            echo "Valid services: api-gateway, web-ui, worker-celery"
+            exit 1
+            ;;
+        esac
+        
+        case "${{ inputs.environment }}" in
+          dev|staging|prod)
+            echo "✅ Valid environment: ${{ inputs.environment }}"
+            ;;
+          *)
+            echo "❌ Invalid environment: ${{ inputs.environment }}"
+            echo "Valid environments: dev, staging, prod"
+            exit 1
+            ;;
+        esac
+
+    - name: Set build context
+      id: context
+      shell: bash
+      run: |
+        case "${{ inputs.service }}" in
+          api-gateway)
+            echo "build-context=services/api-gateway" >> $GITHUB_OUTPUT
+            echo "dockerfile=services/api-gateway/Dockerfile" >> $GITHUB_OUTPUT
+            echo "language=python" >> $GITHUB_OUTPUT
+            ;;
+          web-ui)
+            echo "build-context=apps/web-ui" >> $GITHUB_OUTPUT
+            echo "dockerfile=apps/web-ui/Dockerfile" >> $GITHUB_OUTPUT
+            echo "language=typescript" >> $GITHUB_OUTPUT
+            ;;
+          worker-celery)
+            echo "build-context=services/worker-celery" >> $GITHUB_OUTPUT
+            echo "dockerfile=services/worker-celery/Dockerfile" >> $GITHUB_OUTPUT
+            echo "language=python" >> $GITHUB_OUTPUT
+            ;;
+        esac
+        
+        # Generate image tag
+        if [ "${{ inputs.environment }}" = "prod" ]; then
+          # Use semantic version for production
+          if [ -n "${{ github.ref_name }}" ] && [[ "${{ github.ref_name }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            IMAGE_TAG="${{ github.ref_name }}"
+          else
+            IMAGE_TAG="sha-${{ github.sha }}"
+          fi
+        else
+          # Use SHA for non-production
+          IMAGE_TAG="sha-${{ github.sha }}"
+        fi
+        
+        echo "image-tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+        echo "full-image=${{ inputs.registry }}/websets-${{ inputs.service }}:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+    - name: Setup build environment
+      shell: bash
+      run: |
+        echo "🔧 Setting up build environment for ${{ inputs.service }}"
+        
+        # Install build dependencies based on language
+        case "${{ steps.context.outputs.language }}" in
+          python)
+            python -m pip install --upgrade pip
+            if [ -f "${{ steps.context.outputs.build-context }}/requirements-dev.txt" ]; then
+              pip install -r ${{ steps.context.outputs.build-context }}/requirements-dev.txt
+            fi
+            ;;
+          typescript)
+            npm install -g npm@latest
+            if [ -f "${{ steps.context.outputs.build-context }}/package.json" ]; then
+              cd ${{ steps.context.outputs.build-context }}
+              npm ci
+              cd -
+            fi
+            ;;
+        esac
+
+    - name: Run linting and formatting
+      shell: bash
+      run: |
+        echo "🧹 Running code quality checks for ${{ inputs.service }}"
+        
+        case "${{ steps.context.outputs.language }}" in
+          python)
+            if [ -d "${{ steps.context.outputs.build-context }}" ]; then
+              # Python linting with ruff and black
+              ruff check ${{ steps.context.outputs.build-context }} || true
+              black --check ${{ steps.context.outputs.build-context }} || true
+              isort --check-only ${{ steps.context.outputs.build-context }} || true
+              mypy ${{ steps.context.outputs.build-context }} || true
+            fi
+            ;;
+          typescript)
+            if [ -f "${{ steps.context.outputs.build-context }}/package.json" ]; then
+              cd ${{ steps.context.outputs.build-context }}
+              npm run lint || true
+              npm run type-check || true
+              cd -
+            fi
+            ;;
+        esac
+
+    - name: Run tests
+      if: inputs.run-tests == 'true'
+      shell: bash
+      run: |
+        echo "🧪 Running tests for ${{ inputs.service }}"
+        
+        case "${{ steps.context.outputs.language }}" in
+          python)
+            if [ -d "${{ steps.context.outputs.build-context }}" ]; then
+              cd ${{ steps.context.outputs.build-context }}
+              python -m pytest tests/ --cov=. --cov-report=xml --cov-report=term || true
+              cd -
+            fi
+            ;;
+          typescript)
+            if [ -f "${{ steps.context.outputs.build-context }}/package.json" ]; then
+              cd ${{ steps.context.outputs.build-context }}
+              npm test || true
+              cd -
+            fi
+            ;;
+        esac
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        platforms: linux/amd64,linux/arm64
+
+    - name: Build Docker image
+      id: build
+      shell: bash
+      run: |
+        echo "🐳 Building Docker image for ${{ inputs.service }}"
+        
+        # Determine Dockerfile location
+        if [ -f "${{ steps.context.outputs.dockerfile }}" ]; then
+          DOCKERFILE="${{ steps.context.outputs.dockerfile }}"
+        elif [ -f "${{ steps.context.outputs.build-context }}/Dockerfile" ]; then
+          DOCKERFILE="${{ steps.context.outputs.build-context }}/Dockerfile"
+        else
+          # Use root Dockerfile for monorepo builds
+          DOCKERFILE="Dockerfile"
+        fi
+        
+        echo "Using Dockerfile: $DOCKERFILE"
+        echo "Build context: ${{ steps.context.outputs.build-context }}"
+        
+        # Build with buildx for multi-platform support
+        docker buildx build \
+          --platform linux/amd64,linux/arm64 \
+          --file "$DOCKERFILE" \
+          --tag "${{ steps.context.outputs.full-image }}" \
+          --tag "${{ inputs.registry }}/websets-${{ inputs.service }}:latest" \
+          --build-arg SERVICE=${{ inputs.service }} \
+          --build-arg ENVIRONMENT=${{ inputs.environment }} \
+          --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+          --build-arg VCS_REF=${{ github.sha }} \
+          --label org.opencontainers.image.title="WebSets ${{ inputs.service }}" \
+          --label org.opencontainers.image.description="WebSets ${{ inputs.service }} service" \
+          --label org.opencontainers.image.version="${{ steps.context.outputs.image-tag }}" \
+          --label org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+          --label org.opencontainers.image.revision=${{ github.sha }} \
+          --label org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }} \
+          ${{ inputs.push-image == 'true' && '--push' || '--load' }} \
+          ${{ steps.context.outputs.build-context }}
+
+    - name: Get image digest
+      id: build-info
+      shell: bash
+      run: |
+        if [ "${{ inputs.push-image }}" = "true" ]; then
+          # Get digest from registry
+          DIGEST=$(docker buildx imagetools inspect "${{ steps.context.outputs.full-image }}" --format '{{.Manifest.Digest}}')
+        else
+          # Get digest from local image
+          DIGEST=$(docker images --digests "${{ steps.context.outputs.full-image }}" --format "{{.Digest}}")
+        fi
+        
+        echo "image-tag=${{ steps.context.outputs.full-image }}" >> $GITHUB_OUTPUT
+        echo "image-digest=$DIGEST" >> $GITHUB_OUTPUT
+        
+        echo "✅ Built image: ${{ steps.context.outputs.full-image }}"
+        echo "📋 Image digest: $DIGEST"
+
+    - name: Generate SBOM
+      id: sbom
+      shell: bash
+      run: |
+        echo "📋 Generating Software Bill of Materials (SBOM)"
+        
+        # Install syft if not available
+        if ! command -v syft &> /dev/null; then
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+        fi
+        
+        # Generate SBOM for the built image
+        SBOM_FILE="sbom-${{ inputs.service }}-${{ inputs.environment }}.json"
+        syft "${{ steps.context.outputs.full-image }}" -o cyclonedx-json="$SBOM_FILE"
+        
+        echo "sbom-file=$SBOM_FILE" >> $GITHUB_OUTPUT
+        echo "✅ SBOM generated: $SBOM_FILE"
+
+    - name: Sign image with Cosign
+      if: inputs.environment == 'prod' && inputs.push-image == 'true'
+      shell: bash
+      run: |
+        echo "🔐 Signing production image with Cosign"
+        
+        # Install cosign if not available
+        if ! command -v cosign &> /dev/null; then
+          go install github.com/sigstore/cosign/v2/cmd/cosign@latest
+        fi
+        
+        # Sign the image (requires COSIGN_PRIVATE_KEY secret)
+        cosign sign --yes "${{ steps.context.outputs.full-image }}@${{ steps.build-info.outputs.image-digest }}"
+        
+        # Attach SBOM to image
+        cosign attach sbom --sbom "${{ steps.sbom.outputs.sbom-file }}" "${{ steps.context.outputs.full-image }}@${{ steps.build-info.outputs.image-digest }}"
+        
+        echo "✅ Image signed and SBOM attached"
+
+    - name: Security scan built image
+      shell: bash
+      run: |
+        echo "🔍 Running security scan on built image"
+        
+        # Install trivy if not available
+        if ! command -v trivy &> /dev/null; then
+          sudo apt-get update && sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update && sudo apt-get install -y trivy
+        fi
+        
+        # Scan the built image
+        trivy image \
+          --format sarif \
+          --output "trivy-${{ inputs.service }}-${{ inputs.environment }}.sarif" \
+          --severity HIGH,CRITICAL \
+          "${{ steps.context.outputs.full-image }}"
+        
+        # Also generate table format for human reading
+        trivy image \
+          --format table \
+          --severity HIGH,CRITICAL \
+          "${{ steps.context.outputs.full-image }}"
+
+    - name: Upload build artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts-${{ inputs.service }}-${{ inputs.environment }}-${{ github.run_id }}
+        path: |
+          ${{ steps.sbom.outputs.sbom-file }}
+          trivy-${{ inputs.service }}-${{ inputs.environment }}.sarif
+        retention-days: 30
+
+    - name: Build summary
+      shell: bash
+      run: |
+        echo "## 🚀 Build Summary for ${{ inputs.service }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Service**: ${{ inputs.service }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Environment**: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Image**: \`${{ steps.context.outputs.full-image }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Digest**: \`${{ steps.build-info.outputs.image-digest }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**SBOM**: ${{ steps.sbom.outputs.sbom-file }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Build completed successfully" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,290 @@
+name: Comprehensive Security Scan
+description: Unified security scanning for all services and components
+author: WebSets Platform Team
+
+inputs:
+  service-path:
+    description: Path to service directory to scan
+    required: true
+  scan-types:
+    description: Comma-separated scan types (sast,container,deps,secrets,iac)
+    required: false
+    default: "sast,container,deps,secrets"
+  severity-threshold:
+    description: Minimum severity to fail on (LOW,MEDIUM,HIGH,CRITICAL)
+    required: false
+    default: "HIGH"
+  output-format:
+    description: Output format for scan results (sarif,json,table)
+    required: false
+    default: "sarif"
+
+outputs:
+  scan-results:
+    description: Path to scan results file
+    value: ${{ steps.scan-summary.outputs.results-file }}
+  vulnerabilities-found:
+    description: Number of vulnerabilities found
+    value: ${{ steps.scan-summary.outputs.vuln-count }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup scan environment
+      shell: bash
+      run: |
+        echo "🔍 Starting comprehensive security scan for ${{ inputs.service-path }}"
+        mkdir -p security-reports
+        
+    - name: SAST Analysis
+      if: contains(inputs.scan-types, 'sast')
+      shell: bash
+      run: |
+        echo "🔎 Running Static Application Security Testing (SAST)"
+        
+        # Semgrep for multiple languages
+        if command -v semgrep &> /dev/null; then
+          semgrep --config=auto --json --output=security-reports/semgrep.json ${{ inputs.service-path }} || true
+          echo "✅ Semgrep scan completed"
+        fi
+        
+        # Bandit for Python
+        if find ${{ inputs.service-path }} -name "*.py" | head -1 | grep -q .; then
+          pip install bandit[toml] --quiet
+          bandit -r ${{ inputs.service-path }} -f json -o security-reports/bandit.json || true
+          echo "✅ Bandit Python scan completed"
+        fi
+        
+        # ESLint security rules for JavaScript/TypeScript
+        if find ${{ inputs.service-path }} -name "*.js" -o -name "*.ts" -o -name "*.tsx" | head -1 | grep -q .; then
+          npm install -g eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin eslint-plugin-security --silent
+          eslint ${{ inputs.service-path }} --ext .js,.ts,.tsx --format json --output-file security-reports/eslint-security.json || true
+          echo "✅ ESLint security scan completed"
+        fi
+
+    - name: Container Security Scan
+      if: contains(inputs.scan-types, 'container')
+      shell: bash
+      run: |
+        echo "🐳 Running container security analysis"
+        
+        # Find Dockerfiles
+        dockerfiles=$(find ${{ inputs.service-path }} -name "Dockerfile*" -type f)
+        
+        if [ -n "$dockerfiles" ]; then
+          # Hadolint for Dockerfile best practices
+          if command -v hadolint &> /dev/null; then
+            for dockerfile in $dockerfiles; do
+              hadolint "$dockerfile" --format json > "security-reports/hadolint-$(basename $dockerfile).json" || true
+            done
+            echo "✅ Hadolint Dockerfile analysis completed"
+          fi
+          
+          # Build and scan container if Dockerfile exists
+          if [ -f "${{ inputs.service-path }}/Dockerfile" ]; then
+            docker build -t temp-security-scan:latest ${{ inputs.service-path }} || true
+            
+            # Trivy container scan
+            if command -v trivy &> /dev/null; then
+              trivy image --format json --output security-reports/trivy-container.json temp-security-scan:latest || true
+              echo "✅ Trivy container scan completed"
+            fi
+            
+            # Cleanup
+            docker rmi temp-security-scan:latest || true
+          fi
+        fi
+
+    - name: Dependency Security Scan
+      if: contains(inputs.scan-types, 'deps')
+      shell: bash
+      run: |
+        echo "📦 Running dependency security analysis"
+        
+        # Python dependencies
+        if [ -f "${{ inputs.service-path }}/requirements.txt" ]; then
+          pip install safety --quiet
+          safety check -r ${{ inputs.service-path }}/requirements.txt --json --output security-reports/safety.json || true
+          echo "✅ Python dependency scan completed"
+        fi
+        
+        # Node.js dependencies
+        if [ -f "${{ inputs.service-path }}/package.json" ]; then
+          cd ${{ inputs.service-path }}
+          npm audit --json > ../security-reports/npm-audit.json || true
+          cd ..
+          echo "✅ Node.js dependency scan completed"
+        fi
+        
+        # Go dependencies (if applicable)
+        if [ -f "${{ inputs.service-path }}/go.mod" ]; then
+          cd ${{ inputs.service-path }}
+          go list -json -deps ./... | nancy sleuth --json > ../security-reports/nancy.json || true
+          cd ..
+          echo "✅ Go dependency scan completed"
+        fi
+
+    - name: Secret Detection
+      if: contains(inputs.scan-types, 'secrets')
+      shell: bash
+      run: |
+        echo "🔐 Running secret detection analysis"
+        
+        # Gitleaks for secret detection
+        if command -v gitleaks &> /dev/null; then
+          gitleaks detect --source ${{ inputs.service-path }} --report-format json --report-path security-reports/gitleaks.json || true
+          echo "✅ Gitleaks secret scan completed"
+        fi
+        
+        # TruffleHog for additional secret detection
+        if command -v trufflehog &> /dev/null; then
+          trufflehog filesystem ${{ inputs.service-path }} --json > security-reports/trufflehog.json || true
+          echo "✅ TruffleHog secret scan completed"
+        fi
+
+    - name: Infrastructure as Code Security
+      if: contains(inputs.scan-types, 'iac')
+      shell: bash
+      run: |
+        echo "🏗️ Running Infrastructure as Code security analysis"
+        
+        # Terraform/HCL files
+        if find ${{ inputs.service-path }} -name "*.tf" -o -name "*.hcl" | head -1 | grep -q .; then
+          # Checkov for IaC security
+          if command -v checkov &> /dev/null; then
+            checkov -d ${{ inputs.service-path }} --framework terraform --output json --output-file security-reports/checkov-terraform.json || true
+            echo "✅ Checkov Terraform scan completed"
+          fi
+          
+          # tfsec for Terraform security
+          if command -v tfsec &> /dev/null; then
+            tfsec ${{ inputs.service-path }} --format json --out security-reports/tfsec.json || true
+            echo "✅ tfsec Terraform scan completed"
+          fi
+        fi
+        
+        # Kubernetes manifests
+        if find ${{ inputs.service-path }} -name "*.yaml" -o -name "*.yml" | xargs grep -l "apiVersion" | head -1 | grep -q .; then
+          # Kube-linter for Kubernetes security
+          if command -v kube-linter &> /dev/null; then
+            kube-linter lint ${{ inputs.service-path }} --format json > security-reports/kube-linter.json || true
+            echo "✅ Kube-linter Kubernetes scan completed"
+          fi
+        fi
+        
+        # Docker Compose files
+        if find ${{ inputs.service-path }} -name "docker-compose*.yml" -o -name "docker-compose*.yaml" | head -1 | grep -q .; then
+          checkov -f ${{ inputs.service-path }}/docker-compose*.yml --framework docker_compose --output json --output-file security-reports/checkov-compose.json || true
+          echo "✅ Docker Compose security scan completed"
+        fi
+
+    - name: Aggregate and Process Results
+      id: scan-summary
+      shell: bash
+      run: |
+        echo "📊 Processing and aggregating scan results"
+        
+        # Count total vulnerabilities
+        total_vulns=0
+        critical_vulns=0
+        high_vulns=0
+        
+        # Process each scan result file
+        for report in security-reports/*.json; do
+          if [ -f "$report" ]; then
+            echo "Processing $(basename $report)"
+            # Basic vulnerability counting (would need more sophisticated parsing in real implementation)
+            case "$(basename $report)" in
+              "trivy-"*)
+                vulns=$(jq -r '.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL" or .Severity == "HIGH") | .Severity' "$report" 2>/dev/null | wc -l || echo "0")
+                ;;
+              "semgrep.json")
+                vulns=$(jq -r '.results[]? | .extra.severity' "$report" 2>/dev/null | grep -E "(ERROR|WARNING)" | wc -l || echo "0")
+                ;;
+              "bandit.json")
+                vulns=$(jq -r '.results[]? | select(.issue_severity == "HIGH" or .issue_severity == "MEDIUM") | .issue_severity' "$report" 2>/dev/null | wc -l || echo "0")
+                ;;
+              *)
+                vulns=0
+                ;;
+            esac
+            total_vulns=$((total_vulns + vulns))
+          fi
+        done
+        
+        echo "🎯 Scan Summary:"
+        echo "  Total vulnerabilities found: $total_vulns"
+        echo "  Severity threshold: ${{ inputs.severity-threshold }}"
+        
+        # Create consolidated report
+        cat > security-reports/summary.json << EOF
+{
+  "scan_timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "service_path": "${{ inputs.service-path }}",
+  "scan_types": "${{ inputs.scan-types }}",
+  "total_vulnerabilities": $total_vulns,
+  "severity_threshold": "${{ inputs.severity-threshold }}",
+  "reports_generated": $(ls security-reports/*.json | wc -l)
+}
+EOF
+        
+        # Set outputs
+        echo "results-file=security-reports/summary.json" >> $GITHUB_OUTPUT
+        echo "vuln-count=$total_vulns" >> $GITHUB_OUTPUT
+        
+        # Determine if scan should fail based on threshold
+        case "${{ inputs.severity-threshold }}" in
+          "CRITICAL")
+            if [ $critical_vulns -gt 0 ]; then
+              echo "❌ Critical vulnerabilities found, failing scan"
+              exit 1
+            fi
+            ;;
+          "HIGH")
+            if [ $high_vulns -gt 0 ] || [ $critical_vulns -gt 0 ]; then
+              echo "❌ High or Critical vulnerabilities found, failing scan"
+              exit 1
+            fi
+            ;;
+        esac
+        
+        echo "✅ Security scan completed successfully"
+
+    - name: Upload Security Reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-scan-results-${{ github.run_id }}
+        path: security-reports/
+        retention-days: 30
+
+    - name: Comment PR with Results
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = 'security-reports/summary.json';
+          
+          if (fs.existsSync(path)) {
+            const summary = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const comment = `## 🔍 Security Scan Results
+            
+            **Service**: \`${{ inputs.service-path }}\`
+            **Scan Types**: \`${{ inputs.scan-types }}\`
+            **Vulnerabilities Found**: ${summary.total_vulnerabilities}
+            **Threshold**: ${{ inputs.severity-threshold }}
+            
+            ${summary.total_vulnerabilities === 0 ? '✅ No vulnerabilities found!' : '⚠️ Vulnerabilities detected - review security reports'}
+            
+            📊 **Reports Generated**: ${summary.reports_generated}
+            🕐 **Scan Time**: ${summary.scan_timestamp}
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          }

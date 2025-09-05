@@ -1,0 +1,32 @@
+# syntax=docker/dockerfile:1
+
+########## Backend build stage ##########
+FROM python:3.13-slim AS backend-build
+ENV PYTHONUNBUFFERED=1
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget gnupg unzip curl git gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt ./
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY app ./app
+COPY migrations ./migrations
+COPY alembic.ini .
+
+# Create non-root user
+RUN adduser --system --home /app --disabled-password appuser
+RUN chown -R appuser:nogroup /app
+
+EXPOSE 8001
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8001/v1/health || exit 1
+
+USER appuser
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]

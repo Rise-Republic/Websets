@@ -46,74 +46,77 @@ const Dashboard: React.FC = () => {
       {/* Header */}
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-4 sm:py-6 gap-4">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">Websets</h1>
-              <span className="ml-2 text-sm text-gray-500">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Websets</h1>
+              <span className="ml-2 text-xs sm:text-sm text-gray-500">
                 Mining Dashboard
               </span>
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-700">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+              <span className="text-xs sm:text-sm text-gray-700 order-2 sm:order-1">
                 Welcome, {user?.full_name}
               </span>
-              <button
-                onClick={() => setShowCreateJob(true)}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <svg
-                  className="h-4 w-4 mr-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+              <div className="flex gap-2 order-1 sm:order-2">
+                <button
+                  onClick={() => setShowCreateJob(true)}
+                  className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex-1 sm:flex-none justify-center"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-                New Job
-              </button>
-              <button
-                onClick={logout}
-                className="text-gray-500 hover:text-gray-700 text-sm"
-              >
-                Sign out
-              </button>
+                  <svg
+                    className="h-4 w-4 mr-1 sm:mr-2"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  <span className="hidden sm:inline">New Job</span>
+                  <span className="sm:hidden">New</span>
+                </button>
+                <button
+                  onClick={logout}
+                  className="text-gray-500 hover:text-gray-700 text-xs sm:text-sm px-2 py-1 rounded"
+                >
+                  Sign out
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="mb-4 flex space-x-4">
+      <div className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
+        <div className="mb-4 flex flex-col sm:flex-row gap-2 sm:gap-4">
           <button
             onClick={() => setActiveTab("jobs")}
-            className={`px-3 py-2 text-sm font-medium rounded-md ${activeTab === "jobs" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === "jobs" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
           >
             Jobs
           </button>
           <button
             onClick={() => setActiveTab("datasets")}
-            className={`px-3 py-2 text-sm font-medium rounded-md ${activeTab === "datasets" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === "datasets" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
           >
             Datasets
           </button>
         </div>
-        <div className="px-4 py-6 sm:px-0">
+        <div className="py-4 sm:py-6">
           {activeTab === "jobs" && showCreateJob ? (
             <div className="mb-6">
               <div className="bg-white shadow rounded-lg">
-                <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                  <h2 className="text-lg font-medium text-gray-900">
+                <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                  <h2 className="text-base sm:text-lg font-medium text-gray-900">
                     Create New Mining Job
                   </h2>
                   <button
                     onClick={() => setShowCreateJob(false)}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-gray-400 hover:text-gray-600 p-1"
                     aria-label="Close create job form"
                   >
                     <svg
@@ -152,17 +155,17 @@ const Dashboard: React.FC = () => {
                     {formError && (
                       <p className="text-sm text-red-600">{formError}</p>
                     )}
-                    <div className="flex justify-end space-x-3">
+                    <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
                       <button
                         onClick={() => setShowCreateJob(false)}
-                        className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                        className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 order-2 sm:order-1"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={handleCreateJob}
                         disabled={creatingJob || !prompt.trim()}
-                        className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                        className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 order-1 sm:order-2"
                       >
                         {creatingJob ? "Starting..." : "Start Mining"}
                       </button>
@@ -176,13 +179,13 @@ const Dashboard: React.FC = () => {
           {activeTab === "jobs" && selectedJob ? (
             <div className="mb-6">
               <div className="bg-white shadow rounded-lg">
-                <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                  <h2 className="text-lg font-medium text-gray-900">
+                <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                  <h2 className="text-base sm:text-lg font-medium text-gray-900">
                     Job Details
                   </h2>
                   <button
                     onClick={() => setSelectedJob(null)}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-gray-400 hover:text-gray-600 p-1"
                     aria-label="Close job details"
                   >
                     <svg
@@ -210,7 +213,7 @@ const Dashboard: React.FC = () => {
                         {selectedJob.prompt}
                       </p>
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <h3 className="text-sm font-medium text-gray-500">
                           Status

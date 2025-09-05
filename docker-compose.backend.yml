@@ -1,0 +1,191 @@
+x-app-env: &app-env
+  - DATABASE_URL=postgresql://postgres:changeme@db:5432/webset_miner
+  - VAULT_ADDR=http://vault:8200
+  - VAULT_TOKEN=root
+  - REDIS_URL=redis://redis:6379
+  - CELERY_BROKER_URL=redis://redis:6379
+  - CELERY_RESULT_BACKEND=redis://redis:6379
+  - QDRANT_URL=http://qdrant:6333
+  - WEAVIATE_URL=http://weaviate:8080
+  - MINIO_ENDPOINT=http://minio:9000
+  - OPENAI_API_KEY=sk-dev-openai-key-for-local-development-only-0123456789
+  - WORKOS_API_KEY_TEST=sk_test_a2V5XzAxSkU0VEtXSFZNWjVSMVc5WU0wVlkyNk5OLHZvaHZmQ0oxQ3FSamcxS3g4YVIyMHJrblk
+  - WORKOS_CLIENT_ID_TEST=client_01JE4TKWY9039H6QSH7XNZHQ6Q
+  - WORKOS_REDIRECT_URI=http://localhost:8001/api/auth/workos/callback
+  - WORKOS_COOKIE_PASSWORD=yvHkj2U4tkv+oYGZon1EDfQVtbb4ro9cabdEAV9YH9A=
+  - WORKOS_ENFORCE_MFA=false
+  - ENVIRONMENT=development
+
+x-app-volumes: &app-volumes
+  - ./app:/app/app
+  - ./data:/app/data
+  - ./scripts:/app/scripts
+
+services:
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8001:8001"
+    command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
+    environment: *app-env
+    volumes: *app-volumes
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      vault:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8001/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    command: ["python", "-m", "celery", "-A", "app.tasks.celery_app", "worker", "--loglevel=info", "--concurrency=2"]
+    environment: *app-env
+    volumes: *app-volumes
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      vault:
+        condition: service_healthy
+    restart: unless-stopped
+
+  beat:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    command: ["python", "-m", "celery", "-A", "app.tasks.celery_app", "beat", "--loglevel=info"]
+    environment: *app-env
+    volumes: *app-volumes
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      vault:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=webset_miner
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=changeme
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  vault:
+    image: hashicorp/vault:1.15
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_ADDR: http://0.0.0.0:8200
+      VAULT_DEV_ROOT_TOKEN_ID: root
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault_data:/vault/data
+    command: >
+      sh -c "vault server
+      -dev
+      -dev-root-token-id=root
+      -dev-listen-address=0.0.0.0:8200"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://127.0.0.1:8200/v1/sys/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 5 bash -c '</dev/tcp/localhost/6333' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  weaviate:
+    image: semitechnologies/weaviate:1.21.0
+    ports:
+      - "8080:8080"
+    environment:
+      - QUERY_DEFAULTS_LIMIT=25
+      - AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true
+      - PERSISTENCE_DATA_PATH=/var/lib/weaviate
+      - DEFAULT_VECTORIZER_MODULE=none
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: "minioadmin"
+      MINIO_ROOT_PASSWORD: "minioadmin123"
+    command: server /data --console-address ":9001"
+    volumes:
+      - ./data/minio:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  qdrant_data:
+  weaviate_data:
+  vault_data:
+  redis_data:

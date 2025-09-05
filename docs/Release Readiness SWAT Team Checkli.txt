@@ -1,0 +1,39 @@
+Release Readiness SWAT Team Checklist
+This checklist is designed for multi-agent SWAT team review of a multitenant enterprise SaaS release.
+Each agent has specific duties to ensure compliance, security, scalability, and customer readiness. Use
+this checklist in parallel with AI outputs to enforce enterprise-grade rigor.
+Architecture Sentinel
+• ■ Schema evolution backward/forward compatible
+• ■ Shared vs schema-per-tenant validated
+• ■ Sharding/scaling strategy reviewed
+• ■ Migration runbooks updated
+Security Guardian
+• ■ Threat model updated
+• ■ Secrets rotation confirmed
+• ■ Zero-trust boundaries tested
+• ■ Tenant-level RBAC + RLS enforced
+Compliance Auditor
+• ■ SOC2/FedRAMP control mapping updated
+• ■ Audit logging validated
+• ■ Data retention/export restrictions reviewed
+• ■ Compliance artifacts refreshed
+CI/CD Enforcer
+• ■ Pipelines run: lint, type-check, SAST, DAST, SBOM
+• ■ Build artifacts signed + reproducible
+• ■ Canary/blue-green config validated
+• ■ Rollback plan documented
+Observability Analyst
+• ■ Metrics/traces/logs tenant-segmented
+• ■ Dashboards + alerts configured
+• ■ Error budgets and SLOs verified
+• ■ Rollback signals codified
+Data Reliability Operator
+• ■ Migrations forward/backward safe
+• ■ Anonymization in non-prod confirmed
+• ■ Backup/restore drills validated
+• ■ Disaster recovery readiness checked
+Customer Impact Commander
+• ■ Feature toggles per tenant/region tested
+• ■ Co-branding and localization verified
+• ■ Entitlements and billing regression run
+• ■ SLA commitments re-confirmed

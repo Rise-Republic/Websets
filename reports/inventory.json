@@ -1,0 +1,99 @@
+{
+  "repository_analysis": {
+    "total_files": 320,
+    "file_breakdown": {
+      "python_files": 198,
+      "typescript_files": 39,
+      "dockerfile_count": 1,
+      "yaml_files": 57,
+      "json_files": "estimated_25"
+    },
+    "directory_structure": {
+      "app/": "Backend FastAPI application (198 Python files)",
+      "src/": "Frontend React/TypeScript application (39 TS/TSX files)",
+      ".github/workflows/": "27 GitHub Actions workflows",
+      "migrations/": "11 Alembic database migrations",
+      "tests/": "Comprehensive test suites across multiple directories",
+      "infra/": "Terraform infrastructure code",
+      "monitoring/": "Prometheus/Grafana configurations",
+      "k8s/": "Kubernetes deployment manifests",
+      "docs/": "Documentation and runbooks"
+    },
+    "services_identified": [
+      {
+        "name": "fastapi-backend",
+        "location": "app/",
+        "type": "api_service",
+        "language": "python",
+        "dependencies": ["postgresql", "redis", "qdrant", "weaviate"]
+      },
+      {
+        "name": "react-frontend",
+        "location": "src/",
+        "type": "web_application", 
+        "language": "typescript",
+        "dependencies": ["fastapi-backend"]
+      },
+      {
+        "name": "celery-workers",
+        "location": "app/tasks/",
+        "type": "background_workers",
+        "language": "python",
+        "dependencies": ["redis", "postgresql"]
+      }
+    ],
+    "build_artifacts": [
+      "node_modules/",
+      ".next/",
+      "__pycache__/",
+      ".pytest_cache/",
+      "coverage/",
+      "dist/",
+      "build/"
+    ]
+  },
+  "redundancy_analysis": {
+    "duplicate_workflows": [
+      "security scanning patterns repeated across 5+ workflows",
+      "docker build patterns inconsistent",
+      "lint/format jobs duplicated per language"
+    ],
+    "configuration_duplication": [
+      "environment variables scattered across multiple files",
+      "docker configurations not standardized",
+      "monitoring configs duplicated between prometheus/grafana"
+    ],
+    "dead_code_candidates": [
+      "=2.10.4 file (appears to be artifact)",
+      "git file (appears to be artifact)",
+      "test-locust.txt (may be outdated)",
+      "unused workflow templates"
+    ]
+  },
+  "security_findings": {
+    "container_issues": [
+      "Single Dockerfile not following multi-stage pattern",
+      "Missing .dockerignore file",
+      "No explicit non-root user configuration",
+      "Missing HEALTHCHECK directive"
+    ],
+    "workflow_gaps": [
+      "Inconsistent SBOM generation across workflows",
+      "Container signing not implemented everywhere", 
+      "Some workflows missing Trivy scanning"
+    ]
+  },
+  "organizational_issues": {
+    "naming_inconsistencies": [
+      "Mixed case in directory names",
+      "Inconsistent file naming patterns",
+      "Service names not standardized"
+    ],
+    "structure_problems": [
+      "Backend and frontend mixed in root",
+      "Infrastructure scattered across multiple directories",
+      "Tests not co-located with services",
+      "Documentation spread across multiple locations"
+    ]
+  }
+}

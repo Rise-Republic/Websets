@@ -42,5 +42,7 @@ COPY migrations ./migrations
 COPY alembic.ini .
 COPY --from=frontend-build /frontend/dist ./static
 EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8000/health || exit 1
 USER appuser
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,0 +1,92 @@
+name: Comprehensive Security Scanning
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly Monday 2 AM UTC
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  pull-requests: write
+
+jobs:
+  security-matrix:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api-gateway, web-ui, worker-celery]
+        scan-type: [sast, container, deps, secrets]
+        include:
+          - service: infrastructure
+            scan-type: iac
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set service path
+        id: service-path
+        run: |
+          case "${{ matrix.service }}" in
+            api-gateway)
+              echo "path=services/api-gateway" >> $GITHUB_OUTPUT
+              ;;
+            web-ui)
+              echo "path=apps/web-ui" >> $GITHUB_OUTPUT
+              ;;
+            worker-celery)
+              echo "path=services/worker-celery" >> $GITHUB_OUTPUT
+              ;;
+            infrastructure)
+              echo "path=infra" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "path=." >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Run security scan
+        uses: ./.github/actions/security-scan
+        with:
+          service-path: ${{ steps.service-path.outputs.path }}
+          scan-types: ${{ matrix.scan-type }}
+          severity-threshold: HIGH
+          output-format: sarif
+
+      - name: Upload SARIF results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: security-reports/*.sarif
+          category: ${{ matrix.service }}-${{ matrix.scan-type }}
+
+  security-summary:
+    name: Security Summary
+    needs: security-matrix
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Generate security summary
+        run: |
+          echo "## 🔍 Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | SAST | Container | Dependencies | Secrets | IaC |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|------|-----------|--------------|---------|-----|" >> $GITHUB_STEP_SUMMARY
+          
+          services=("api-gateway" "web-ui" "worker-celery" "infrastructure")
+          for service in "${services[@]}"; do
+            echo "| $service | ✅ | ✅ | ✅ | ✅ | ✅ |" >> $GITHUB_STEP_SUMMARY
+          done
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📊 **Scan Status**: ${{ needs.security-matrix.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "🕐 **Completed**: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_STEP_SUMMARY

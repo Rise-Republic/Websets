@@ -2,24 +2,50 @@
 __pycache__/
 *.pyc
 .venv/
+.pytest_cache/
+.coverage
+*.egg-info/
+build/
+.tox/
 
 # Node
 node_modules/
 dist/
 dist-ssr/
+.next/
+coverage/
+.npm/
+.eslintcache
 
-# Tests and docs
-tests/
-docs/
+# Development and CI artifacts
+.git/
+.github/
+.vscode/
+.idea/
+*.log
+.DS_Store
+Thumbs.db
 
-# Development artifacts
-scripts/
+# Environment and secrets
+.env*
+secrets/
+vault_secrets_template.json
+
+# Infrastructure and deployment
+.terraform/
+*.tfstate*
+k8s/
+infra/
 monitoring/
 observability/
 supabase/
-k8s/
-.git
-.github/
-.env
-secrets/
+
+# Data and reports
 data/
+reports/
+.attic/
+
+# Tests (exclude from production builds)
+tests/
+docs/
+scripts/
