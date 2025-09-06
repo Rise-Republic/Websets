@@ -5,6 +5,10 @@ services:
     build:
       context: ../../apps/web-ui
       dockerfile: Dockerfile
+      args:
+        - VITE_WORKOS_CLIENT_ID=client_01HXRMBQ9BJ3E7QSTQ9X2PHVB7
+        - VITE_WORKOS_REDIRECT_URI=http://localhost:3000/auth/workos/callback
+        - VITE_API_BASE=http://localhost:8000
     ports:
       - "3000:80"
     depends_on:
