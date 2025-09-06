@@ -1,6 +1,25 @@
-# WebSet Miner
+# WebSets - Enterprise Data Mining Platform
 
-An autonomous LLM-powered system for discovering, extracting, and structuring public web data at scale. [Start here](docs/start_here.md) to set up your environment.
+An autonomous LLM-powered system for discovering, extracting, and structuring public web data at scale. Built with enterprise-grade architecture for multitenant SaaS deployment.
+
+## 🏗️ Architecture Overview
+
+WebSets follows a modern microservices architecture with clear service boundaries:
+
+```
+websets/
+├── apps/                    # Customer-facing applications
+│   ├── web-ui/             # React frontend (Port 3000)
+│   └── api-gateway/        # FastAPI backend (Port 8000)
+├── services/               # Microservices (future)
+│   ├── auth-service/       # Authentication service
+│   ├── data-mining/        # Mining jobs and workers
+│   └── vector-search/      # Search and embeddings
+├── packages/               # Shared libraries
+├── db/                     # Database management
+├── deploy/                 # Deployment configurations
+└── docs/                   # Documentation
+```
 
 ## Features
 

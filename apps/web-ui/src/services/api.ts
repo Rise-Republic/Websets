@@ -2,7 +2,7 @@
 // Allow overriding the backend URL via environment variables
 const API_BASE =
   import.meta.env.VITE_API_BASE ||
-  'http://localhost:8001';
+  'http://localhost:8000';
 const API_VERSION = 'v1'; // Default to v1
 const VERSIONED_API_BASE = `${API_BASE}/${API_VERSION}`;
 
