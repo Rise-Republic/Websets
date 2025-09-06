@@ -1,203 +1,112 @@
-# Docker/K8s Audit Report
+# Docker Audit Report
 
-## Current Dockerfile Analysis
+## Overview
+This report analyzes the Docker configuration and identifies areas for improvement in the WebSets repository.
 
-### ✅ Strengths
-- **Multi-stage build**: Properly implemented with frontend-build, backend-build, and runtime stages
-- **Non-root user**: Creates and uses `appuser` system account
-- **Minimal base**: Uses `python:3.13-slim` for smaller attack surface
-- **Build optimization**: Separates dependency installation from application code
+## Current Docker Files
+- `Dockerfile` - Multi-stage build (Frontend + Backend)
+- `Dockerfile.backend` - Backend-only build
 
-### ❌ Issues Identified
+## Audit Findings
 
-#### Missing .dockerignore
-- **Status**: ❌ **CRITICAL** - No .dockerignore file found
-- **Impact**: Build context includes unnecessary files (node_modules, .git, __pycache__, etc.)
-- **Risk**: Slower builds, potential secret leakage, larger image sizes
+### Dockerfile Analysis
 
-#### Missing HEALTHCHECK
-- **Status**: ❌ **MISSING** - No HEALTHCHECK directive
-- **Impact**: Poor container orchestration, no health monitoring
-- **Risk**: Failed containers not detected by K8s/Docker
+#### Strengths ✅
+- Multi-stage build implemented in main Dockerfile
+- Non-root user (appuser) configured
+- Health checks present
+- Minimal base images (python:3.13-slim, node:20-alpine)
+- Build dependencies separated from runtime
 
-#### Security Concerns
-- **Root privileges during build**: Package installation as root (acceptable pattern)
-- **System packages**: Installs multiple system dependencies for Playwright
-- **Browser binaries**: Chromium installation increases attack surface
+#### Issues Found ❌
 
-## Kubernetes Manifests Audit
+1. **Duplicate Docker Strategies**
+   - Two different Dockerfiles serve similar purposes
+   - `Dockerfile.backend` appears redundant with main `Dockerfile`
+   - Creates confusion about which to use for deployments
 
-### Current K8s Structure
-```
-k8s/
-├── deployment-blue.yaml
-├── deployment-green.yaml  
-└── service.yaml
-```
+2. **Security Concerns**
+   - Installing system packages in runtime stage (Playwright deps)
+   - Large attack surface with browser dependencies
+   - No explicit vulnerability scanning in build process
 
-### ✅ Strengths
-- Blue-green deployment support with separate manifests
-- Service abstraction for traffic routing
+3. **Build Optimization**
+   - Could benefit from better layer caching
+   - Some dependencies installed at runtime vs build time
+   - Playwright installation adds significant image size
 
-### ❌ Issues Identified
+4. **Port Inconsistency**
+   - Main Dockerfile uses port 8000
+   - Backend Dockerfile uses port 8001
+   - No clear service separation rationale documented
 
-#### Inconsistent Structure
-- **Status**: ❌ **ORGANIZATIONAL** - Manifests not following Helm patterns
-- **Impact**: Difficult to manage environment-specific configurations
-- **Risk**: Configuration drift between environments
+5. **Missing .dockerignore Optimization**
+   - Present but may not be optimized for build context
+   - Could reduce build time and image size
 
-#### Missing Resources
-- **ConfigMaps**: No centralized configuration management
-- **Secrets**: No secret management manifests
-- **Ingress**: No ingress controller configuration
-- **NetworkPolicies**: No network security policies
-- **ResourceQuotas**: No resource limits defined
+### Detailed Analysis
 
-#### Security Gaps
-- **No PodSecurityPolicy**: Missing pod security constraints
-- **No ServiceAccount**: Using default service account
-- **No SecurityContext**: Missing security context definitions
+#### Main Dockerfile (Recommended)
+- **Multi-stage**: ✅ Properly implemented
+- **Non-root user**: ✅ appuser created and used
+- **Health check**: ✅ Implemented with curl
+- **Layer optimization**: ⚠️ Could be improved
+- **Security**: ⚠️ Runtime package installation
 
-## Container Security Analysis
+#### Dockerfile.backend (Redundant)
+- **Purpose**: Unclear differentiation from main Dockerfile
+- **Usage**: Not referenced in current deployment configs
+- **Recommendation**: Remove or clearly document purpose
 
-### Base Image Assessment
-- **Base**: `python:3.13-slim` 
-- **Status**: ✅ **GOOD** - Official Python image, minimal variant
-- **Vulnerabilities**: Need to scan with Trivy for current CVEs
+### Recommendations
 
-### Runtime Security
-- **User**: ✅ Non-root user (`appuser`)
-- **Filesystem**: ❌ No read-only root filesystem
-- **Capabilities**: ❌ No capability dropping
-- **Secrets**: ❌ No secret management integration
+#### Immediate Actions
+1. **Consolidate Docker Strategy**
+   - Choose single Dockerfile approach
+   - Remove redundant `Dockerfile.backend` or document specific use case
+   - Update deployment references
 
-## Recommendations
+2. **Security Hardening**
+   - Move all system dependencies to build stage
+   - Consider distroless final stage for production
+   - Add explicit vulnerability scanning step
 
-### Immediate Actions (Week 1)
+3. **Standardization**
+   - Consistent port usage across services
+   - Standardized health check endpoints
+   - Common base image strategy
 
-1. **Create .dockerignore**
+4. **Build Optimization**
+   - Optimize .dockerignore file
+   - Improve layer caching strategy
+   - Consider separate images for different service types
+
+#### Target Docker Structure
 ```dockerfile
-# .dockerignore
-node_modules/
-.git/
-__pycache__/
-.pytest_cache/
-*.pyc
-.coverage
-.env*
-.vscode/
-.idea/
-*.log
-dist/
-build/
-reports/
-.attic/
+# Optimized multi-stage build
+FROM node:20-alpine AS frontend-build
+FROM python:3.13-slim AS backend-build  
+FROM python:3.13-slim AS runtime  # or distroless for production
 ```
 
-2. **Add HEALTHCHECK to Dockerfile**
-```dockerfile
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8000/health || exit 1
-```
+#### Proposed Changes
+1. Remove `Dockerfile.backend`
+2. Optimize main `Dockerfile` for security and size
+3. Create service-specific Dockerfiles under `/services/`
+4. Implement consistent naming: `websets/service-name:tag`
 
-3. **Enhance container security**
-```dockerfile
-# Add after USER appuser
-USER 65534:65534
-# Add security options
-LABEL maintainer="websets-team"
-LABEL security.scan="trivy"
-```
+## Compliance Check
 
-### Medium-term Improvements (Week 2-3)
+### Enterprise Requirements
+- ✅ Multi-stage builds
+- ✅ Non-root user
+- ✅ Health checks
+- ⚠️ Minimal base images (could be more minimal)
+- ❌ Distroless runtime (recommended for production)
+- ⚠️ Vulnerability scanning (present in CI, not in Dockerfile)
 
-4. **Migrate to Helm Charts**
-```yaml
-# deploy/helm/websets/values/values-prod.yaml
-image:
-  repository: ghcr.io/rise-republic/websets
-  tag: v1.2.3
-  pullPolicy: IfNotPresent
-
-security:
-  runAsNonRoot: true
-  runAsUser: 65534
-  readOnlyRootFilesystem: true
-  allowPrivilegeEscalation: false
-```
-
-5. **Add Kubernetes security contexts**
-```yaml
-securityContext:
-  runAsNonRoot: true
-  runAsUser: 65534
-  runAsGroup: 65534
-  fsGroup: 65534
-  capabilities:
-    drop:
-      - ALL
-```
-
-### Long-term Enhancements (Week 4+)
-
-6. **Implement distroless runtime**
-```dockerfile
-FROM gcr.io/distroless/python3-debian12 as runtime
-COPY --from=backend-build /install /usr/local
-COPY --from=backend-build --chown=65534:65534 /app /app
-USER 65534
-```
-
-7. **Add comprehensive monitoring**
-```yaml
-# Prometheus ServiceMonitor
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: websets-metrics
-spec:
-  selector:
-    matchLabels:
-      app: websets
-  endpoints:
-  - port: metrics
-```
-
-## Risk Assessment
-
-### High Risk
-- **Missing .dockerignore**: Immediate security and performance impact
-- **No health checks**: Production reliability risk
-- **Scattered K8s configs**: Configuration management complexity
-
-### Medium Risk  
-- **Large attack surface**: Playwright dependencies increase vulnerability scope
-- **Missing security contexts**: Potential privilege escalation
-- **No resource limits**: Resource exhaustion risk
-
-### Low Risk
-- **Base image age**: Python 3.13-slim is current and maintained
-- **Build optimization**: Multi-stage build is properly implemented
-
-## Compliance Gaps
-
-### SOC2 Requirements
-- ❌ **Access Controls**: Missing RBAC configurations
-- ❌ **Monitoring**: No security event logging in containers
-- ❌ **Change Management**: No immutable image tagging strategy
-
-### Security Standards
-- ❌ **CIS Benchmarks**: Container security benchmarks not followed
-- ❌ **NIST Framework**: Missing security control implementations
-- ❌ **OWASP**: Container security top 10 gaps identified
-
-## Implementation Priority
-
-1. **P0 (Immediate)**: .dockerignore, HEALTHCHECK, basic security context
-2. **P1 (Week 1)**: Helm migration, security policies, resource limits  
-3. **P2 (Week 2-3)**: Distroless runtime, comprehensive monitoring
-4. **P3 (Week 4+)**: Advanced security features, compliance automation
-
----
-
-**Next Steps**: Implement P0 fixes and begin Helm chart migration for standardized K8s deployment patterns.
+## Next Steps
+1. Create standardized Dockerfile template
+2. Implement security scanning in CI build process
+3. Remove redundant Docker files
+4. Update deployment configurations to use single Docker strategy
