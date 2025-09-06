@@ -1,0 +1,264 @@
+name: CI - New Structure
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'apps/**'
+      - 'services/**'
+      - 'packages/**'
+      - 'db/**'
+      - '.github/workflows/ci-new-structure.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'apps/**'
+      - 'services/**'
+      - 'packages/**'
+      - 'db/**'
+
+env:
+  NODE_VERSION: '20'
+  PYTHON_VERSION: '3.13'
+
+jobs:
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./apps/web-ui
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: apps/web-ui/package-lock.json
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run linting
+      run: npm run lint
+    
+    - name: Run type checking
+      run: npm run type-check
+    
+    - name: Run tests
+      run: npm test -- --coverage --watchAll=false
+    
+    - name: Build application
+      run: npm run build
+    
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./apps/web-ui/coverage/lcov.info
+        flags: frontend
+
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./apps/api-gateway
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: websets_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        cache-dependency-path: apps/api-gateway/requirements.txt
+    
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt || echo "No dev requirements"
+    
+    - name: Run linting
+      run: |
+        flake8 app/ --max-line-length=88 --extend-ignore=E203,W503
+        black --check app/
+        isort --check-only app/
+    
+    - name: Run type checking
+      run: mypy app/ --ignore-missing-imports
+    
+    - name: Run database migrations
+      run: alembic upgrade head
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/websets_test
+    
+    - name: Run tests
+      run: pytest --cov=app --cov-report=xml
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/websets_test
+        REDIS_URL: redis://localhost:6379
+        JWT_SECRET_KEY: test-secret-key
+        OPENAI_API_KEY: sk-test-key
+        ENVIRONMENT: test
+    
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./apps/api-gateway/coverage.xml
+        flags: backend
+
+  docker-build:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    needs: [frontend-test, backend-test]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build frontend image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./apps/web-ui
+        push: false
+        tags: websets/web-ui:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Build backend image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./apps/api-gateway
+        push: false
+        tags: websets/api-gateway:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Test Docker Compose
+      run: |
+        cp deploy/compose/docker-compose.new.yml docker-compose.test.yml
+        # Update image tags for testing
+        sed -i 's/build:/image: websets\/web-ui:test #build:/g' docker-compose.test.yml
+        sed -i 's/build:/image: websets\/api-gateway:test #build:/g' docker-compose.test.yml
+        # Use different ports to avoid conflicts
+        sed -i 's/5433:5432/5434:5432/g' docker-compose.test.yml
+        sed -i 's/6380:6379/6381:6379/g' docker-compose.test.yml
+        sed -i 's/9002:9000/9004:9000/g' docker-compose.test.yml
+        sed -i 's/9003:9001/9005:9001/g' docker-compose.test.yml
+        
+        # Start services
+        docker-compose -f docker-compose.test.yml up -d
+        
+        # Wait for services to be ready
+        sleep 30
+        
+        # Test health endpoints
+        curl -f http://localhost:8000/health || exit 1
+        curl -f http://localhost:3000 || exit 1
+        
+        # Cleanup
+        docker-compose -f docker-compose.test.yml down
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: [frontend-test, backend-test]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+    
+    - name: Run Semgrep
+      uses: returntocorp/semgrep-action@v1
+      with:
+        config: >-
+          p/security-audit
+          p/secrets
+          p/owasp-top-ten
+        generateSarif: "1"
+    
+    - name: Upload Semgrep results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: semgrep.sarif
+      if: always()
+
+  accessibility-test:
+    name: Accessibility Tests
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+    
+    - name: Install Playwright
+      run: |
+        npm install -g @playwright/test
+        playwright install --with-deps chromium
+    
+    - name: Start services
+      run: |
+        docker-compose -f deploy/compose/docker-compose.new.yml up -d
+        sleep 30
+    
+    - name: Run accessibility tests
+      run: |
+        npx playwright test --config=apps/web-ui/playwright.config.ts
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: accessibility-test-results
+        path: apps/web-ui/test-results/
+    
+    - name: Cleanup
+      run: docker-compose -f deploy/compose/docker-compose.new.yml down
