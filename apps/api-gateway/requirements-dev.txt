@@ -1,0 +1,44 @@
+# Development dependencies
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.0
+httpx>=0.24.0
+faker>=19.3.0
+factory-boy>=3.3.0
+black>=23.7.0
+isort>=5.12.0
+mypy>=1.5.0
+bandit>=1.7.5
+safety>=2.3.0
+pre-commit>=3.3.0
+coverage>=7.2.0
+locust>=2.15.0
+pytest-xdist>=3.3.0
+pytest-benchmark>=4.0.0
+pytest-html>=3.2.0
+aioresponses>=0.7.4
+respx>=0.20.0
+
+# Contract testing
+pact-python>=2.2.0
+pytest-pact>=1.0.0
+openapi-spec-validator>=0.7.0
+schemathesis>=3.19.0
+
+# Performance testing
+k6>=0.47.05
+mypy==1.10.0
+bandit==1.7.8
+safety==3.6.0
+testcontainers[postgres]==3.7.1
+pre-commit==4.2.0
+PyYAML==6.0.2
+
+hvac==2.1.0
+packaging>=22.0
+# locust==2.26.0  # Disabled due to geventhttpclient dependency issue with Python 3.13
+# Alternative load testing tools compatible with Python 3.13:
+# Option 1: Use pytest-benchmark for performance testing
+pytest-benchmark==4.0.0
+# Option 2: Use artillery or k6 (external tools) for load testing

@@ -1,0 +1,75 @@
+import os
+from loguru import logger
+
+from app.secrets.vault import VaultClient
+from .celery_app import celery_app
+
+VAULT_PATH = os.getenv("MINIO_VAULT_PATH", "secret/websets")
+
+
+@celery_app.task
+def rotate_minio_credentials() -> bool:
+    """Rotate MinIO credentials stored in Vault."""
+    try:
+        client = VaultClient()
+        client.rotate_secret(VAULT_PATH, "MINIO_ACCESS_KEY", length=16)
+        client.rotate_secret(VAULT_PATH, "MINIO_SECRET_KEY", length=32)
+        logger.info("MinIO credentials rotated in Vault")
+        return True
+    except Exception as exc:
+        logger.error(f"Failed to rotate MinIO credentials: {exc}")
+        return False
+
+
+@celery_app.task
+def rotate_minio_root_credentials() -> bool:
+    """Rotate MinIO root credentials stored in Vault."""
+    try:
+        client = VaultClient()
+        client.rotate_secret(VAULT_PATH, "MINIO_ROOT_USER", length=16)
+        client.rotate_secret(VAULT_PATH, "MINIO_ROOT_PASSWORD", length=32)
+        logger.info("MinIO root credentials rotated in Vault")
+        return True
+    except Exception as exc:
+        logger.error(f"Failed to rotate MinIO root credentials: {exc}")
+        return False
+
+
+@celery_app.task
+def rotate_database_password() -> bool:
+    """Rotate database password stored in Vault."""
+    try:
+        client = VaultClient()
+        client.rotate_secret(VAULT_PATH, "POSTGRES_PASSWORD", length=32)
+        logger.info("Database password rotated in Vault")
+        return True
+    except Exception as exc:
+        logger.error(f"Failed to rotate database password: {exc}")
+        return False
+
+
+@celery_app.task
+def rotate_jwt_secret() -> bool:
+    """Rotate JWT secret key stored in Vault."""
+    try:
+        client = VaultClient()
+        client.rotate_secret(VAULT_PATH, "JWT_SECRET_KEY", length=64)
+        logger.info("JWT secret key rotated in Vault")
+        return True
+    except Exception as exc:
+        logger.error(f"Failed to rotate JWT secret key: {exc}")
+        return False
+
+
+@celery_app.task
+def rotate_api_keys() -> bool:
+    """Rotate API keys stored in Vault."""
+    try:
+        client = VaultClient()
+        client.rotate_secret(VAULT_PATH, "OPENAI_API_KEY", length=48)
+        client.rotate_secret(VAULT_PATH, "ANTHROPIC_API_KEY", length=48)
+        logger.info("API keys rotated in Vault")
+        return True
+    except Exception as exc:
+        logger.error(f"Failed to rotate API keys: {exc}")
+        return False
