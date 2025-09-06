@@ -11,17 +11,27 @@ const redirectUri =
   import.meta.env.VITE_WORKOS_REDIRECT_URI ||
   'http://localhost:3000/auth/workos/callback';
 
+// Check if WorkOS is properly configured
+const workosClientId = import.meta.env.VITE_WORKOS_CLIENT_ID;
+const isWorkOSConfigured = workosClientId && workosClientId !== 'client_01HXRMBQ9BJ3E7QSTQ9X2PHVB7';
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthKitProvider
-      clientId={import.meta.env.VITE_WORKOS_CLIENT_ID}
-      redirectUri={redirectUri}
-    >
-      <AuthProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </AuthProvider>
-    </AuthKitProvider>
+    {isWorkOSConfigured ? (
+      <AuthKitProvider
+        clientId={workosClientId}
+        redirectUri={redirectUri}
+      >
+        <AuthProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </AuthProvider>
+      </AuthKitProvider>
+    ) : (
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    )}
   </StrictMode>
 );

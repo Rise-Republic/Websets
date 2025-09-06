@@ -3,7 +3,7 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 COPY . .
 # Set build-time environment variables
 ARG VITE_WORKOS_CLIENT_ID=client_01HXRMBQ9BJ3E7QSTQ9X2PHVB7

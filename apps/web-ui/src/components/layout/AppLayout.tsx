@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Briefcase, 
@@ -25,7 +24,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
-const AppLayout: React.FC = () => {
+interface AppLayoutProps {
+  children: React.ReactNode;
+}
+
+const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -178,7 +181,7 @@ const AppLayout: React.FC = () => {
 
         {/* Page Content */}
         <main className="flex-1 overflow-auto p-4 lg:p-6">
-          <Outlet />
+          {children}
         </main>
       </div>
     </div>

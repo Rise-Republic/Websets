@@ -191,7 +191,7 @@ const SearchInterface: React.FC = () => {
             <div className="flex flex-wrap gap-2">
               <Badge variant="secondary">All Datasets</Badge>
               <Badge variant="outline">Last 30 days</Badge>
-              <Badge variant="outline">Similarity > 80%</Badge>
+              <Badge variant="outline">Similarity &gt; 80%</Badge>
             </div>
           </div>
 

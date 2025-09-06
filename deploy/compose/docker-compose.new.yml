@@ -24,17 +24,20 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/websets
-      - REDIS_URL=redis://redis:6379
-      - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin
-      - OPENAI_API_KEY=sk-test-key-for-development
-      - JWT_SECRET_KEY=development-secret-key-change-in-production
+      - REDIS_URL=redis://redis:6379/0
       - ENVIRONMENT=development
+      - WORKOS_API_KEY_TEST=sk_test_dev_placeholder
+      - WORKOS_CLIENT_ID_TEST=client_01HXRMBQ9BJ3E7QSTQ9X2PHVB7
+      - JWT_SECRET_KEY=dev-secret-key-change-in-production
+      - OPENAI_API_KEY=sk-placeholder
     depends_on:
       - postgres
       - redis
-      - minio
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       - websets-network
 
