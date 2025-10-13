@@ -17,7 +17,7 @@
     "@hookform/resolvers": "^5.1.1",
     "@workos-inc/authkit-react": "^0.11.0",
     "@workos-inc/node": "^7.14.0",
-    "lucide-react": "^0.344.0",
+    "lucide-react": "^0.545.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.61.0",
