@@ -29,7 +29,7 @@ schemathesis>=3.19.0
 # Performance testing
 k6>=0.47.05
 mypy==1.10.0
-bandit==1.7.8
+bandit==1.8.6
 safety==3.6.0
 testcontainers[postgres]==3.7.1
 pre-commit==4.2.0
